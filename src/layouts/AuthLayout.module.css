@@ -1,0 +1,33 @@
+.wrapper {
+  min-height: 100vh;
+  background-size: cover;
+  background-position: center;
+  background-image: linear-gradient(
+      180deg,
+      rgba(11, 61, 58, 0.45) 0%,
+      rgba(11, 61, 58, 0.15) 100%
+    ),
+    url(https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1600&q=80),
+    linear-gradient(135deg, var(--mantine-color-teal-8) 0%, var(--mantine-color-teal-4) 100%);
+}
+
+.form {
+  border-right: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-7));
+  min-height: 100vh;
+  max-width: 450px;
+  padding: 30px;
+  padding-top: 80px;
+  border-radius: 0;
+
+  @media (max-width: $mantine-breakpoint-sm) {
+    max-width: 100%;
+  }
+}
+
+.title {
+  color: light-dark(var(--mantine-color-black), var(--mantine-color-white));
+  font-weight: 500;
+  text-align: center;
+  margin-top: var(--mantine-spacing-md);
+  margin-bottom: 30px;
+}
