@@ -10,6 +10,7 @@ export default function AuthLayout({ title, children }) {
         </Title>
         {children}
       </Paper>
+      <div className={classes.image} />
     </div>
   )
 }
