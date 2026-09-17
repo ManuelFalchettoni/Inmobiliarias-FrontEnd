@@ -1,10 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, NavLink as RouterNavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   ActionIcon,
   AppShell,
   Avatar,
-  Box,
+  Badge,
   Burger,
   Button,
   Group,
@@ -19,19 +19,36 @@ import {
 import { useDisclosure } from '@mantine/hooks'
 import { IconBell, IconHome, IconLogout, IconPlus, IconSearch } from '@tabler/icons-react'
 
-import { DASHBOARD_INDEX, dashboardNav, getActiveNavPath } from './dashboard-nav.js'
+import { emptyWorkspaceTotals, getWorkspaceTotals } from '../services/workspace.js'
+import { DASHBOARD_INDEX, dashboardSections, getActiveNavPath } from './dashboard-nav.js'
 
 const HEADER_HEIGHT = 72
+const NUMBER_FORMAT = new Intl.NumberFormat('es-AR')
 
-const workspaceStats = [
-  { label: 'Inmuebles activos', value: '48' },
-  { label: 'Visitas este mes', value: '1.240' },
-  { label: 'Ratio conversión', value: '3.8%', color: 'teal' },
-]
+/**
+ * Totales reales de los listados paginados. Se piden una sola vez por montaje y
+ * se abortan al desmontar; si fallan, cada valor queda en `null`.
+ */
+function useWorkspaceTotals() {
+  const [totals, setTotals] = useState(emptyWorkspaceTotals)
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    getWorkspaceTotals({ signal: controller.signal }).then((result) => {
+      if (!controller.signal.aborted) setTotals(result)
+    })
+
+    return () => controller.abort()
+  }, [])
+
+  return totals
+}
 
 export default function DashboardLayout() {
   const [opened, { toggle, close }] = useDisclosure(false)
   const { pathname } = useLocation()
+  const totals = useWorkspaceTotals()
 
   // En móvil el menú se superpone al contenido: al navegar hay que cerrarlo.
   useEffect(() => {
@@ -117,37 +134,49 @@ export default function DashboardLayout() {
 
       <AppShell.Navbar p="md">
         <AppShell.Section grow component="nav" aria-label="Navegación principal">
-          <Text size="xs" fw={700} c="dimmed" tt="uppercase" mb="xs" lts={0.5}>
-            Navegación principal
-          </Text>
-          {dashboardNav.map((item) => (
-            <NavLink
-              key={item.to}
-              component={RouterNavLink}
-              to={item.to}
-              label={item.label}
-              active={item.to === activePath}
-              leftSection={<item.icon size={18} stroke={1.6} />}
-              style={{ borderRadius: 'var(--mantine-radius-md)' }}
-            />
-          ))}
+          <Stack gap="lg">
+            {dashboardSections.map((section) => (
+              <div key={section.title}>
+                <Group justify="space-between" mb="xs" wrap="nowrap">
+                  <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts={0.5}>
+                    {section.title}
+                  </Text>
+                  {section.badge && (
+                    <Badge size="xs" variant="light" color="gray">
+                      {section.badge}
+                    </Badge>
+                  )}
+                </Group>
+
+                {section.items.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    component={RouterNavLink}
+                    to={item.to}
+                    label={item.label}
+                    active={item.to === activePath}
+                    c={item.comingSoon ? 'dimmed' : undefined}
+                    leftSection={<item.icon size={18} stroke={1.6} />}
+                    style={{ borderRadius: 'var(--mantine-radius-md)' }}
+                  />
+                ))}
+              </div>
+            ))}
+          </Stack>
         </AppShell.Section>
 
         <AppShell.Section>
-          <Group justify="space-between" mb="xs">
-            <Text size="xs" fw={700} tt="uppercase" lts={0.5}>
-              Espacio de trabajo
-            </Text>
-            <Box w={8} h={8} bg="teal.6" style={{ borderRadius: '50%' }} />
-          </Group>
+          <Text size="xs" fw={700} tt="uppercase" lts={0.5} mb="xs">
+            Espacio de trabajo
+          </Text>
           <Stack gap={4} mb="md">
-            {workspaceStats.map((stat) => (
-              <Group key={stat.label} justify="space-between">
+            {totals.map((stat) => (
+              <Group key={stat.key} justify="space-between" wrap="nowrap">
                 <Text size="sm" c="dimmed">
                   {stat.label}
                 </Text>
-                <Text size="sm" fw={600} c={stat.color}>
-                  {stat.value}
+                <Text size="sm" fw={600} c={stat.total == null ? 'dimmed' : undefined}>
+                  {stat.total == null ? '—' : NUMBER_FORMAT.format(stat.total)}
                 </Text>
               </Group>
             ))}

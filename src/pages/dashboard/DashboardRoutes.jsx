@@ -28,6 +28,8 @@ export default function DashboardRoutes() {
                 icon={item.icon}
                 title={item.label}
                 description={item.description}
+                endpoint={item.endpoint}
+                blockedBy={item.blockedBy}
                 action={item.action}
               />
             }
