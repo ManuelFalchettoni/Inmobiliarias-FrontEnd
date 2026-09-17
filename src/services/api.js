@@ -122,3 +122,12 @@ export const get = (path, options) => request(path, { ...options, method: 'GET' 
 export const post = (path, body, options) => request(path, { ...options, method: 'POST', body })
 export const put = (path, body, options) => request(path, { ...options, method: 'PUT', body })
 export const del = (path, options) => request(path, { ...options, method: 'DELETE' })
+
+/**
+ * PATCH. El backend lo usa para las acciones que no reemplazan el recurso
+ * entero: `.../{id}/restore` y `.../{id}/password`, en los tres recursos.
+ *
+ * Con `body` en `undefined` (el caso de restore) `request` no manda
+ * `Content-Type`, que es lo correcto para un PATCH sin cuerpo.
+ */
+export const patch = (path, body, options) => request(path, { ...options, method: 'PATCH', body })
