@@ -113,18 +113,17 @@ export function toPropertyRequest(values) {
  * GET /api/properties -> `Page<PropertyResponse>` de Spring:
  * `{ content, totalElements, totalPages, number, size, first, last }`.
  *
- * `idAgency` solo viaja si tiene valor: el backend distingue entre filtrar por
- * agencia y traer todas, y un parámetro vacío no es lo mismo que ausente.
- * La coma de `sort` se ve escapada como %2C en devtools; Spring la desescapa.
+ * Todo lo que no sea paginación se trata como filtro, así sumar filtros nuevos
+ * en el backend no obliga a tocar este archivo.
  */
-export function listProperties({ idAgency, active = true, page = 0, size = 20 } = {}, options) {
-  const params = new URLSearchParams({
-    active: String(active),
-    page: String(page),
-    size: String(size),
-    sort: 'createdAt,desc',
-  })
-  if (idAgency != null && idAgency !== '') params.set('idAgency', String(idAgency))
+export function listProperties({ page = 0, size = 20, sort = 'createdAt,desc', ...filters } = {}, options) {
+  const params = new URLSearchParams({ page: String(page), size: String(size), sort })
+
+  // Los filtros sin valor no viajan: el backend distingue "sin filtrar" de
+  // "filtrado por vacío". Ojo, `!value` acá descartaría active=false.
+  for (const [key, value] of Object.entries(filters)) {
+    if (value != null && value !== '') params.set(key, String(value))
+  }
 
   return get(`${PROPERTIES_ENDPOINT}?${params}`, options)
 }

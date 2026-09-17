@@ -3,7 +3,11 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import DashboardLayout from '../../layouts/DashboardLayout.jsx'
 import { DASHBOARD_INDEX, dashboardNav } from '../../layouts/dashboard-nav.js'
 import AgencyForm from './agency/AgencyForm.jsx'
+import PropertyList from './property/PropertyList.jsx'
 import PagePlaceholder from './PagePlaceholder.jsx'
+
+/** Rutas ya implementadas: quedan fuera del mapeo a PagePlaceholder. */
+const IMPLEMENTADAS = new Set(['propiedades', 'agencias/nueva'])
 
 /**
  * Rutas del panel, en su propio módulo para que `App.jsx` pueda cargarlas con
@@ -15,26 +19,29 @@ export default function DashboardRoutes() {
       <Route element={<DashboardLayout />}>
         <Route index element={<Navigate to={DASHBOARD_INDEX} replace />} />
 
-        {/* Única pantalla del panel conectada al backend. */}
+        {/* Pantallas conectadas al backend. */}
+        <Route path="propiedades" element={<PropertyList />} />
         <Route path="agencias/nueva" element={<AgencyForm />} />
 
         {/* El resto del menú todavía no tiene implementación, pero sí una pantalla. */}
-        {dashboardNav.map((item) => (
-          <Route
-            key={item.to}
-            path={item.path}
-            element={
-              <PagePlaceholder
-                icon={item.icon}
-                title={item.label}
-                description={item.description}
-                endpoint={item.endpoint}
-                blockedBy={item.blockedBy}
-                action={item.action}
-              />
-            }
-          />
-        ))}
+        {dashboardNav
+          .filter((item) => !IMPLEMENTADAS.has(item.path))
+          .map((item) => (
+            <Route
+              key={item.to}
+              path={item.path}
+              element={
+                <PagePlaceholder
+                  icon={item.icon}
+                  title={item.label}
+                  description={item.description}
+                  endpoint={item.endpoint}
+                  blockedBy={item.blockedBy}
+                  action={item.action}
+                />
+              }
+            />
+          ))}
 
         <Route
           path="*"
@@ -42,7 +49,7 @@ export default function DashboardRoutes() {
             <PagePlaceholder
               title="Página no encontrada"
               description="La sección que buscabas no existe o cambió de dirección."
-              action={{ to: DASHBOARD_INDEX, label: 'Volver al explorador' }}
+              action={{ to: DASHBOARD_INDEX, label: 'Volver a propiedades' }}
             />
           }
         />
