@@ -1,5 +1,7 @@
-import { NavLink as RouterNavLink, Outlet } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Link, NavLink as RouterNavLink, Outlet, useLocation } from 'react-router-dom'
 import {
+  ActionIcon,
   AppShell,
   Avatar,
   Box,
@@ -12,32 +14,14 @@ import {
   Text,
   TextInput,
   ThemeIcon,
+  UnstyledButton,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import {
-  IconBell,
-  IconChartBar,
-  IconHome,
-  IconLogin,
-  IconMap,
-  IconPlus,
-  IconSearch,
-  IconSettings,
-  IconUsers,
-  IconBuildingSkyscraper,
-  IconFileDescription,
-} from '@tabler/icons-react'
+import { IconBell, IconHome, IconLogout, IconPlus, IconSearch } from '@tabler/icons-react'
 
-const navItems = [
-  { label: 'Explorador & Mapa', icon: IconMap, to: '/dashboard/explorador' },
-  { label: 'Publicar Propiedad', icon: IconPlus, to: '/dashboard/propiedades/nueva' },
-  { label: 'Ficha de Propiedad', icon: IconFileDescription, to: '/dashboard/propiedades' },
-  { label: 'Clientes & Leads', icon: IconUsers, to: '/dashboard/consultas' },
-  { label: 'Analítica & Reportes', icon: IconChartBar, to: '/dashboard/analitica' },
-  { label: 'Configuración de Agencia', icon: IconBuildingSkyscraper, to: '/dashboard/agencias/nueva' },
-  { label: 'Configuración', icon: IconSettings, to: '/dashboard/configuracion' },
-  { label: 'Portal de Acceso', icon: IconLogin, to: '/login' },
-]
+import { DASHBOARD_INDEX, dashboardNav, getActiveNavPath } from './dashboard-nav.js'
+
+const HEADER_HEIGHT = 72
 
 const workspaceStats = [
   { label: 'Inmuebles activos', value: '48' },
@@ -46,45 +30,73 @@ const workspaceStats = [
 ]
 
 export default function DashboardLayout() {
-  const [opened, { toggle }] = useDisclosure()
+  const [opened, { toggle, close }] = useDisclosure(false)
+  const { pathname } = useLocation()
+
+  // En móvil el menú se superpone al contenido: al navegar hay que cerrarlo.
+  useEffect(() => {
+    close()
+  }, [pathname, close])
+
+  const activePath = getActiveNavPath(pathname)
 
   return (
     <AppShell
-      header={{ height: 72 }}
+      header={{ height: HEADER_HEIGHT }}
       navbar={{ width: 280, breakpoint: 'sm', collapsed: { mobile: !opened } }}
       padding={0}
     >
       <AppShell.Header px="md">
-        <Group h="100%" justify="space-between" wrap="nowrap">
+        <Group h="100%" justify="space-between" wrap="nowrap" gap="md">
           <Group gap="sm" wrap="nowrap">
-            <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-            <ThemeIcon size={36} radius="md" variant="filled">
-              <IconHome size={20} />
-            </ThemeIcon>
-            <div>
-              <Text fw={700} lh={1.1}>
-                HabitatPro
-              </Text>
-              <Text size="xs" c="dimmed" tt="uppercase" fw={600} lts={1}>
-                Enterprise Suite
-              </Text>
-            </div>
+            <Burger
+              opened={opened}
+              onClick={toggle}
+              hiddenFrom="sm"
+              size="sm"
+              aria-label={opened ? 'Cerrar el menú' : 'Abrir el menú'}
+            />
+            <UnstyledButton component={Link} to={DASHBOARD_INDEX}>
+              <Group gap="sm" wrap="nowrap">
+                <ThemeIcon size={36} radius="md" variant="filled">
+                  <IconHome size={20} />
+                </ThemeIcon>
+                <div>
+                  <Text fw={700} lh={1.1}>
+                    HabitatPro
+                  </Text>
+                  <Text size="xs" c="dimmed" tt="uppercase" fw={600} lts={1}>
+                    Enterprise Suite
+                  </Text>
+                </div>
+              </Group>
+            </UnstyledButton>
           </Group>
 
           <TextInput
+            type="search"
+            aria-label="Buscar en el panel"
             placeholder="Buscar referencia, dirección o cliente..."
             leftSection={<IconSearch size={16} />}
             radius="md"
-            w={420}
+            flex={1}
+            maw={420}
             visibleFrom="md"
           />
 
           <Group gap="md" wrap="nowrap">
-            <Indicator size={8} offset={4}>
-              <IconBell size={22} />
+            <Indicator size={8} offset={6}>
+              <ActionIcon variant="subtle" color="gray" size="lg" aria-label="Notificaciones">
+                <IconBell size={22} />
+              </ActionIcon>
             </Indicator>
-            <Button leftSection={<IconPlus size={16} />} visibleFrom="sm">
-              Crear Propiedad
+            <Button
+              component={Link}
+              to="/dashboard/propiedades/nueva"
+              leftSection={<IconPlus size={16} />}
+              visibleFrom="sm"
+            >
+              Crear propiedad
             </Button>
             <Group gap="xs" wrap="nowrap" visibleFrom="lg">
               <Avatar radius="xl" color="teal">
@@ -92,10 +104,10 @@ export default function DashboardLayout() {
               </Avatar>
               <div>
                 <Text size="sm" fw={600} lh={1.2}>
-                  Habitat Real Estate Agency
+                  Habitat Real Estate
                 </Text>
                 <Text size="xs" c="dimmed">
-                  Madrid HQ
+                  Córdoba HQ
                 </Text>
               </div>
             </Group>
@@ -104,16 +116,17 @@ export default function DashboardLayout() {
       </AppShell.Header>
 
       <AppShell.Navbar p="md">
-        <AppShell.Section grow>
+        <AppShell.Section grow component="nav" aria-label="Navegación principal">
           <Text size="xs" fw={700} c="dimmed" tt="uppercase" mb="xs" lts={0.5}>
             Navegación principal
           </Text>
-          {navItems.map((item) => (
+          {dashboardNav.map((item) => (
             <NavLink
-              key={item.label}
+              key={item.to}
               component={RouterNavLink}
               to={item.to}
               label={item.label}
+              active={item.to === activePath}
               leftSection={<item.icon size={18} stroke={1.6} />}
               style={{ borderRadius: 'var(--mantine-radius-md)' }}
             />
@@ -127,7 +140,7 @@ export default function DashboardLayout() {
             </Text>
             <Box w={8} h={8} bg="teal.6" style={{ borderRadius: '50%' }} />
           </Group>
-          <Stack gap={4}>
+          <Stack gap={4} mb="md">
             {workspaceStats.map((stat) => (
               <Group key={stat.label} justify="space-between">
                 <Text size="sm" c="dimmed">
@@ -139,6 +152,18 @@ export default function DashboardLayout() {
               </Group>
             ))}
           </Stack>
+
+          <Button
+            component={Link}
+            to="/login"
+            variant="subtle"
+            color="gray"
+            fullWidth
+            justify="flex-start"
+            leftSection={<IconLogout size={18} />}
+          >
+            Salir al portal de acceso
+          </Button>
         </AppShell.Section>
       </AppShell.Navbar>
 
