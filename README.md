@@ -27,7 +27,7 @@ npm run dev            # http://localhost:5173
 - Login y registro de usuarios
 - Propiedades: listado paginado, alta, edición y fotos
 - Alta de agencias y usuarios
-- Secciones pendientes (mapa, leads, analítica) con placeholder que indica qué falta en el backend
+- Secciones en desarrollo: mapa, leads y analítica
 
 ## Estructura
 

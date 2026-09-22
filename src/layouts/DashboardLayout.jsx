@@ -4,7 +4,6 @@ import {
   ActionIcon,
   AppShell,
   Avatar,
-  Badge,
   Burger,
   Button,
   Group,
@@ -137,16 +136,9 @@ export default function DashboardLayout() {
           <Stack gap="lg">
             {dashboardSections.map((section) => (
               <div key={section.title}>
-                <Group justify="space-between" mb="xs" wrap="nowrap">
-                  <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts={0.5}>
-                    {section.title}
-                  </Text>
-                  {section.badge && (
-                    <Badge size="xs" variant="light" color="gray">
-                      {section.badge}
-                    </Badge>
-                  )}
-                </Group>
+                <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts={0.5} mb="xs">
+                  {section.title}
+                </Text>
 
                 {section.items.map((item) => (
                   <NavLink
@@ -155,7 +147,6 @@ export default function DashboardLayout() {
                     to={item.to}
                     label={item.label}
                     active={item.to === activePath}
-                    c={item.comingSoon ? 'dimmed' : undefined}
                     leftSection={<item.icon size={18} stroke={1.6} />}
                     style={{ borderRadius: 'var(--mantine-radius-md)' }}
                   />

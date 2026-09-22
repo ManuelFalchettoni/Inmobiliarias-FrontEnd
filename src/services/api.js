@@ -109,7 +109,10 @@ export async function request(path, { method = 'GET', body, signal, timeout = DE
     throw new ApiError(
       timedOut
         ? 'El servidor tardó demasiado en responder. Intente nuevamente.'
-        : `No se pudo conectar con el servidor (${BASE_URL}). Verifique que el backend esté levantado.`,
+        : // El navegador no distingue "servidor caído" de "CORS rechazado": los dos llegan
+          // como el mismo TypeError. Por eso el mensaje nombra ambas causas y el origen.
+          `No se pudo conectar con el servidor (${BASE_URL}). Verifique que el backend esté levantado ` +
+          `y que su CORS permita este origen (${window.location.origin}).`,
       { path, cause },
     )
   }

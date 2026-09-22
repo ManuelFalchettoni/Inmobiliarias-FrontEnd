@@ -28,7 +28,7 @@ export default function DashboardRoutes() {
         <Route path="agencias/nueva" element={<AgencyForm />} />
         <Route path="usuarios/nuevo" element={<UserForm />} />
 
-        {/* El resto del menú todavía no tiene implementación, pero sí una pantalla. */}
+        {/* Secciones del menú que todavía no están disponibles. */}
         {dashboardNav
           .filter((item) => !IMPLEMENTADAS.has(item.path))
           .map((item) => (
@@ -40,8 +40,6 @@ export default function DashboardRoutes() {
                   icon={item.icon}
                   title={item.label}
                   description={item.description}
-                  endpoint={item.endpoint}
-                  blockedBy={item.blockedBy}
                   action={item.action}
                 />
               }
