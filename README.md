@@ -121,7 +121,7 @@ solo guarda el nombre del archivo, y el backend arma la dirección para verla.
 
 ---
 
-## 5. Ideas clave para entender el código
+## 5. Ideas clave 
 
 **Validar en los dos lados.** El navegador valida por **comodidad**: el usuario ve el error al
 instante. El backend valida por **seguridad**: cualquiera podría saltearse la página y hablarle
@@ -188,19 +188,4 @@ Para que nadie pueda registrarse como administrador. Siempre se crea como usuari
 **¿Qué formatos de foto se aceptan?**
 JPG, PNG y WEBP, de hasta 5 MB cada una y hasta 20 por propiedad. Son los mismos límites del backend.
 
-**¿Cuál es el próximo paso del proyecto?**
-El inicio de sesión, y que cada inmobiliaria vea y gestione solamente sus propias propiedades.
 
----
-
-## 8. Cómo estudiarlo
-
-1. Levantar todo y hacer la **prueba rápida** del punto 1.
-2. Abrir las herramientas del navegador (**F12 → pestaña Red / Network**) y publicar una propiedad
-   con fotos: se ve primero el envío de la propiedad y después uno por cada foto.
-3. Leer `src/services/api.js`, que es corto y es la base de todo lo demás.
-4. Leer `src/services/properties.js` y compararlo con `PropertyRequest.java` del backend: los límites
-   son los mismos.
-5. **Ejercicio:** agregar un campo nuevo, por ejemplo *cantidad de baños*. Primero en el backend y
-   después en `properties.js`, `property-form.js` y `PropertyForm.jsx`. Si sale, se entendió el
-   recorrido completo.
