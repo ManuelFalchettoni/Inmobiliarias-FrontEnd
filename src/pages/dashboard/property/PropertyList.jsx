@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
+  ActionIcon,
   Alert,
+  Avatar,
   Badge,
   Button,
   Card,
@@ -16,13 +18,14 @@ import {
   ThemeIcon,
   Title,
 } from '@mantine/core'
-import { IconAlertTriangle, IconBuildingEstate, IconPlus } from '@tabler/icons-react'
+import { IconAlertTriangle, IconBuildingEstate, IconPencil, IconPlus } from '@tabler/icons-react'
 
 import {
   PROPERTY_CONDITION_COLOR,
   PROPERTY_CONDITION_LABEL,
   PROPERTY_TYPE_LABEL,
   listProperties,
+  sortPhotos,
 } from '../../../services/properties.js'
 
 const PAGE_SIZE = 20
@@ -168,18 +171,31 @@ export default function PropertyList() {
                     <Table.Th ta="right">Ambientes</Table.Th>
                     <Table.Th ta="right">Superficie</Table.Th>
                     <Table.Th ta="right">Año</Table.Th>
+                    <Table.Th w={1} />
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
                   {data.content.map((propiedad) => (
                     <Table.Tr key={propiedad.id}>
                       <Table.Td>
-                        <Text size="sm" fw={500}>
-                          {propiedad.address}
-                        </Text>
-                        <Text size="xs" c="dimmed">
-                          {propiedad.location}
-                        </Text>
+                        <Group gap="sm" wrap="nowrap">
+                          <Avatar
+                            src={sortPhotos(propiedad.photos)[0]?.url}
+                            radius="md"
+                            size={40}
+                            color="gray"
+                          >
+                            <IconBuildingEstate size={18} />
+                          </Avatar>
+                          <div>
+                            <Text size="sm" fw={500}>
+                              {propiedad.address}
+                            </Text>
+                            <Text size="xs" c="dimmed">
+                              {propiedad.location}
+                            </Text>
+                          </div>
+                        </Group>
                       </Table.Td>
                       {/* Los enums llegan en inglés; el mapa los traduce. */}
                       <Table.Td>{PROPERTY_TYPE_LABEL[propiedad.type] ?? propiedad.type}</Table.Td>
@@ -191,6 +207,19 @@ export default function PropertyList() {
                       <Table.Td ta="right">{propiedad.rooms}</Table.Td>
                       <Table.Td ta="right">{propiedad.size} m²</Table.Td>
                       <Table.Td ta="right">{propiedad.year ?? '—'}</Table.Td>
+                      <Table.Td>
+                        {/* El PUT solo acepta propiedades activas: las dadas de baja no se editan. */}
+                        {propiedad.active !== false && (
+                          <ActionIcon
+                            component={Link}
+                            to={`/dashboard/propiedades/${propiedad.id}/editar`}
+                            variant="subtle"
+                            aria-label={`Editar ${propiedad.address}`}
+                          >
+                            <IconPencil size={18} />
+                          </ActionIcon>
+                        )}
+                      </Table.Td>
                     </Table.Tr>
                   ))}
                 </Table.Tbody>

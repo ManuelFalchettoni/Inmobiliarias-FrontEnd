@@ -14,12 +14,14 @@ const DEFAULT_TIMEOUT = 15000
  * `{ timestamp, status, error, message, path }`.
  */
 export class ApiError extends Error {
-  constructor(message, { status = 0, path = '', fieldErrors = {}, cause } = {}) {
+  constructor(message, { status = 0, path = '', fieldErrors = {}, detail = message, cause } = {}) {
     super(message, { cause })
     this.name = 'ApiError'
     this.status = status
     this.path = path
     this.fieldErrors = fieldErrors
+    /** Mensaje tal cual lo mandó el backend, para depurar. */
+    this.detail = detail
   }
 
   /** No hubo respuesta del servidor (caído, CORS, timeout o red). */
@@ -68,10 +70,23 @@ async function readBody(response) {
 }
 
 /**
+ * Arma el cuerpo y las cabeceras según el tipo de `body`.
+ *
+ * Un `FormData` viaja tal cual y sin `Content-Type`: el navegador lo completa
+ * con el `boundary` del multipart. Si se fijara a mano, Spring no encuentra las
+ * partes y el `@RequestPart("files")` falla.
+ */
+function encodeBody(body, headers) {
+  if (body === undefined) return { body: undefined, headers }
+  if (body instanceof FormData) return { body, headers }
+  return { body: JSON.stringify(body), headers: { 'Content-Type': 'application/json', ...headers } }
+}
+
+/**
  * @param {string} path Ruta absoluta del backend, p. ej. `/api/agencies`.
  * @param {object} [options]
  * @param {string} [options.method]
- * @param {unknown} [options.body] Se serializa a JSON.
+ * @param {unknown} [options.body] Se serializa a JSON, salvo que sea un `FormData`.
  * @param {AbortSignal} [options.signal] Cancelación del llamador (se propaga tal cual).
  * @param {number} [options.timeout]
  */
@@ -84,8 +99,7 @@ export async function request(path, { method = 'GET', body, signal, timeout = DE
     response = await fetch(`${BASE_URL}${path}`, {
       method,
       signal: AbortSignal.any(signals),
-      headers: body === undefined ? headers : { 'Content-Type': 'application/json', ...headers },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      ...encodeBody(body, headers),
     })
   } catch (cause) {
     // Cancelación pedida por el llamador: no es un fallo de la API.
@@ -103,15 +117,23 @@ export async function request(path, { method = 'GET', body, signal, timeout = DE
   const payload = await readBody(response)
 
   if (!response.ok) {
-    const message =
+    const detail =
       (typeof payload === 'string' ? payload : payload?.message) ||
       response.statusText ||
       `La solicitud falló con estado ${response.status}.`
 
+    // Un 5xx no trae nada útil para el usuario y a veces trae el texto de una
+    // excepción de Java (p. ej. con MinIO caído). El original queda en `detail`.
+    const serverError = response.status >= 500
+    const message = serverError
+      ? 'El servidor tuvo un error al procesar la solicitud. Intente nuevamente en unos minutos.'
+      : detail
+
     throw new ApiError(message, {
       status: response.status,
       path: payload?.path ?? path,
-      fieldErrors: parseFieldErrors(payload?.message),
+      fieldErrors: serverError ? {} : parseFieldErrors(payload?.message),
+      detail,
     })
   }
 
@@ -131,3 +153,20 @@ export const del = (path, options) => request(path, { ...options, method: 'DELET
  * `Content-Type`, que es lo correcto para un PATCH sin cuerpo.
  */
 export const patch = (path, body, options) => request(path, { ...options, method: 'PATCH', body })
+
+/**
+ * Query string de los listados paginados (`Page<T>` de Spring, que cuenta desde 0).
+ *
+ * Todo lo que no sea paginación se trata como filtro, así sumar filtros nuevos
+ * en el backend no obliga a tocar los servicios. Los filtros sin valor no
+ * viajan; ojo, un `!value` acá descartaría `active=false`.
+ */
+export function pageQuery({ page = 0, size = 20, sort = 'createdAt,desc', ...filters } = {}) {
+  const params = new URLSearchParams({ page: String(page), size: String(size), sort })
+
+  for (const [key, value] of Object.entries(filters)) {
+    if (value != null && value !== '') params.set(key, String(value))
+  }
+
+  return params.toString()
+}

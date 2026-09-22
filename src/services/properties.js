@@ -5,7 +5,7 @@
  * enums de enums/property del backend. Cambiar algo acá exige el cambio
  * equivalente en Java.
  */
-import { get, patch, post, put, del } from './api.js'
+import { get, pageQuery, patch, post, put, del } from './api.js'
 
 export const PROPERTIES_ENDPOINT = '/api/properties'
 
@@ -85,8 +85,9 @@ export function toInt(value, fallback = null) {
  * Traduce los valores del formulario al `PropertyRequest`.
  *
  * Solo salen de acá los 10 campos del DTO: `id`, `active`, `photos` y las
- * marcas de tiempo viven en `PropertyResponse`. Spring ignora los campos que
- * no conoce, así que mandarlos no falla — simplemente no llegan a ningún lado.
+ * marcas de tiempo viven en `PropertyResponse`. El backend corre con
+ * `fail-on-unknown-properties=true`, así que cualquier campo de más convierte
+ * el alta en un 400 "Malformed or invalid request body".
  */
 export function toPropertyRequest(values) {
   return {
@@ -110,26 +111,38 @@ export function toPropertyRequest(values) {
 }
 
 /**
+ * Inversa de `toPropertyRequest`: carga un `PropertyResponse` en el formulario
+ * de edición. Los números quedan como números (lo que espera NumberInput) e
+ * `idAgency` como string (lo que espera Select). `year` puede no venir: el
+ * backend omite los null (`default-property-inclusion=non_null`).
+ */
+export function toPropertyFormValues(property) {
+  return {
+    address: property.address ?? '',
+    location: property.location ?? '',
+    type: property.type ?? null,
+    condition: property.condition ?? null,
+    occupancy: property.occupancy ?? null,
+    idAgency: property.idAgency != null ? String(property.idAgency) : null,
+    year: property.year ?? '',
+    size: property.size ?? '',
+    rooms: property.rooms ?? '',
+    floorNumber: property.floorNumber ?? 0,
+  }
+}
+
+/**
  * GET /api/properties -> `Page<PropertyResponse>` de Spring:
  * `{ content, totalElements, totalPages, number, size, first, last }`.
- *
- * Todo lo que no sea paginación se trata como filtro, así sumar filtros nuevos
- * en el backend no obliga a tocar este archivo.
+ * Filtros: `idAgency` y `active`.
  */
-export function listProperties({ page = 0, size = 20, sort = 'createdAt,desc', ...filters } = {}, options) {
-  const params = new URLSearchParams({ page: String(page), size: String(size), sort })
-
-  // Los filtros sin valor no viajan: el backend distingue "sin filtrar" de
-  // "filtrado por vacío". Ojo, `!value` acá descartaría active=false.
-  for (const [key, value] of Object.entries(filters)) {
-    if (value != null && value !== '') params.set(key, String(value))
-  }
-
-  return get(`${PROPERTIES_ENDPOINT}?${params}`, options)
-}
+export const listProperties = (params, options) =>
+  get(`${PROPERTIES_ENDPOINT}?${pageQuery(params)}`, options)
 
 export const findProperty = (id, options) => get(`${PROPERTIES_ENDPOINT}/${id}`, options)
 export const createProperty = (request, options) => post(PROPERTIES_ENDPOINT, request, options)
+
+/** El backend responde 400 si `idAgency` difiere de la actual: no se mueve de agencia. */
 export const updateProperty = (id, request, options) =>
   put(`${PROPERTIES_ENDPOINT}/${id}`, request, options)
 
@@ -139,3 +152,77 @@ export const deleteProperty = (id, options) => del(`${PROPERTIES_ENDPOINT}/${id}
 /** Revierte la baja lógica. Se llega a estas propiedades listando con `active: false`. */
 export const restoreProperty = (id, options) =>
   patch(`${PROPERTIES_ENDPOINT}/${id}/restore`, undefined, options)
+
+// ------------------------------------------------------------------ Fotos
+
+/**
+ * Límites de `PropertyPhotoCreatorService`, `MinioPhotoStorage` y del multipart
+ * de `application.properties`.
+ *
+ * El backend valida la extensión del nombre del archivo, no solo el
+ * content-type: una imagen sin extensión se rechaza aunque sea un PNG válido.
+ */
+export const PHOTO_LIMITS = {
+  maxPhotos: 20,
+  maxFileSize: 5 * 1024 * 1024, // spring.servlet.multipart.max-file-size
+  extensions: ['jpg', 'jpeg', 'png', 'webp'],
+}
+
+/** Formato `accept` de react-dropzone (lo usa el Dropzone de Mantine). */
+export const PHOTO_ACCEPT = {
+  'image/jpeg': ['.jpg', '.jpeg'],
+  'image/png': ['.png'],
+  'image/webp': ['.webp'],
+}
+
+function extensionOf(name) {
+  const text = String(name ?? '')
+  const dot = text.lastIndexOf('.')
+  return dot < 0 ? '' : text.slice(dot + 1).toLowerCase()
+}
+
+export const formatFileSize = (bytes) =>
+  bytes >= 1024 * 1024
+    ? `${(bytes / 1024 / 1024).toFixed(1)} MB`
+    : `${Math.max(1, Math.round(bytes / 1024))} KB`
+
+/** Mismas reglas que `MinioPhotoStorage.store`, para no gastar un viaje en un 400 seguro. */
+export function validatePhotoFile(file) {
+  if (!file || file.size === 0) return 'El archivo está vacío.'
+  if (!PHOTO_LIMITS.extensions.includes(extensionOf(file.name))) {
+    return 'Formato no admitido. Use JPG, PNG o WEBP.'
+  }
+  if (!String(file.type).startsWith('image/')) return 'El archivo no es una imagen.'
+  if (file.size > PHOTO_LIMITS.maxFileSize) {
+    return `Pesa ${formatFileSize(file.size)}; el máximo es ${formatFileSize(PHOTO_LIMITS.maxFileSize)}.`
+  }
+  return null
+}
+
+/**
+ * El backend no ordena la lista de fotos del response: se ordena por
+ * `position`, y la primera es la portada.
+ */
+export const sortPhotos = (photos = []) => [...photos].sort((a, b) => a.position - b.position)
+
+const photosEndpoint = (propertyId) => `${PROPERTIES_ENDPOINT}/${propertyId}/photos`
+
+/** GET -> `PropertyPhotoResponse[]`: `{ id, url, photoName, position }`. */
+export const listPropertyPhotos = (propertyId, options) => get(photosEndpoint(propertyId), options)
+
+/**
+ * POST multipart con la parte `files` repetida -> 201 con las fotos creadas.
+ *
+ * El backend procesa el lote en una sola transacción: si un archivo falla no
+ * queda ninguno. Por eso el formulario sube de a uno y reintenta solo el que
+ * falló. El timeout es más largo que el de JSON porque cada archivo pesa hasta 5 MB.
+ */
+export function uploadPropertyPhotos(propertyId, files, options) {
+  const body = new FormData()
+  for (const file of files) body.append('files', file, file.name)
+  return post(photosEndpoint(propertyId), body, { timeout: 60000, ...options })
+}
+
+/** Borra la fila y el archivo en MinIO: no tiene restore. */
+export const deletePropertyPhoto = (propertyId, photoId, options) =>
+  del(`${photosEndpoint(propertyId)}/${photoId}`, options)

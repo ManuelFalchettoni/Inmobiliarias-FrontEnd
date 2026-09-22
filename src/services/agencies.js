@@ -5,7 +5,7 @@
  * (`AgencyRequest` / `AgencyResponse` / `AgencyStatus`). Cualquier cambio acá
  * debe ir acompañado del cambio equivalente en el DTO de Java.
  */
-import { get, post } from './api.js'
+import { get, pageQuery, post } from './api.js'
 
 export const AGENCIES_ENDPOINT = '/api/agencies'
 
@@ -130,5 +130,9 @@ export function toAgencyRequest(values) {
 /** POST /api/agencies -> 201 con el `AgencyResponse` creado. */
 export const createAgency = (agencyRequest, options) => post(AGENCIES_ENDPOINT, agencyRequest, options)
 
-/** GET /api/agencies */
-export const listAgencies = (options) => get(AGENCIES_ENDPOINT, options)
+/**
+ * GET /api/agencies -> `Page<AgencyResponse>`. Filtro: `active` (por defecto
+ * `true` en el backend). El `size` tope es 100 (`max-page-size`).
+ */
+export const listAgencies = (params, options) =>
+  get(`${AGENCIES_ENDPOINT}?${pageQuery(params)}`, options)

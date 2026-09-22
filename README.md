@@ -1,18 +1,40 @@
-# React + Vite
+# Inmobiliarias – FrontEnd
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Panel de gestión inmobiliaria hecho con React 19, Vite y Mantine. Consume la API de [Inmobiliarias-BackEnd](https://github.com/ManuelFalchettoni/Inmobiliarias-BackEnd) (Spring Boot).
 
-Currently, two official plugins are available:
+## Requisitos
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Node.js 20.19+ (lo exige Vite 8)
+- El backend corriendo (por defecto en `http://localhost:8080`)
 
-## React Compiler
+## Puesta en marcha
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+```bash
+npm install
+cp .env.example .env   # opcional: ajustar VITE_API_URL
+npm run dev            # http://localhost:5173
+```
 
-Note: This will impact Vite dev & build performances.
+| Script            | Descripción                  |
+| ----------------- | ---------------------------- |
+| `npm run dev`     | Servidor de desarrollo       |
+| `npm run build`   | Build de producción (`dist/`) |
+| `npm run preview` | Sirve el build localmente    |
+| `npm run lint`    | ESLint                       |
 
-## Expanding the ESLint configuration
+## Funcionalidades
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- Login y registro de usuarios
+- Propiedades: listado paginado, alta, edición y fotos
+- Alta de agencias y usuarios
+- Secciones pendientes (mapa, leads, analítica) con placeholder que indica qué falta en el backend
+
+## Estructura
+
+```
+src/
+├── context/    # Autenticación
+├── layouts/    # AuthLayout, DashboardLayout y menú (dashboard-nav.js)
+├── pages/      # auth/ y dashboard/ (property, agency, user)
+└── services/   # Cliente HTTP (api.js) y servicios por recurso
+```

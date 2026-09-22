@@ -57,6 +57,7 @@ const sections = [
         icon: IconUsers,
         endpoint: 'GET /api/users',
         description: 'Cuentas de la plataforma y su rol: USER, AGENT, AGENCY o ADMIN.',
+        action: { to: `${DASHBOARD_ROOT}/usuarios/nuevo`, label: 'Dar de alta un usuario' },
       },
       {
         path: 'archivados',
