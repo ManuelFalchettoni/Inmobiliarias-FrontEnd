@@ -19,11 +19,15 @@ const CONFLICT_MESSAGES = {
  * traen el campo en el mensaje y los 409 se reconocen por su prefijo.
  */
 export function describeUserError(error) {
+  // `instanceof` pregunta si el error es un ApiError (vino del backend) o algo
+  // inesperado del navegador. Solo los ApiError traen status y campos.
   if (!(error instanceof ApiError)) {
     return { message: 'Ocurrió un error inesperado al crear la cuenta.', fieldErrors: {} }
   }
   if (error.isConflict) {
     const field = userConflictField(error.message)
+    // `{ [field]: ... }`: la clave del objeto sale de la variable. Si field es
+    // 'email', queda { email: 'Ya existe una cuenta con este email.' }.
     return field
       ? { message: CONFLICT_MESSAGES[field], fieldErrors: { [field]: CONFLICT_MESSAGES[field] } }
       : { message: 'Alguno de los datos ya está registrado.', fieldErrors: {} }
@@ -41,8 +45,15 @@ export const userDefaultValues = {
   acceptTerms: false,
 }
 
+// Email: algo sin espacios ni @, una @, algo, un punto y al menos 2 caracteres
+// al final ("juan@mail.com"). `^` y `$` obligan a que toda la cadena coincida.
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
+/**
+ * Reglas de Mantine Form: una función por campo que recibe el valor (y todos
+ * los valores del formulario como segundo argumento) y devuelve el mensaje de
+ * error, o `null` si está bien.
+ */
 export const userValidation = {
   name: (value) => {
     const trimmed = String(value ?? '').trim()
@@ -66,8 +77,11 @@ export const userValidation = {
   phoneNumber: (value) => {
     const raw = String(value ?? '').trim()
     if (!raw) return 'Indique un teléfono de contacto.'
+    // Un + opcional al principio (`\+?`) y después solo dígitos, espacios,
+    // paréntesis y guiones.
     if (!/^\+?[\d\s()-]+$/.test(raw)) return 'Use solo números, espacios, guiones y un + inicial.'
 
+    // El largo se mide sobre el teléfono compactado, que es lo que se guarda.
     const { min, max } = USER_LIMITS.phoneNumber
     const normalized = normalizePhone(raw)
     if (normalized.length < min) return `El teléfono debe tener al menos ${min} dígitos.`
@@ -83,6 +97,8 @@ export const userValidation = {
     return null
   },
 
+  // Usa el segundo argumento (`values`) para comparar con otro campo. Esta
+  // regla existe solo en el front: el backend no recibe la repetición.
   confirmPassword: (value, values) => {
     if (!value) return 'Repita la contraseña.'
     return value === values.password ? null : 'Las contraseñas no coinciden.'
@@ -108,6 +124,7 @@ export const panelUserValidation = {
 
   cuit: (value) => {
     const digits = onlyDigits(value)
+    // Opcional: vacío es válido. Si se escribe algo, se valida completo.
     if (!digits) return null
     if (digits.length !== 11) return 'El CUIT debe tener 11 dígitos.'
     if (!isValidCuit(value)) return 'El dígito verificador no coincide. Revise el número.'

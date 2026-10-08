@@ -3,6 +3,10 @@ import { Alert, Anchor, Button, Checkbox, Group, PasswordInput, Text, TextInput 
 import { IconCircleCheck } from '@tabler/icons-react'
 import AuthLayout from '../../layouts/AuthLayout.jsx'
 
+/**
+ * Pantalla de login. Es solo visual: el backend todavía no tiene un endpoint
+ * para iniciar sesión, así que el formulario no envía nada.
+ */
 export default function Login() {
   // Lo deja el registro al terminar: `{ name, email }` de la cuenta recién creada.
   const registered = useLocation().state?.registered
@@ -15,7 +19,11 @@ export default function Login() {
         </Alert>
       )}
 
+      {/* `preventDefault` frena el envío por defecto del navegador, que
+          recargaría la página. */}
       <form onSubmit={(event) => event.preventDefault()}>
+        {/* `defaultValue`: input no controlado que arranca con el email recién
+            registrado. `?.` evita un error si no viene de un registro. */}
         <TextInput
           label="Email"
           placeholder="hola@inmobiliaria.com"
