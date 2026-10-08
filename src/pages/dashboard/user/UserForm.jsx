@@ -37,15 +37,20 @@ import {
 } from '../../auth/user-form.js'
 
 /** Desde el panel no hay términos que aceptar: los acepta quien se registra. */
+// Objeto -> lista de pares [clave, valor] -> sin 'acceptTerms' -> objeto otra vez.
 const withoutTerms = (object) =>
   Object.fromEntries(Object.entries(object).filter(([key]) => key !== 'acceptTerms'))
 
+// Reglas y valores del registro (reutilizados de user-form.js) más los campos
+// propios del panel: inmobiliaria, CUIT y matrícula. El `...` junta los dos objetos.
 const validation = { ...withoutTerms(userValidation), ...panelUserValidation }
 const defaultValues = { ...withoutTerms(userDefaultValues), ...panelUserDefaultValues }
 
+/** Alta de usuario desde el panel (`/dashboard/usuarios/nuevo`), con rol e inmobiliaria. */
 export default function UserForm() {
   const [status, setStatus] = useState({ state: 'idle' })
   const abortRef = useRef(null)
+  // Opciones del Select de inmobiliaria; `null` porque en un alta no hay valor previo.
   const agencies = useAgencyOptions(null)
 
   const form = useForm({
@@ -65,6 +70,7 @@ export default function UserForm() {
 
     try {
       const user = await createUser(toUserRequest(values), { signal: controller.signal })
+      // Vacía el formulario para cargar otro usuario y muestra el aviso con el creado.
       form.reset()
       setStatus({ state: 'created', user })
     } catch (error) {
@@ -74,10 +80,13 @@ export default function UserForm() {
       const fields = Object.keys(fieldErrors)
       if (fields.length > 0) {
         form.setErrors(fieldErrors)
+        // `preventScroll`: pone el cursor sin mover la página, que se lleva
+        // arriba (abajo) para mostrar el aviso.
         form.getInputNode(fields[0])?.focus({ preventScroll: true })
       }
       setStatus({ state: 'error', message })
     }
+    // Arriba de todo, donde aparece el aviso de éxito o de error.
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 

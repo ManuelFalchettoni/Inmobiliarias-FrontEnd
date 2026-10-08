@@ -89,6 +89,10 @@ function UserActions({ user, onAction, disabled }) {
   )
 }
 
+/**
+ * Listado de usuarios, con filtro por estado (activos / dados de baja) y por
+ * inmobiliaria. Mismo patrón que el listado de propiedades.
+ */
 export default function UserList() {
   const [searchParams, setSearchParams] = useSearchParams()
   const page = Number(searchParams.get('page') ?? 1)
@@ -116,12 +120,16 @@ export default function UserList() {
 
   const data = resultado?.data ?? null
   const error = resultado?.error ?? null
+  // Los usuarios traen solo `agencyId`: useLookup busca el nombre de cada agencia
+  // (con caché, así una agencia con 10 usuarios se pide una sola vez).
   const agencyNames = useLookup('agencies', data?.content.map((u) => u.agencyId) ?? [], findAgency)
+  // Opciones del filtro por inmobiliaria.
   const agencies = useAgencyOptions(agencyId)
 
   /** Al cambiar un filtro se vuelve a la página 1. */
   const setFiltro = (nombre, valor) => {
     const next = new URLSearchParams(searchParams)
+    // Si el Select se vacía (clearable), el filtro se saca de la dirección.
     if (valor) next.set(nombre, valor)
     else next.delete(nombre)
     next.delete('page')

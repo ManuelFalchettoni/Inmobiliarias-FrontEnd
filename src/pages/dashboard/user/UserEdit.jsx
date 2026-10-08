@@ -93,7 +93,11 @@ function PageHeader({ userId, user }) {
   )
 }
 
-/** Datos de la cuenta: nombre, email, teléfono, CUIT y matrícula. */
+/**
+ * Datos de la cuenta: nombre, email, teléfono, CUIT y matrícula. Es un
+ * formulario propio, separado del de contraseña: son dos pedidos distintos en
+ * el backend (PUT y PATCH) y cada uno se guarda y avisa por su cuenta.
+ */
 function AccountCard({ user, onSaved }) {
   const [status, setStatus] = useState({ state: 'idle' })
   const abortRef = useRef(null)
@@ -108,6 +112,7 @@ function AccountCard({ user, onSaved }) {
       license: user.license ?? '',
     },
     validateInputOnBlur: true,
+    // Reutiliza reglas sueltas del alta: solo las de los campos que se editan.
     validate: {
       name: userValidation.name,
       email: userValidation.email,
@@ -127,9 +132,13 @@ function AccountCard({ user, onSaved }) {
 
     try {
       const saved = await updateUser(user.id, toUserUpdateRequest(values), { signal: controller.signal })
+      // El nombre cambió: se borra de la caché de useLookup para que las otras
+      // pantallas (listados, CRM) muestren el nuevo.
       forgetCached('users', user.id)
+      // Marca el formulario como "sin cambios" respecto de lo guardado.
       form.resetDirty()
       setStatus({ state: 'saved' })
+      // Avisa al padre con el usuario actualizado (para el título de la página).
       onSaved(saved)
     } catch (error) {
       if (controller.signal.aborted) return
@@ -231,6 +240,7 @@ function PasswordCard({ user }) {
     initialValues: { currentPassword: '', password: '', confirmPassword: '' },
     validate: {
       currentPassword: (value) => (value ? null : 'Indique la contraseña actual.'),
+      // La regla del alta (8 a 20 caracteres) más una propia del cambio.
       password: (value, values) => {
         const error = userValidation.password(value)
         if (error) return error
@@ -242,6 +252,7 @@ function PasswordCard({ user }) {
 
   useEffect(() => () => abortRef.current?.abort(), [])
 
+  // Desestructura solo los dos campos que viajan: `confirmPassword` se queda acá.
   const handleSubmit = async ({ currentPassword, password }) => {
     abortRef.current?.abort()
     const controller = new AbortController()
@@ -250,10 +261,13 @@ function PasswordCard({ user }) {
 
     try {
       await updateUserPassword(user.id, { currentPassword, password }, { signal: controller.signal })
+      // Las contraseñas no quedan escritas en pantalla después de cambiarlas.
       form.reset()
       setStatus({ state: 'saved' })
     } catch (error) {
       if (controller.signal.aborted) return
+      // El backend responde 400 con un mensaje fijo si la actual no coincide:
+      // se reconoce ese texto y el error va al campo, no a un cartel general.
       if (error instanceof ApiError && String(error.message).toLowerCase().includes(WRONG_CURRENT_PASSWORD)) {
         form.setErrors({ currentPassword: 'La contraseña actual no es correcta.' })
         setStatus({ state: 'idle' })
@@ -351,6 +365,7 @@ export default function UserEdit() {
   }, [id])
 
   const user = result?.user
+  // useLookup con un solo id: devuelve { [id]: agencia } y se toma la de ese id.
   const agency = useLookup('agencies', [user?.agencyId], findAgency)[user?.agencyId]
 
   return (
@@ -381,6 +396,9 @@ export default function UserEdit() {
               </Text>
             </Group>
 
+            {/* El rol y la inmobiliaria se muestran arriba solo para consulta:
+                el backend no permite cambiarlos. Al guardar, AccountCard
+                devuelve el usuario actualizado y se reemplaza el de la página. */}
             <AccountCard key={user.id} user={user} onSaved={(saved) => setResult({ user: saved })} />
             <PasswordCard user={user} />
 
