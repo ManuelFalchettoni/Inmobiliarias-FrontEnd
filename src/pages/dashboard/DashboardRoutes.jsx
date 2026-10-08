@@ -3,13 +3,15 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import DashboardLayout from '../../layouts/DashboardLayout.jsx'
 import { DASHBOARD_INDEX, dashboardNav } from '../../layouts/dashboard-nav.js'
 import AgencyForm from './agency/AgencyForm.jsx'
+import PeopleForm from './people/PeopleForm.jsx'
+import PeopleList from './people/PeopleList.jsx'
 import PropertyForm from './property/PropertyForm.jsx'
 import PropertyList from './property/PropertyList.jsx'
 import UserForm from './user/UserForm.jsx'
 import PagePlaceholder from './PagePlaceholder.jsx'
 
 /** Rutas ya implementadas: quedan fuera del mapeo a PagePlaceholder. */
-const IMPLEMENTADAS = new Set(['propiedades', 'propiedades/nueva', 'agencias/nueva'])
+const IMPLEMENTADAS = new Set(['propiedades', 'propiedades/nueva', 'agencias/nueva', 'personas'])
 
 /**
  * Rutas del panel, en su propio módulo para que `App.jsx` pueda cargarlas con
@@ -27,6 +29,9 @@ export default function DashboardRoutes() {
         <Route path="propiedades/:id/editar" element={<PropertyForm />} />
         <Route path="agencias/nueva" element={<AgencyForm />} />
         <Route path="usuarios/nuevo" element={<UserForm />} />
+        <Route path="personas" element={<PeopleList />} />
+        <Route path="personas/nueva" element={<PeopleForm />} />
+        <Route path="personas/:id/editar" element={<PeopleForm />} />
 
         {/* Secciones del menú que todavía no están disponibles. */}
         {dashboardNav

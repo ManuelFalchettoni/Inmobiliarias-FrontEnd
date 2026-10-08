@@ -8,6 +8,7 @@ import {
   IconPlus,
   IconSettings,
   IconUsers,
+  IconUsersGroup,
 } from '@tabler/icons-react'
 
 export const DASHBOARD_ROOT = '/dashboard'
@@ -44,6 +45,13 @@ const sections = [
         icon: IconUsers,
         description: 'Cuentas de la plataforma y su rol: USER, AGENT, AGENCY o ADMIN.',
         action: { to: `${DASHBOARD_ROOT}/usuarios/nuevo`, label: 'Dar de alta un usuario' },
+      },
+      {
+        path: 'personas',
+        label: 'Personas',
+        icon: IconUsersGroup,
+        description: 'Clientes, interesados y propietarios de cada inmobiliaria.',
+        action: { to: `${DASHBOARD_ROOT}/personas/nueva`, label: 'Cargar una persona' },
       },
       {
         path: 'archivados',

@@ -138,3 +138,5 @@ export const createAgency = (agencyRequest, options) => post(AGENCIES_ENDPOINT, 
  */
 export const listAgencies = (params, options) =>
   get(`${AGENCIES_ENDPOINT}?${pageQuery(params)}`, options)
+
+export const findAgency = (id, options) => get(`${AGENCIES_ENDPOINT}/${id}`, options)
