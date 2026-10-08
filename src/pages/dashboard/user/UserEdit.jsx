@@ -29,7 +29,10 @@ import {
   IconUser,
 } from '@tabler/icons-react'
 
-import { forgetCached, useLookup } from '../../../hooks/useLookup.js'
+import { useQueryClient } from '@tanstack/react-query'
+
+import { useLookup } from '../../../hooks/useLookup.js'
+import { queryKeys } from '../../../queries/keys.js'
 import { ApiError } from '../../../services/api.js'
 import { findAgency, formatCuit, normalizePhone } from '../../../services/agencies.js'
 import {
@@ -99,6 +102,7 @@ function PageHeader({ userId, user }) {
  * el backend (PUT y PATCH) y cada uno se guarda y avisa por su cuenta.
  */
 function AccountCard({ user, onSaved }) {
+  const queryClient = useQueryClient()
   const [status, setStatus] = useState({ state: 'idle' })
   const abortRef = useRef(null)
 
@@ -132,9 +136,9 @@ function AccountCard({ user, onSaved }) {
 
     try {
       const saved = await updateUser(user.id, toUserUpdateRequest(values), { signal: controller.signal })
-      // El nombre cambió: se borra de la caché de useLookup para que las otras
-      // pantallas (listados, CRM) muestren el nuevo.
-      forgetCached('users', user.id)
+      // Marca como viejo todo lo de usuarios: el listado y los nombres que
+      // muestran el CRM y otras pantallas se vuelven a pedir.
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
       // Marca el formulario como "sin cambios" respecto de lo guardado.
       form.resetDirty()
       setStatus({ state: 'saved' })

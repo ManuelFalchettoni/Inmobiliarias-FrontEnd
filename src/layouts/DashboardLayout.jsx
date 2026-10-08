@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { Link, NavLink as RouterNavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   ActionIcon,
@@ -18,7 +18,10 @@ import {
 import { useDisclosure } from '@mantine/hooks'
 import { IconBell, IconHome, IconLogout, IconPlus, IconSearch } from '@tabler/icons-react'
 
-import { emptyWorkspaceTotals, getWorkspaceTotals } from '../services/workspace.js'
+import { useQueries } from '@tanstack/react-query'
+
+import { queryKeys } from '../queries/keys.js'
+import { WORKSPACE_TOTALS, fetchWorkspaceTotal } from '../services/workspace.js'
 import { DASHBOARD_INDEX, dashboardSections, getActiveNavPath } from './dashboard-nav.js'
 
 const HEADER_HEIGHT = 72
@@ -26,27 +29,25 @@ const HEADER_HEIGHT = 72
 const NUMBER_FORMAT = new Intl.NumberFormat('es-AR')
 
 /**
- * Totales reales de los listados paginados. Se piden una sola vez por montaje y
- * se abortan al desmontar; si fallan, cada valor queda en `null`.
+ * Totales reales de los listados paginados: una consulta por total.
+ *
+ * Cada una usa la clave [recurso, 'total']. Como está debajo de la clave del
+ * recurso, cuando una pantalla invalida ['properties'] (por ejemplo, al
+ * publicar una propiedad), el total del menú se actualiza solo.
+ * Si una falla, ese total queda en `null` y se muestra un guion.
  */
 function useWorkspaceTotals() {
-  // Arranca con los totales en null: el pie del menú muestra "—" hasta que llegan.
-  const [totals, setTotals] = useState(emptyWorkspaceTotals)
+  const results = useQueries({
+    queries: WORKSPACE_TOTALS.map((entry) => ({
+      queryKey: queryKeys[entry.resource].total(),
+      queryFn: ({ signal }) => fetchWorkspaceTotal(entry.endpoint, { signal }),
+    })),
+  })
 
-  // `[]` como dependencias: el efecto corre una sola vez, al montar el panel.
-  useEffect(() => {
-    const controller = new AbortController()
-
-    getWorkspaceTotals({ signal: controller.signal }).then((result) => {
-      // Si el componente ya se desmontó, no se toca el estado.
-      if (!controller.signal.aborted) setTotals(result)
-    })
-
-    // Limpieza: al desmontar se cancelan los pedidos que sigan en camino.
-    return () => controller.abort()
-  }, [])
-
-  return totals
+  return WORKSPACE_TOTALS.map((entry, index) => {
+    const total = results[index].data
+    return { ...entry, total: Number.isFinite(total) ? total : null }
+  })
 }
 
 /**

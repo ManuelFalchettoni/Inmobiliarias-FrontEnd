@@ -1,43 +1,37 @@
-import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+
+import { queryKeys } from '../queries/keys.js'
+import { selectState } from '../queries/status.js'
 import { listAgencies } from '../services/agencies.js'
+
+const PARAMS = { size: 100, sort: 'publicName,asc', active: true }
 
 /**
  * Agencias activas para un Select. El tope de página del backend es 100: si
  * algún día hay más, esto tiene que pasar a un Select con búsqueda remota.
+ *
+ * Un "hook propio": una función que empieza con `use` y usa otros hooks. Saca la
+ * lógica de carga del componente para reutilizarla en varios formularios.
  */
-// Un "hook propio": una función que empieza con `use` y usa otros hooks
-// (useState, useEffect). Saca la lógica de carga del componente para poder
-// reutilizarla en varios formularios (propiedad, usuario, persona).
 export function useAgencyOptions(currentId) {
-  // `state` va de 'loading' a 'ready' o 'error'; la pantalla muestra
-  // "Cargando agencias..." o el error según corresponda.
-  const [result, setResult] = useState({ state: 'loading', options: [] })
+  // useQuery pide los datos y los guarda en la caché con esa clave. Si otro
+  // formulario ya los pidió hace poco, los devuelve al instante.
+  const query = useQuery({
+    queryKey: queryKeys.agencies.list(PARAMS),
+    queryFn: ({ signal }) => listAgencies(PARAMS, { signal }),
+    // `select` transforma la respuesta antes de entregarla: del Page de Spring
+    // a la lista { value, label } que espera el Select (value como texto).
+    select: (page) =>
+      page.content.map((agency) => ({
+        value: String(agency.id),
+        label: `${agency.publicName} (#${agency.id})`,
+      })),
+  })
 
-  useEffect(() => {
-    const controller = new AbortController()
-
-    listAgencies({ size: 100, sort: 'publicName,asc', active: true }, { signal: controller.signal })
-      .then((page) =>
-        setResult({
-          state: 'ready',
-          // Cada agencia se convierte en { value, label }, el formato del Select.
-          // El value va como texto porque el Select de Mantine trabaja con strings.
-          options: page.content.map((agency) => ({
-            value: String(agency.id),
-            label: `${agency.publicName} (#${agency.id})`,
-          })),
-        }),
-      )
-      .catch((error) => {
-        if (!controller.signal.aborted) setResult({ state: 'error', message: error.message, options: [] })
-      })
-
-    return () => controller.abort()
-  }, [])
-
+  const loaded = query.data ?? []
   // Un registro cuya agencia ya no está activa igual tiene que mostrar su valor.
-  const missing = currentId && !result.options.some((option) => option.value === currentId)
-  const options = missing ? [{ value: currentId, label: `Agencia #${currentId}` }, ...result.options] : result.options
+  const missing = currentId && !loaded.some((option) => option.value === currentId)
+  const options = missing ? [{ value: currentId, label: `Agencia #${currentId}` }, ...loaded] : loaded
 
-  return { ...result, options }
+  return { ...selectState(query), options }
 }

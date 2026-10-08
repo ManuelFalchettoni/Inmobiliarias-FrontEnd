@@ -19,8 +19,10 @@ import {
 import { useForm } from '@mantine/form'
 import { IconAlertTriangle, IconAt, IconChevronRight, IconCircleCheck } from '@tabler/icons-react'
 
+import { useQueryClient } from '@tanstack/react-query'
+
 import { useAgencyOptions } from '../../../hooks/useAgencyOptions.js'
-import { forgetCached } from '../../../hooks/useLookup.js'
+import { queryKeys } from '../../../queries/keys.js'
 import { ApiError } from '../../../services/api.js'
 import { formatCuit, normalizePhone } from '../../../services/agencies.js'
 import {
@@ -66,6 +68,7 @@ function PageHeader({ personId }) {
  */
 function PeopleEditor({ person, returnTo }) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [status, setStatus] = useState({ state: 'idle' })
   const abortRef = useRef(null)
   const isEdit = person != null
@@ -94,8 +97,9 @@ function PeopleEditor({ person, returnTo }) {
         ? await updatePerson(person.id, request, { signal: controller.signal })
         : await createPerson(request, { signal: controller.signal })
 
-      // Que los listados y el CRM muestren el nombre nuevo (ver useLookup).
-      forgetCached('people', saved.id)
+      // Marca como viejo todo lo de personas: el listado, el detalle y los
+      // nombres que muestran el CRM y los contratos se vuelven a pedir.
+      queryClient.invalidateQueries({ queryKey: queryKeys.people.all })
 
       // Si se vino desde otra pantalla (un lead, un contrato, una propiedad), se
       // vuelve a ella con el id de la persona. Si la dirección ya tiene `?`, el

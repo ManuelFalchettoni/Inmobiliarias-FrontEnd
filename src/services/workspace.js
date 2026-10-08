@@ -8,33 +8,16 @@
 import { get } from './api.js'
 
 // Los tres totales como datos: agregar uno nuevo es sumar una fila acá.
-const TOTALS = [
-  { key: 'properties', label: 'Propiedades activas', endpoint: '/api/properties' },
-  { key: 'agencies', label: 'Agencias activas', endpoint: '/api/agencies' },
-  { key: 'users', label: 'Usuarios activos', endpoint: '/api/users' },
+// `resource` es el nombre en queryKeys: invalidar ese recurso (por ejemplo,
+// después de dar de alta una propiedad) actualiza también su total.
+export const WORKSPACE_TOTALS = [
+  { key: 'properties', resource: 'properties', label: 'Propiedades activas', endpoint: '/api/properties' },
+  { key: 'agencies', resource: 'agencies', label: 'Agencias activas', endpoint: '/api/agencies' },
+  { key: 'users', resource: 'users', label: 'Usuarios activos', endpoint: '/api/users' },
 ]
 
-/** Descriptores sin dato, para pintar el bloque antes de la primera respuesta. */
-export const emptyWorkspaceTotals = TOTALS.map((entry) => ({ ...entry, total: null }))
-
-/**
- * Nunca rechaza: si el backend no está levantado cada total queda en `null` y
- * la barra lateral muestra un guion en lugar de romper el panel entero.
- */
-export async function getWorkspaceTotals(options) {
-  // Promise.allSettled espera los tres pedidos aunque alguno falle, y devuelve
-  // el resultado de cada uno: { status: 'fulfilled', value } o { status: 'rejected', reason }.
-  // Con Promise.all, un solo fallo haría perder los tres totales.
-  // `size=1`: se pide una sola fila; solo interesa `totalElements`.
-  const results = await Promise.allSettled(
-    TOTALS.map(({ endpoint }) => get(`${endpoint}?active=true&page=0&size=1`, options)),
-  )
-
-  // Los resultados vienen en el mismo orden que TOTALS: se unen por `index`.
-  return TOTALS.map((entry, index) => {
-    const result = results[index]
-    const total = result.status === 'fulfilled' ? result.value?.totalElements : null
-
-    return { ...entry, total: Number.isFinite(total) ? total : null }
-  })
+/** Pide una sola fila (`size=1`): solo interesa `totalElements`. */
+export async function fetchWorkspaceTotal(endpoint, options) {
+  const page = await get(`${endpoint}?active=true&page=0&size=1`, options)
+  return page.totalElements
 }

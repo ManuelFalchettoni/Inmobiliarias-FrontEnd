@@ -32,7 +32,9 @@ import {
   IconWorld,
 } from '@tabler/icons-react'
 
-import { forgetCached } from '../../../hooks/useLookup.js'
+import { useQueryClient } from '@tanstack/react-query'
+
+import { queryKeys } from '../../../queries/keys.js'
 import { ApiError } from '../../../services/api.js'
 import {
   AGENCY_LIMITS,
@@ -98,6 +100,8 @@ function conflictFieldErrors(message) {
  */
 function AgencyEditor({ agency }) {
   const isEdit = agency != null
+  // Acceso a la caché de React Query, para invalidarla después de guardar.
+  const queryClient = useQueryClient()
   const [status, setStatus] = useState({ state: 'idle' })
   // Hora del último borrador guardado, para el texto de la barra inferior.
   const [draftSavedAt, setDraftSavedAt] = useState(null)
@@ -168,7 +172,9 @@ function AgencyEditor({ agency }) {
     try {
       if (isEdit) {
         const saved = await updateAgency(agency.id, toAgencyRequest(values), { signal: controller.signal })
-        forgetCached('agencies', agency.id)
+        // Marca como viejo todo lo de agencias (listado, detalle, nombres en
+        // otras pantallas): React Query lo vuelve a pedir donde se muestre.
+        queryClient.invalidateQueries({ queryKey: queryKeys.agencies.all })
         // Lo guardado pasa a ser el nuevo punto de partida del formulario.
         form.setInitialValues(toAgencyFormValues(saved))
         form.resetDirty()
@@ -178,6 +184,9 @@ function AgencyEditor({ agency }) {
       }
 
       const created = await createAgency(toAgencyRequest(values), { signal: controller.signal })
+
+      // Hay una agencia más: el listado y el total del menú se actualizan.
+      queryClient.invalidateQueries({ queryKey: queryKeys.agencies.all })
 
       // Alta exitosa: se borra el borrador y el formulario vuelve a vacío.
       clearDraft()
