@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ActionIcon,
   Alert,
@@ -41,6 +41,7 @@ import {
   updateAgency,
 } from '../../../services/agencies.js'
 import { formatDate } from '../../../services/format.js'
+import { queryKeys } from '../../../queries/keys.js'
 
 const PAGE_SIZE = 20
 
@@ -124,24 +125,28 @@ export default function AgencyList() {
   const page = Number(searchParams.get('page') ?? 1)
   const active = searchParams.get('active') ?? 'true'
 
-  // `version` vuelve a pedir la página después de una acción.
-  const [version, setVersion] = useState(0)
-  const clave = `${page}|${active}|${version}`
-  const [resultado, setResultado] = useState(null) // { clave, data, error }
-  const cargando = resultado?.clave !== clave
-  const [accion, setAccion] = useState({ state: 'idle' })
+  const queryClient = useQueryClient()
+  const params = { page: page - 1, size: PAGE_SIZE, active }
 
-  useEffect(() => {
-    const controller = new AbortController()
+  // Mismo patrón que el listado de propiedades (ver PropertyList).
+  const query = useQuery({
+    queryKey: queryKeys.agencies.list(params),
+    queryFn: ({ signal }) => listAgencies(params, { signal }),
+    placeholderData: keepPreviousData,
+  })
 
-    listAgencies({ page: page - 1, size: PAGE_SIZE, active }, { signal: controller.signal })
-      .then((data) => setResultado({ clave, data, error: null }))
-      .catch((err) => {
-        if (!controller.signal.aborted) setResultado({ clave, data: null, error: err.message })
-      })
-
-    return () => controller.abort()
-  }, [clave, page, active])
+  /**
+   * Las acciones de las filas (cambiar el estado, dar de baja, restaurar) son
+   * "mutaciones": pedidos que modifican datos. useMutation lleva su estado
+   * (`isPending`, `isError`, `error`) y `onSettled` corre al terminar, salga
+   * bien o mal: ahí se invalida la caché de agencias para mostrar el estado
+   * real del backend (también se actualiza el total del menú).
+   * `variables` guarda lo que se pasó a `mutate`, para nombrar la agencia en el error.
+   */
+  const action = useMutation({
+    mutationFn: ({ work }) => work(),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.agencies.all }),
+  })
 
   const setFiltro = (valor) => setSearchParams({ active: valor })
   const irAPagina = (nuevaPagina) => {
@@ -150,22 +155,12 @@ export default function AgencyList() {
     setSearchParams(next)
   }
 
-  // Ejecuta la acción de una fila y, salga bien o mal, recarga la página para
-  // mostrar el estado real del backend.
-  const runAction = async (agency, work) => {
-    setAccion({ state: 'saving', id: agency.id })
-    try {
-      await work()
-      setAccion({ state: 'idle' })
-    } catch (error) {
-      setAccion({ state: 'error', message: `${agency.publicName}: ${error.message}` })
-    }
-    // `(v) => v + 1` usa el valor anterior: es la forma segura de sumar sobre un estado.
-    setVersion((v) => v + 1)
-  }
+  // Lo que llaman las filas: `work` es la función que hace el pedido.
+  const runAction = (agency, work) => action.mutate({ agency, work })
 
-  const data = resultado?.data ?? null
-  const error = resultado?.error ?? null
+  const data = query.data ?? null
+  const error = query.isError ? query.error.message : null
+  const cargando = query.isPlaceholderData
   const verArchivadas = active === 'false'
 
   return (
@@ -204,20 +199,21 @@ export default function AgencyList() {
         ]}
       />
 
-      {accion.state === 'error' && (
+      {action.isError && (
         <Alert
           color="red"
           icon={<IconAlertTriangle />}
           title="No se pudo completar la acción"
           mb="md"
           withCloseButton
-          onClose={() => setAccion({ state: 'idle' })}
+          // `reset` vuelve la mutación a su estado inicial y oculta el aviso.
+          onClose={action.reset}
         >
-          {accion.message}
+          {action.variables?.agency.publicName}: {action.error.message}
         </Alert>
       )}
 
-      {cargando && resultado == null && (
+      {query.isPending && (
         <Stack gap="xs">
           {Array.from({ length: 4 }, (_, i) => (
             <Skeleton key={i} height={52} radius="md" />
@@ -318,7 +314,7 @@ export default function AgencyList() {
                         <AgencyActions
                           agency={agency}
                           onAction={runAction}
-                          disabled={accion.state === 'saving'}
+                          disabled={action.isPending}
                         />
                       </Table.Td>
                     </Table.Tr>

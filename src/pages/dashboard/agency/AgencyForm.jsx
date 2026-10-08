@@ -32,7 +32,7 @@ import {
   IconWorld,
 } from '@tabler/icons-react'
 
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { queryKeys } from '../../../queries/keys.js'
 import { ApiError } from '../../../services/api.js'
@@ -527,25 +527,22 @@ function AgencyEditor({ agency }) {
  * Es el mismo patrón Loader + Editor del formulario de propiedades.
  */
 function AgencyLoader({ id }) {
-  const [result, setResult] = useState(null)
+  const query = useQuery({
+    queryKey: queryKeys.agencies.detail(id),
+    queryFn: ({ signal }) => findAgency(id, { signal }),
+  })
 
-  useEffect(() => {
-    const controller = new AbortController()
-
-    findAgency(id, { signal: controller.signal })
-      .then((agency) => setResult({ agency }))
-      .catch((error) => {
-        if (controller.signal.aborted) return
-        setResult({
+  // Si ya hay datos se usan aunque falle una recarga en segundo plano (ver PropertyLoader).
+  const result = query.data
+    ? { agency: query.data }
+    : query.isError
+      ? {
           error:
-            error instanceof ApiError && error.status === 404
+            query.error instanceof ApiError && query.error.status === 404
               ? `No existe una agencia activa con el identificador #${id}. Si está dada de baja, restáurela desde el listado.`
-              : error.message,
-        })
-      })
-
-    return () => controller.abort()
-  }, [id])
+              : query.error.message,
+        }
+      : null
 
   if (result?.agency) return <AgencyEditor agency={result.agency} />
 
