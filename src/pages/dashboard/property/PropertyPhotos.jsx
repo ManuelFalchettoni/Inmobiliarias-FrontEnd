@@ -43,12 +43,17 @@ const DROPZONE_ERRORS = {
   'too-many-files': 'Demasiados archivos a la vez.',
 }
 
+// Etiqueta y color de cada estado de una foto pendiente.
 const QUEUE_BADGE = {
   pending: { color: 'gray', label: 'Pendiente' },
   uploading: { color: 'blue', label: 'Subiendo' },
   error: { color: 'red', label: 'Error' },
 }
 
+/**
+ * La base de cada miniatura: la imagen recortada a 4:3 (AspectRatio) y encima
+ * lo que se le pase como `children` (badges, botones, el nombre).
+ */
 function Tile({ src, alt, children }) {
   return (
     <Card withBorder radius="md" padding={0} pos="relative" style={{ overflow: 'hidden' }}>
@@ -60,7 +65,12 @@ function Tile({ src, alt, children }) {
   )
 }
 
+/**
+ * Una foto ya guardada en el backend. Borrarla pide confirmación en un globo
+ * (Popover), porque se borra de verdad: de la base y del almacenamiento MinIO.
+ */
 function StoredPhotoTile({ photo, isCover, onDelete, disabled }) {
+  // Cada miniatura tiene su propio estado: abrir el globo de una no afecta a las otras.
   const [confirming, setConfirming] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState(null)
@@ -95,6 +105,7 @@ function StoredPhotoTile({ photo, isCover, onDelete, disabled }) {
               size="sm"
               aria-label="Eliminar foto"
               disabled={disabled || deleting}
+              // Alterna: si estaba abierto lo cierra y viceversa.
               onClick={() => setConfirming((open) => !open)}
             >
               <IconTrash size={14} />
@@ -122,6 +133,10 @@ function StoredPhotoTile({ photo, isCover, onDelete, disabled }) {
   )
 }
 
+/**
+ * Una foto elegida que todavía no se subió. Se ve con la dirección temporal
+ * `item.preview` (blob:) y, si falló, el motivo aparece al pasar el mouse (Tooltip).
+ */
 function QueuedPhotoTile({ item, onRemove, disabled }) {
   const badge = QUEUE_BADGE[item.status]
 
@@ -170,9 +185,14 @@ export default function PropertyPhotos({
   onUploadNow,
   busy,
 }) {
+  // Archivos que no se agregaron y por qué, para el aviso naranja.
   const [rejections, setRejections] = useState([])
 
+  // Estos valores se calculan en cada render a partir de las props: no hace
+  // falta guardarlos en un estado aparte.
+  // Cuenta las subidas más las pendientes: el máximo de 20 es para las dos juntas.
   const used = photos.length + queue.length
+  // Math.max(0, ...) evita un número negativo.
   const remaining = Math.max(0, PHOTO_LIMITS.maxPhotos - used)
   const pendingCount = queue.filter((item) => item.status !== 'uploading').length
 
@@ -182,11 +202,15 @@ export default function PropertyPhotos({
    */
   const handleDropAny = (files, fileRejections) => {
     const accepted = []
+    // Primero los que ya rechazó la biblioteca (por tipo o tamaño), con el
+    // mensaje traducido.
     const rejected = fileRejections.map(({ file, errors }) => ({
       name: file.name,
       error: DROPZONE_ERRORS[errors[0]?.code] ?? errors[0]?.message ?? 'Archivo rechazado.',
     }))
 
+    // Después, los que pasaron el primer filtro se revisan con las reglas del
+    // backend y se aceptan hasta llenar los lugares libres.
     for (const file of files) {
       const error = validatePhotoFile(file)
       if (error) rejected.push({ name: file.name, error })
@@ -200,6 +224,8 @@ export default function PropertyPhotos({
 
   return (
     <Stack gap="md">
+      {/* Zona para arrastrar fotos. `accept` y `maxSize` son un primer filtro
+          de la biblioteca; `onDrop` vacío porque todo se maneja en onDropAny. */}
       <Dropzone
         onDrop={() => {}}
         onDropAny={handleDropAny}
@@ -208,6 +234,10 @@ export default function PropertyPhotos({
         disabled={remaining === 0 || busy}
         radius="md"
       >
+        {/* `pointerEvents: none`: el contenido no "roba" el clic, que tiene que
+            llegar a la zona para abrir el selector de archivos.
+            Accept / Reject / Idle muestran un ícono distinto según lo que se
+            esté arrastrando encima. */}
         <Group justify="center" gap="lg" mih={120} style={{ pointerEvents: 'none' }} wrap="nowrap">
           <Dropzone.Accept>
             <IconUpload size={44} color="var(--mantine-color-blue-6)" stroke={1.5} />
@@ -259,6 +289,8 @@ export default function PropertyPhotos({
         </Group>
       ) : (
         <SimpleGrid cols={{ base: 2, sm: 3, md: 4 }} spacing="sm">
+          {/* Primero las subidas (la de índice 0 es la portada) y después las
+              pendientes. El `key` es el id o la clave única, nunca la posición. */}
           {photos.map((photo, index) => (
             <StoredPhotoTile
               key={photo.id}
@@ -274,6 +306,7 @@ export default function PropertyPhotos({
         </SimpleGrid>
       )}
 
+      {/* `onUploadNow` solo llega en edición: en un alta las fotos se suben al publicar. */}
       {onUploadNow && pendingCount > 0 && (
         <Box>
           <Button

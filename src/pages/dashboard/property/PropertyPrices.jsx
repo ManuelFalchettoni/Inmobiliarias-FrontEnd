@@ -11,8 +11,12 @@ import {
  * se suscribe solo a su `enabled` para habilitar o apagar sus inputs.
  */
 function PriceRow({ form, operationType, label, disabled }) {
+  // Ruta del campo dentro del formulario: "prices.SALE" o "prices.RENT".
   const path = `prices.${operationType}`
+  // useWatchValue suscribe este componente a un solo campo: al mover el switch
+  // se redibuja esta fila, no todo el formulario.
   const enabled = form.useWatchValue(`${path}.enabled`)
+  // Los inputs se apagan si la operación no se ofrece o si se está guardando.
   const inactive = disabled || !enabled
 
   return (
@@ -24,6 +28,8 @@ function PriceRow({ form, operationType, label, disabled }) {
           disabled={disabled}
           miw={180}
           key={form.key(`${path}.enabled`)}
+          // `type: 'checkbox'`: el switch trabaja con `checked` (verdadero/falso)
+          // en vez de `value` (texto).
           {...form.getInputProps(`${path}.enabled`, { type: 'checkbox' })}
         />
         <Group gap="sm" align="flex-start" wrap="nowrap" style={{ flex: 1, minWidth: 260 }}>
@@ -42,6 +48,8 @@ function PriceRow({ form, operationType, label, disabled }) {
             min={PRICE_LIMITS.amount.min}
             max={PRICE_LIMITS.amount.max}
             decimalScale={PRICE_LIMITS.amount.decimals}
+            // Formato argentino al escribir: 95.000,50. El valor que guarda el
+            // formulario sigue siendo un número (95000.5).
             decimalSeparator=","
             thousandSeparator="."
             allowNegative={false}

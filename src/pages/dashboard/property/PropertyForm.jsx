@@ -58,9 +58,19 @@ import PropertyOwners from './PropertyOwners.jsx'
 import PropertyPrices from './PropertyPrices.jsx'
 import { propertyDefaultValues, propertyValidation } from './property-form.js'
 
+/**
+ * Alta y edición de propiedades (`/propiedades/nueva` y `/propiedades/:id/editar`).
+ * Junta en una pantalla los datos de la propiedad, sus precios, sus dueños y sus
+ * fotos; cada parte se guarda en su propio endpoint del backend.
+ */
+
 const LIST_PATH = '/dashboard/propiedades'
 const editPath = (id) => `${LIST_PATH}/${id}/editar`
 
+/**
+ * Tarjeta con ícono, título y descripción. `children` es el contenido que va
+ * entre `<SectionCard>` y `</SectionCard>`.
+ */
 function SectionCard({ icon: Icon, title, description, children }) {
   return (
     <Card withBorder radius="lg" padding="xl" shadow="xs">
@@ -82,6 +92,7 @@ function SectionCard({ icon: Icon, title, description, children }) {
   )
 }
 
+/** Encabezado con "migas de pan" (Breadcrumbs) y título según si es alta o edición. */
 function PageHeader({ propertyId }) {
   return (
     <Box bg="white" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
@@ -107,6 +118,10 @@ function PageHeader({ propertyId }) {
   )
 }
 
+/**
+ * El formulario en sí. Sirve para crear (sin `property`) y para editar (con
+ * `property`, que trae PropertyLoader más abajo).
+ */
 function PropertyEditor({ property }) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -117,15 +132,23 @@ function PropertyEditor({ property }) {
   const [createdId, setCreatedId] = useState(null)
   const propertyId = property?.id ?? createdId
 
+  // `useState(() => ...)`: la función solo corre la primera vez (inicialización
+  // perezosa), no en cada render.
+  // `photos`: las fotos ya subidas al backend.
   const [photos, setPhotos] = useState(() => sortPhotos(property?.photos))
   // Lo que hay guardado en el backend; el formulario tiene lo que se quiere guardar.
   const [prices, setPrices] = useState(() => sortPrices(property?.prices))
+  // `queue`: fotos elegidas que todavía no se subieron (con su vista previa).
   const [queue, setQueue] = useState([])
+  // Si venimos de un alta exitosa, la navegación trae `state.created` y se
+  // muestra el aviso "Propiedad publicada".
   const [status, setStatus] = useState(() =>
     location.state?.created ? { state: 'created' } : { state: 'idle' },
   )
 
   const abortRef = useRef(null)
+  // Copia de la cola en un ref: la limpieza del efecto de abajo corre al
+  // desmontar y necesita la cola ACTUAL, no la del primer render.
   const queueRef = useRef(queue)
 
   const initialValues = property ? toPropertyFormValues(property) : propertyDefaultValues
@@ -151,6 +174,7 @@ function PropertyEditor({ property }) {
     [],
   )
 
+  /** Cancela el pedido anterior (si había) y devuelve la señal del nuevo. */
   const startRequest = () => {
     abortRef.current?.abort()
     const controller = new AbortController()
@@ -161,8 +185,12 @@ function PropertyEditor({ property }) {
   const addFiles = (files) => {
     // Las URLs se crean fuera del updater: en StrictMode el updater corre dos veces.
     const items = files.map((file) => ({
+      // Identificador único que genera el navegador, para el `key` de la lista.
       key: crypto.randomUUID(),
       file,
+      // Dirección temporal "blob:..." que apunta al archivo en la memoria del
+      // navegador: permite ver la foto antes de subirla. Hay que liberarla
+      // con revokeObjectURL cuando ya no se usa.
       preview: URL.createObjectURL(file),
       status: 'pending',
       error: null,
@@ -176,6 +204,10 @@ function PropertyEditor({ property }) {
     setQueue((current) => current.filter((entry) => entry.key !== key))
   }
 
+  // Cambia algunos campos de una foto de la cola (por ejemplo su `status`).
+  // La forma con función `(current) => ...` recibe siempre la cola más reciente:
+  // dentro del bucle de subida hay varias actualizaciones seguidas y, si se
+  // usara `queue` directo, se pisarían entre sí.
   const patchQueued = (key, changes) =>
     setQueue((current) => current.map((entry) => (entry.key === key ? { ...entry, ...changes } : entry)))
 
@@ -188,11 +220,15 @@ function PropertyEditor({ property }) {
   const uploadQueue = async (id, signal) => {
     let failed = 0
 
+    // El `await` dentro del `for` hace que espere a que termine una foto antes
+    // de empezar la siguiente.
     for (const item of queue) {
       if (signal.aborted) break
       patchQueued(item.key, { status: 'uploading', error: null })
 
       try {
+        // El backend responde un array con las fotos creadas; con `[photo]` se
+        // toma la primera (y única).
         const [photo] = await uploadPropertyPhotos(id, [item.file], { signal })
         URL.revokeObjectURL(item.preview)
         setQueue((current) => current.filter((entry) => entry.key !== item.key))
@@ -212,12 +248,17 @@ function PropertyEditor({ property }) {
     setPhotos((current) => current.filter((entry) => entry.id !== photo.id))
   }
 
+  /** Desplaza la página hasta el campo con error y le pone el cursor. */
   const focusField = (path) => {
     const node = form.getInputNode(path)
     node?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     node?.focus({ preventScroll: true })
   }
 
+  /**
+   * Guardar: 1) crear o actualizar la propiedad, 2) sincronizar los precios,
+   * 3) subir las fotos pendientes. Cada paso necesita el id del primero.
+   */
   const handleSubmit = async (values) => {
     const signal = startRequest()
     const isNew = propertyId == null
@@ -225,11 +266,14 @@ function PropertyEditor({ property }) {
 
     setStatus({ state: 'saving' })
 
+    // Paso 1. Si falla, no tiene sentido seguir: se muestra el error y se corta.
     try {
       const request = toPropertyRequest(values)
       if (isNew) {
         const created = await createProperty(request, { signal })
         id = created.id
+        // Desde acá la pantalla ya conoce el id: si después falla una foto y se
+        // vuelve a guardar, se hace PUT y no se crea otra propiedad.
         setCreatedId(id)
       } else {
         await updateProperty(id, request, { signal })
@@ -262,11 +306,14 @@ function PropertyEditor({ property }) {
       pricesError = error instanceof ApiError ? error.message : 'Ocurrió un error inesperado.'
     }
 
+    // Paso 3: las fotos.
     if (queue.length > 0) setStatus({ state: 'uploading' })
     const failed = await uploadQueue(id, signal)
     if (signal.aborted) return
 
     // Alta completa: se pasa a la URL de edición para que recargar no duplique el alta.
+    // `replace: true` reemplaza "nueva" en el historial: "Atrás" no vuelve a un
+    // formulario de alta vacío.
     if (isNew && failed === 0 && !pricesError) {
       navigate(editPath(id), { replace: true, state: { created: true } })
       return
@@ -280,11 +327,13 @@ function PropertyEditor({ property }) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  // Se llama cuando la validación del formulario falla: lleva al primer error.
   const handleSubmitFail = (errors) => {
     const [firstPath] = Object.keys(errors)
     if (firstPath) focusField(firstPath)
   }
 
+  /** Botón "Subir ahora" (solo en edición): sube la cola sin guardar el resto. */
   const handleUploadNow = async () => {
     const signal = startRequest()
     setStatus({ state: 'uploading' })
@@ -294,6 +343,7 @@ function PropertyEditor({ property }) {
   }
 
   const onSubmit = (event) => form.onSubmit(handleSubmit, handleSubmitFail)(event)
+  // Mientras se guarda o se suben fotos, los botones quedan deshabilitados.
   const busy = status.state === 'saving' || status.state === 'uploading'
   const dismiss = () => setStatus({ state: 'idle' })
 
@@ -302,6 +352,8 @@ function PropertyEditor({ property }) {
       <PageHeader propertyId={propertyId} />
 
       <Container size="xl" py="xl">
+        {/* Un aviso distinto según cómo terminó el guardado. `condición && <X/>`
+            dibuja X solo si la condición se cumple. */}
         {status.state === 'created' && (
           <Alert color="teal" icon={<IconCircleCheck />} title="Propiedad publicada" mb="lg" withCloseButton onClose={dismiss}>
             La propiedad #{propertyId} se creó con {photos.length}{' '}
@@ -347,6 +399,8 @@ function PropertyEditor({ property }) {
           </Alert>
         )}
 
+        {/* Grilla de 12 columnas: en pantallas grandes (lg) el formulario ocupa 8
+            y la tarjeta lateral 4; en chicas (base) cada una ocupa las 12. */}
         <Grid gutter="xl">
           <Grid.Col span={{ base: 12, lg: 8 }}>
             <Stack gap="xl">
@@ -355,6 +409,8 @@ function PropertyEditor({ property }) {
                 title="Ubicación"
                 description="Dirección exacta del inmueble y la zona donde se publica."
               >
+                {/* `maxLength` usa el mismo límite del backend: no deja escribir de más.
+                    `withAsterisk` solo pinta el asterisco; la obligación está en las reglas. */}
                 <TextInput
                   label="Dirección"
                   placeholder="Av. Colón 1234, 5° B"
@@ -389,6 +445,8 @@ function PropertyEditor({ property }) {
                     {...form.getInputProps('city')}
                   />
                 </SimpleGrid>
+                {/* `decimalScale={7}`: hasta 7 decimales (precisión de ~1 cm).
+                    `thousandSeparator={false}` para que -32.9468 no se vea con puntos de miles. */}
                 <SimpleGrid cols={{ base: 1, sm: 2 }} mt="md">
                   <NumberInput
                     label="Latitud"
@@ -446,6 +504,8 @@ function PropertyEditor({ property }) {
                     {...form.getInputProps('occupancy')}
                   />
                 </SimpleGrid>
+                {/* `allowDecimal` y `allowNegative` en false: el input no deja escribir
+                    "3.5" ni "-1". La validación igual lo revisa por si llega otro valor. */}
                 <SimpleGrid cols={{ base: 2, sm: 4 }} mt="md">
                   <NumberInput
                     label="Superficie"
@@ -497,6 +557,8 @@ function PropertyEditor({ property }) {
                 title="Precios"
                 description="Operaciones en las que se ofrece la propiedad y su precio."
               >
+                {/* Se le pasa el `form`: las filas de precios son campos del mismo
+                    formulario (prices.SALE, prices.RENT). */}
                 <PropertyPrices form={form} disabled={busy} />
               </SectionCard>
 
@@ -509,6 +571,8 @@ function PropertyEditor({ property }) {
                     : 'Se cargan después de publicar la propiedad.'
                 }
               >
+                {/* Los dueños se vinculan a la propiedad por su id: en un alta
+                    todavía no existe, así que la sección solo funciona al editar. */}
                 {propertyId ? (
                   <PropertyOwners propertyId={propertyId} initialPeopleId={searchParams.get('peopleId')} />
                 ) : (
@@ -527,6 +591,8 @@ function PropertyEditor({ property }) {
                     : 'Se suben después de crear la propiedad. Hasta que no se publique, solo están en este navegador.'
                 }
               >
+                {/* PropertyPhotos solo dibuja: el estado (fotos y cola) vive acá y
+                    se le pasan funciones para avisar cambios ("levantar el estado"). */}
                 <PropertyPhotos
                   photos={photos}
                   queue={queue}
@@ -541,6 +607,7 @@ function PropertyEditor({ property }) {
           </Grid.Col>
 
           <Grid.Col span={{ base: 12, lg: 4 }}>
+            {/* `sticky`: en pantallas grandes la tarjeta acompaña el scroll. */}
             <Box pos={{ lg: 'sticky' }} top={24}>
               <SectionCard
                 icon={IconBuildingSkyscraper}
@@ -588,6 +655,8 @@ function PropertyEditor({ property }) {
         </Grid>
       </Container>
 
+      {/* Barra inferior pegada al fondo de la pantalla con los botones, para
+          no tener que bajar hasta el final del formulario. */}
       <Box
         pos="sticky"
         bottom={0}
@@ -597,6 +666,7 @@ function PropertyEditor({ property }) {
       >
         <Container size="xl">
           <Group justify="space-between" gap="sm" wrap="nowrap">
+            {/* Ternarios encadenados: a ? b : (c ? d : e). */}
             <Text size="xs" c="dimmed" visibleFrom="md">
               {status.state === 'uploading'
                 ? 'Subiendo fotos...'
@@ -619,8 +689,13 @@ function PropertyEditor({ property }) {
   )
 }
 
-/** Trae la propiedad antes de montar el editor, así el formulario nace con sus valores. */
+/**
+ * Trae la propiedad antes de montar el editor, así el formulario nace con sus valores.
+ * `useForm` toma los valores iniciales una sola vez: si el editor se creara
+ * vacío y la propiedad llegara después, habría que pisar los campos a mano.
+ */
 function PropertyLoader({ id }) {
+  // null = cargando; { property } = listo; { error } = falló.
   const [result, setResult] = useState(null)
 
   useEffect(() => {
@@ -641,6 +716,8 @@ function PropertyLoader({ id }) {
     return () => controller.abort()
   }, [id])
 
+  // Mientras carga: rectángulos grises animados (Skeleton) con la forma del formulario.
+  // `<>...</>` es un Fragment: agrupa sin agregar un elemento al HTML.
   if (!result) {
     return (
       <>
@@ -677,6 +754,9 @@ function PropertyLoader({ id }) {
 
 /** `/propiedades/nueva` y `/propiedades/:id/editar`. */
 export default function PropertyForm() {
+  // `id` sale de la ruta `propiedades/:id/editar`; en `propiedades/nueva` no hay.
   const { id } = useParams()
+  // `key`: si cambia, React descarta el componente y crea uno nuevo. Pasar de
+  // editar la propiedad 1 a la 2 arranca un formulario limpio.
   return id ? <PropertyLoader key={id} id={id} /> : <PropertyEditor key="new" />
 }

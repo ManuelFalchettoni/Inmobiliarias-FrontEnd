@@ -36,6 +36,10 @@ export const propertyDefaultValues = {
 /** Tope de un `Integer` de Java: más arriba Jackson responde 400 por overflow. */
 const JAVA_INT_MAX = 2147483647
 
+// Validadores reutilizables. Reciben el valor y la configuración, y devuelven el
+// mensaje de error o null. `{ required = true } = {}` es un parámetro opcional
+// con valor por defecto: si no se pasa, el campo es obligatorio.
+
 function text(value, { max }, subject, { required = true } = {}) {
   const trimmed = String(value ?? '').trim().replace(/\s+/g, ' ')
   if (!trimmed) return required ? `Indique ${subject}.` : null
@@ -46,6 +50,7 @@ function text(value, { max }, subject, { required = true } = {}) {
 function integer(value, { min = 0, max = JAVA_INT_MAX } = {}, { required = true } = {}) {
   if (value === '' || value == null) return required ? 'Campo obligatorio.' : null
   const parsed = toInt(value)
+  // Si al cortar los decimales el número cambia (3.5 -> 3), no era entero.
   if (parsed == null || parsed !== Number(value)) return 'Debe ser un número entero.'
   if (parsed < min) return `El mínimo es ${min}.`
   if (parsed > max) return `El máximo es ${max}.`
@@ -63,10 +68,14 @@ function coordinate(value, { min, max }, other, subject) {
   return null
 }
 
+// Una función que fabrica funciones: required('Elija el tipo.') devuelve una
+// regla lista para usar. Evita repetir el mismo código en cada Select.
 const required = (message) => (value) => (value ? null : message)
 
 /** El monto solo se valida si la operación está habilitada. */
 function priceAmount(value, values, path) {
+  // Mantine pasa como tercer argumento la ruta del campo: "prices.SALE.amount".
+  // El elemento [1] del split es la operación ("SALE").
   const operationType = path.split('.')[1]
   if (!values.prices[operationType].enabled) return null
   if (value === '' || value == null) return 'Indique el monto.'
@@ -84,11 +93,15 @@ const priceValidation = {
   amount: priceAmount,
 }
 
+// Las claves coinciden con los nombres de los campos del formulario. Mantine
+// valida también objetos anidados: `prices.SALE.amount` usa
+// propertyValidation.prices.SALE.amount.
 export const propertyValidation = {
   address: (value) => text(value, PROPERTY_LIMITS.address, 'la dirección'),
   province: (value) => text(value, PROPERTY_LIMITS.province, 'la provincia'),
   county: (value) => text(value, PROPERTY_LIMITS.county, 'el partido', { required: false }),
   city: (value) => text(value, PROPERTY_LIMITS.city, 'la ciudad'),
+  // Cada coordenada mira el valor de la otra (segundo argumento `values`).
   latitude: (value, values) =>
     coordinate(value, PROPERTY_LIMITS.latitude, values.longitude, 'latitud'),
   longitude: (value, values) =>

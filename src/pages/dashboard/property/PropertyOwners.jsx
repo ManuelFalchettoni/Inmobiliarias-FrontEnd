@@ -20,6 +20,11 @@ import { findPerson } from '../../../services/people.js'
 /** El backend exige un comentario en cada vínculo (`@NotBlank`). */
 const COMMENT_HINT = 'Titular, co-titular, 50%...'
 
+/**
+ * Alta de un dueño. Es un formulario chico, así que usa `useState` común
+ * (inputs "controlados": el valor vive en el estado y cada tecla lo actualiza)
+ * en vez de Mantine Form.
+ */
 function NewOwnerForm({ propertyId, initialPeopleId, onSaved }) {
   const navigate = useNavigate()
   const people = usePeopleOptions(initialPeopleId)
@@ -35,6 +40,7 @@ function NewOwnerForm({ propertyId, initialPeopleId, onSaved }) {
     setStatus({ state: 'saving' })
     try {
       await createOwner(toOwnerRequest(propertyId, { peopleId, comments }))
+      // Limpia el formulario y avisa al padre para que recargue la lista.
       setPeopleId(null)
       setComments('')
       setStatus({ state: 'idle' })
@@ -51,6 +57,8 @@ function NewOwnerForm({ propertyId, initialPeopleId, onSaved }) {
   }
 
   // El alta de persona vuelve al editor con `?peopleId=`.
+  // encodeURIComponent codifica la dirección de vuelta para que sus `/` y `?`
+  // no se confundan con los de la dirección principal.
   const back = `/dashboard/propiedades/${propertyId}/editar`
   const newPersonLink = `/dashboard/personas/nueva?volver=${encodeURIComponent(back)}`
 
@@ -99,11 +107,16 @@ function NewOwnerForm({ propertyId, initialPeopleId, onSaved }) {
   )
 }
 
-/** Comentario editable en línea. */
+/**
+ * Comentario editable en línea: muestra el texto con un lápiz y, al tocarlo,
+ * se convierte en un input. Enter guarda y Escape descarta.
+ */
 function OwnerComment({ owner, disabled, onSave }) {
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState(owner.comments ?? '')
 
+  // "Return temprano": si no se está editando, se dibuja la versión de lectura
+  // y la función termina acá.
   if (!editing) {
     return (
       <Group gap={4} wrap="nowrap">
@@ -155,8 +168,11 @@ function OwnerComment({ owner, disabled, onSave }) {
  * cambios" del formulario: cada vínculo es su propio recurso en el backend.
  */
 export default function PropertyOwners({ propertyId, initialPeopleId }) {
+  // Sumarle 1 a `version` vuelve a ejecutar el efecto de carga (está en sus
+  // dependencias): es la forma de "recargar la lista" después de un cambio.
   const [version, setVersion] = useState(0)
   const [data, setData] = useState(null) // { owners } | { error }
+  // Id del dueño que se está guardando o quitando, para atenuar su fila.
   const [busyId, setBusyId] = useState(null)
   const [error, setError] = useState(null)
 
@@ -174,6 +190,10 @@ export default function PropertyOwners({ propertyId, initialPeopleId }) {
   const people = useLookup('people', owners.map((o) => o.peopleId), findPerson)
   const reload = () => setVersion((v) => v + 1)
 
+  /**
+   * Ejecuta una acción sobre un dueño (`work` es la función que hace el pedido)
+   * con el mismo manejo para todas: marcar la fila, mostrar el error y recargar.
+   */
   const run = async (owner, work) => {
     setBusyId(owner.id)
     setError(null)
@@ -182,6 +202,7 @@ export default function PropertyOwners({ propertyId, initialPeopleId }) {
     } catch (err) {
       setError(err.message)
     } finally {
+      // `finally` corre siempre, haya salido bien o mal.
       setBusyId(null)
       reload()
     }

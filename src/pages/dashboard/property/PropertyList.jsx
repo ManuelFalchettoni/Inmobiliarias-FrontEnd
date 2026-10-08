@@ -34,9 +34,15 @@ import {
 
 const PAGE_SIZE = 20
 
+/**
+ * Listado de propiedades (`/dashboard/propiedades`). Es el modelo que siguen
+ * todos los listados del panel: página y filtros en la URL, un efecto que pide
+ * los datos y una tabla que no "parpadea" al cambiar de página.
+ */
 export default function PropertyList() {
   // La página y los filtros viven en la URL: el listado queda compartible y
   // sumar filtros nuevos no obliga a declarar más estado.
+  // useSearchParams lee y escribe la parte `?page=2&active=false` de la dirección.
   const [searchParams, setSearchParams] = useSearchParams()
   const page = Number(searchParams.get('page') ?? 1) // 1-based, como lo ve el usuario
   const active = searchParams.get('active') ?? 'true'
@@ -48,6 +54,8 @@ export default function PropertyList() {
   const [resultado, setResultado] = useState(null) // { clave, data, error }
   const cargando = resultado?.clave !== clave
 
+  // Se vuelve a ejecutar cada vez que cambia algo de la lista de dependencias
+  // (la página o el filtro), o sea, cada vez que hay que pedir otra página.
   useEffect(() => {
     const controller = new AbortController()
 
@@ -71,6 +79,7 @@ export default function PropertyList() {
 
   /** Al cambiar un filtro hay que volver a la página 1, o queda una lista vacía. */
   const setFiltro = (nombre, valor) => {
+    // Se copian los parámetros actuales para no perder los otros filtros.
     const next = new URLSearchParams(searchParams)
     next.set(nombre, valor)
     next.delete('page')
@@ -158,6 +167,7 @@ export default function PropertyList() {
 
       {data?.content.length > 0 && (
         <>
+          {/* Mientras llega la página nueva, la anterior se ve más transparente. */}
           <Card
             withBorder
             radius="lg"
@@ -165,6 +175,7 @@ export default function PropertyList() {
             shadow="xs"
             style={{ opacity: cargando ? 0.55 : 1, transition: 'opacity 150ms' }}
           >
+            {/* En pantallas angostas la tabla se desplaza de costado en vez de apretarse. */}
             <Table.ScrollContainer minWidth={860}>
               <Table verticalSpacing="sm" horizontalSpacing="md" highlightOnHover>
                 <Table.Thead>
@@ -180,10 +191,14 @@ export default function PropertyList() {
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
+                  {/* Una fila por propiedad. `key` con el id: React lo usa para
+                      saber qué fila es cuál al cambiar de página. */}
                   {data.content.map((propiedad) => (
                     <Table.Tr key={propiedad.id}>
                       <Table.Td>
                         <Group gap="sm" wrap="nowrap">
+                          {/* La portada es la foto con menor `position`. `?.` evita un
+                              error si no hay fotos; en ese caso se ve el ícono. */}
                           <Avatar
                             src={sortPhotos(propiedad.photos)[0]?.url}
                             radius="md"
