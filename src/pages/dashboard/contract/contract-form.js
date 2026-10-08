@@ -17,6 +17,8 @@ export const contractDefaultValues = {
 
 const required = (message) => (value) => (value ? null : message)
 
+// Válido si `new URL` lo puede analizar Y es http o https. Así se descartan
+// textos sueltos y esquemas peligrosos como `javascript:`.
 function isUrl(value) {
   try {
     const { protocol } = new URL(value)
@@ -46,6 +48,8 @@ export const contractValidation = {
   // Opcional en el DTO; en un alquiler conviene cargarla, pero no se exige.
   endDate: (value, values) => {
     if (values.type === 'SALE' || !value) return null
+    // Las fechas son texto "yyyy-MM-dd": compararlas con `<` da el orden
+    // cronológico, porque van de año a día.
     if (values.startDate && value < values.startDate) return 'No puede ser anterior al inicio.'
     return null
   },

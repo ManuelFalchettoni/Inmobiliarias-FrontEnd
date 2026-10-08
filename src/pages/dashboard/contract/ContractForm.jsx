@@ -69,6 +69,8 @@ function PageHeader({ contractId }) {
 }
 
 /** Fecha de fin: no aplica a una venta. Se suscribe solo a `type`. */
+// Componente aparte para que solo él se redibuje al cambiar el tipo: el resto
+// del formulario es no controlado y no se entera del cambio.
 function EndDateInput({ form }) {
   const type = form.useWatchValue('type')
   const isSale = type === 'SALE'
@@ -92,6 +94,7 @@ function ContractEditor({ contract }) {
   const abortRef = useRef(null)
   const isEdit = contract != null
 
+  // En un alta se puede llegar con `?propertyId=` para dejar la propiedad elegida.
   const initialValues = isEdit
     ? toContractFormValues(contract)
     : { ...contractDefaultValues, propertyId: searchParams.get('propertyId') }
@@ -117,6 +120,8 @@ function ContractEditor({ contract }) {
       const saved = isEdit
         ? await updateContract(contract.id, request, { signal: controller.signal })
         : await createContract(request, { signal: controller.signal })
+      // En los dos casos se va al detalle; el `state` dice qué aviso mostrar.
+      // Después de un alta, ahí se cargan las partes.
       navigate(`${LIST_PATH}/${saved.id}`, { state: { saved: isEdit ? 'updated' : 'created' } })
     } catch (error) {
       if (controller.signal.aborted) return
@@ -214,6 +219,8 @@ function ContractEditor({ contract }) {
             </Group>
 
             <SimpleGrid cols={{ base: 1, sm: 2 }}>
+              {/* `type="date"` usa el calendario del navegador. Su valor es
+                  "yyyy-MM-dd", el mismo formato del LocalDate del backend. */}
               <TextInput
                 label="Inicio"
                 type="date"

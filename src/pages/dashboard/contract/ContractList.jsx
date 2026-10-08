@@ -34,6 +34,10 @@ import { findProperty, formatPrice, formatPropertyPlace } from '../../../service
 
 const PAGE_SIZE = 20
 
+/**
+ * Listado de contratos. Muestra las partes de cada uno, pero el backend no deja
+ * pedirlas por contrato: se traen todas y se agrupan en el navegador.
+ */
 export default function ContractList() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -48,6 +52,8 @@ export default function ContractList() {
 
     // Las partes no se pueden pedir por contrato: se traen todas y se agrupan.
     Promise.all([listContracts({ page: page - 1, size: PAGE_SIZE }, options), listAllParties(options)])
+      // Se guardan agrupadas: { [contractId]: partes[] }, para buscar las de
+      // cada fila directo por su id.
       .then(([data, parties]) =>
         setResultado({ page, data, parties: groupPartiesByContract(parties), error: null }),
       )
@@ -64,6 +70,8 @@ export default function ContractList() {
   const partiesByContract = resultado?.parties ?? {}
 
   const properties = useLookup('properties', contracts.map((c) => c.propertyId), findProperty)
+  // Todos los peopleId de las partes de los contratos de esta página.
+  // `flatMap` junta las listas de cada contrato en una sola.
   const people = useLookup(
     'people',
     contracts.flatMap((c) => (partiesByContract[c.id] ?? []).map((p) => p.peopleId)),
@@ -197,6 +205,7 @@ export default function ContractList() {
                           <Badge variant="light" color={CONTRACT_STATUS_COLOR[contract.status]}>
                             {CONTRACT_STATUS_LABEL[contract.status] ?? contract.status}
                           </Badge>
+                          {/* Vigente pero con la fecha de fin ya pasada. */}
                           {isContractOverdue(contract) && (
                             <Badge variant="light" color="orange" ml={4}>
                               Vencido

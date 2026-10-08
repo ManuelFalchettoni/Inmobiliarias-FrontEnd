@@ -21,6 +21,7 @@ import { findPerson } from '../../../services/people.js'
 /** Roles que no pueden faltar para que el contrato esté completo. */
 const REQUIRED_ROLES = { RENT: ['OWNER', 'TENANT'], SALE: ['OWNER', 'BUYER'] }
 
+// Opciones de rol para el Select según el tipo de contrato (alquiler o venta).
 function roleOptionsFor(type, current) {
   const allowed = ROLES_BY_TYPE[type] ?? CONTRACT_ROLE_OPTIONS.map((o) => o.value)
   // Una parte cargada antes con otro rol igual tiene que mostrarlo.
@@ -123,6 +124,8 @@ export default function ContractParties({ contract, parties, initialPeopleId, on
     }
   }
 
+  // Roles que ya están cargados (un Set para preguntar rápido con `.has`) y,
+  // de los imprescindibles para este tipo de contrato, cuáles faltan.
   const present = new Set(parties.map((p) => p.role))
   const missing = (REQUIRED_ROLES[contract.type] ?? []).filter((role) => !present.has(role))
 
@@ -174,6 +177,8 @@ export default function ContractParties({ contract, parties, initialPeopleId, on
                   allowDeselect={false}
                   disabled={busyId != null}
                   w={140}
+                  // Cambiar el rol guarda al instante. Con `&&` encadenados, el
+                  // pedido solo se hace si hay rol y es distinto del actual.
                   onChange={(role) =>
                     role && role !== party.role && run(party, () => updateParty(party.id, partyToRequest(party, { role })))
                   }

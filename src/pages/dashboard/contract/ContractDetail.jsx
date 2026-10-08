@@ -107,6 +107,7 @@ function useContractData(id) {
   return { data, reload: () => setVersion((v) => v + 1) }
 }
 
+/** Detalle de un contrato: sus datos, sus partes y la acción de cancelarlo. */
 export default function ContractDetail() {
   const { id } = useParams()
   const location = useLocation()
@@ -138,6 +139,7 @@ export default function ContractDetail() {
     )
   }
 
+  // "Cancelar" usa el DELETE del backend, que no borra: pasa el contrato a CANCELLED.
   const cancel = async () => {
     setAction({ state: 'saving' })
     try {
@@ -273,6 +275,9 @@ export default function ContractDetail() {
                 <InfoRow label="Monto">{formatPrice(contract)}</InfoRow>
                 <InfoRow label="Vigencia">{formatContractTerm(contract)}</InfoRow>
                 <InfoRow label="Documento">
+                  {/* Solo se muestra como link si es http o https: el texto lo cargó
+                      un usuario y un `javascript:...` ejecutaría código al hacer clic.
+                      `rel="noreferrer"` evita que la pestaña nueva acceda a esta. */}
                   {/^https?:\/\//i.test(contract.documentURL ?? '') ? (
                     <Anchor href={contract.documentURL} target="_blank" rel="noreferrer" size="sm">
                       Abrir documento <IconExternalLink size={12} style={{ verticalAlign: 'middle' }} />
