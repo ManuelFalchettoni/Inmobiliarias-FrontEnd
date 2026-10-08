@@ -33,7 +33,7 @@ import {
 } from '@tabler/icons-react'
 
 import { ApiError } from '../../../services/api.js'
-import { listAgencies } from '../../../services/agencies.js'
+import { useAgencyOptions } from '../../../hooks/useAgencyOptions.js'
 import {
   PHOTO_LIMITS,
   PROPERTY_CONDITION_OPTIONS,
@@ -99,40 +99,6 @@ function PageHeader({ propertyId }) {
       </Container>
     </Box>
   )
-}
-
-/**
- * Agencias activas para el Select. El tope de página del backend es 100: si
- * algún día hay más, esto tiene que pasar a un Select con búsqueda remota.
- */
-function useAgencyOptions(currentId) {
-  const [result, setResult] = useState({ state: 'loading', options: [] })
-
-  useEffect(() => {
-    const controller = new AbortController()
-
-    listAgencies({ size: 100, sort: 'publicName,asc', active: true }, { signal: controller.signal })
-      .then((page) =>
-        setResult({
-          state: 'ready',
-          options: page.content.map((agency) => ({
-            value: String(agency.id),
-            label: `${agency.publicName} (#${agency.id})`,
-          })),
-        }),
-      )
-      .catch((error) => {
-        if (!controller.signal.aborted) setResult({ state: 'error', message: error.message, options: [] })
-      })
-
-    return () => controller.abort()
-  }, [])
-
-  // Una propiedad cuya agencia ya no está activa igual tiene que mostrar su valor.
-  const missing = currentId && !result.options.some((option) => option.value === currentId)
-  const options = missing ? [{ value: currentId, label: `Agencia #${currentId}` }, ...result.options] : result.options
-
-  return { ...result, options }
 }
 
 function PropertyEditor({ property }) {

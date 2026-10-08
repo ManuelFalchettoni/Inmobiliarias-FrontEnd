@@ -2,14 +2,14 @@
  * API de usuarios y normalización de datos.
  *
  * Replica `UserRequest`, `UserUpdateRequest`, `UserPasswordRequest`,
- * `UserResponse` y `enums/user/UserRol` del backend. Cambiar algo acá exige el
+ * `RegisterRequest`, `UserResponse` y `enums/user/UserRol` del backend. Cambiar algo acá exige el
  * cambio equivalente en Java.
  *
  * Todavía no hay endpoint de login: el backend guarda el hash de BCrypt pero no
  * expone nada para validar credenciales ni emite tokens.
  */
 import { del, get, pageQuery, patch, post, put } from './api.js'
-import { normalizePhone } from './agencies.js'
+import { formatCuit, normalizePhone, onlyDigits } from './agencies.js'
 
 export const USERS_ENDPOINT = '/api/users'
 export const REGISTER_ENDPOINT = '/api/auth/register'
@@ -40,6 +40,8 @@ export const USER_LIMITS = {
   email: { max: 100 },
   password: { min: 8, max: 20 },
   phoneNumber: { min: 8, max: 15 },
+  cuit: { min: 11, max: 13 },
+  license: { max: 20 },
 }
 
 /**
@@ -56,7 +58,11 @@ export function userConflictField(message) {
 const cleanName = (value) => String(value ?? '').trim().replace(/\s+/g, ' ')
 const cleanEmail = (value) => String(value ?? '').trim().toLowerCase()
 
-/** Valores del formulario -> `UserRequest` (exactamente estos 5 campos). */
+/** CUIT y matrícula son opcionales: sin valor viajan como null en lugar de "". */
+const optionalCuit = (value) => (onlyDigits(value) ? formatCuit(value) : null)
+const optionalText = (value) => cleanName(value) || null
+
+/** Valores del formulario -> `UserRequest`. */
 export function toUserRequest(values) {
   return {
     name: cleanName(values.name),
@@ -64,15 +70,21 @@ export function toUserRequest(values) {
     password: values.password,
     phoneNumber: normalizePhone(values.phoneNumber),
     rol: values.rol,
+    // El Select de Mantine entrega strings; el backend espera un Long.
+    agencyId: Number(values.agencyId),
+    cuit: optionalCuit(values.cuit),
+    license: optionalText(values.license),
   }
 }
 
-/** Valores del formulario -> `UserUpdateRequest`: sin contraseña ni rol. */
+/** Valores del formulario -> `UserUpdateRequest`: sin contraseña, rol ni agencia. */
 export function toUserUpdateRequest(values) {
   return {
     name: cleanName(values.name),
     email: cleanEmail(values.email),
     phoneNumber: normalizePhone(values.phoneNumber),
+    cuit: optionalCuit(values.cuit),
+    license: optionalText(values.license),
   }
 }
 
@@ -95,7 +107,7 @@ export const registerUser = (request, options) => post(REGISTER_ENDPOINT, reques
 /** POST /api/users -> 201 con el `UserResponse` creado. */
 export const createUser = (request, options) => post(USERS_ENDPOINT, request, options)
 
-/** GET /api/users -> `Page<UserResponse>`. Filtro: `active`. */
+/** GET /api/users -> `Page<UserResponse>`. Filtros: `active` y `agencyId`. */
 export const listUsers = (params, options) => get(`${USERS_ENDPOINT}?${pageQuery(params)}`, options)
 
 export const findUser = (id, options) => get(`${USERS_ENDPOINT}/${id}`, options)

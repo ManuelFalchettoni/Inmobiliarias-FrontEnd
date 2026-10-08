@@ -6,7 +6,7 @@
  * el `UserRequest` del backend para que el error aparezca antes del 400.
  */
 import { ApiError } from '../../services/api.js'
-import { normalizePhone } from '../../services/agencies.js'
+import { isValidCuit, normalizePhone, onlyDigits } from '../../services/agencies.js'
 import { PUBLIC_SIGNUP_ROL, USER_LIMITS, userConflictField } from '../../services/users.js'
 
 const CONFLICT_MESSAGES = {
@@ -91,4 +91,33 @@ export const userValidation = {
   rol: (value) => (value ? null : 'Elija un rol.'),
 
   acceptTerms: (value) => (value ? null : 'Debe aceptar los términos y condiciones.'),
+}
+
+/**
+ * Campos que solo pide el alta desde el panel: el registro público no tiene
+ * inmobiliaria. CUIT y matrícula son opcionales, pensados para los agentes.
+ */
+export const panelUserDefaultValues = {
+  agencyId: null,
+  cuit: '',
+  license: '',
+}
+
+export const panelUserValidation = {
+  agencyId: (value) => (value ? null : 'Elija la inmobiliaria del usuario.'),
+
+  cuit: (value) => {
+    const digits = onlyDigits(value)
+    if (!digits) return null
+    if (digits.length !== 11) return 'El CUIT debe tener 11 dígitos.'
+    if (!isValidCuit(value)) return 'El dígito verificador no coincide. Revise el número.'
+    return null
+  },
+
+  license: (value) => {
+    const { max } = USER_LIMITS.license
+    return String(value ?? '').trim().length > max
+      ? `La matrícula no puede superar los ${max} caracteres.`
+      : null
+  },
 }

@@ -19,7 +19,8 @@ import {
 import { useForm } from '@mantine/form'
 import { IconAlertTriangle, IconAt, IconChevronRight, IconCircleCheck } from '@tabler/icons-react'
 
-import { normalizePhone } from '../../../services/agencies.js'
+import { useAgencyOptions } from '../../../hooks/useAgencyOptions.js'
+import { formatCuit, normalizePhone } from '../../../services/agencies.js'
 import {
   USER_LIMITS,
   USER_ROL_LABEL,
@@ -27,18 +28,25 @@ import {
   createUser,
   toUserRequest,
 } from '../../../services/users.js'
-import { describeUserError, userDefaultValues, userValidation } from '../../auth/user-form.js'
+import {
+  describeUserError,
+  panelUserDefaultValues,
+  panelUserValidation,
+  userDefaultValues,
+  userValidation,
+} from '../../auth/user-form.js'
 
 /** Desde el panel no hay términos que aceptar: los acepta quien se registra. */
 const withoutTerms = (object) =>
   Object.fromEntries(Object.entries(object).filter(([key]) => key !== 'acceptTerms'))
 
-const validation = withoutTerms(userValidation)
-const defaultValues = withoutTerms(userDefaultValues)
+const validation = { ...withoutTerms(userValidation), ...panelUserValidation }
+const defaultValues = { ...withoutTerms(userDefaultValues), ...panelUserDefaultValues }
 
 export default function UserForm() {
   const [status, setStatus] = useState({ state: 'idle' })
   const abortRef = useRef(null)
+  const agencies = useAgencyOptions(null)
 
   const form = useForm({
     mode: 'uncontrolled',
@@ -92,8 +100,8 @@ export default function UserForm() {
             Alta de usuario
           </Title>
           <Text c="dimmed">
-            Cree una cuenta con su rol. La contraseña se guarda hasheada y el usuario puede
-            cambiarla después.
+            Cree una cuenta con su rol y su inmobiliaria. Ninguno de los dos se puede cambiar
+            después. La contraseña se guarda hasheada y el usuario puede cambiarla.
           </Text>
         </Container>
       </Box>
@@ -147,6 +155,23 @@ export default function UserForm() {
               key={form.key('rol')}
               {...form.getInputProps('rol')}
             />
+            <Select
+              label="Inmobiliaria"
+              placeholder={agencies.state === 'loading' ? 'Cargando inmobiliarias...' : 'Elegir'}
+              description={
+                agencies.state === 'error'
+                  ? `No se pudieron cargar: ${agencies.message}`
+                  : 'La agencia a la que pertenece la cuenta'
+              }
+              data={agencies.options}
+              searchable
+              nothingFoundMessage="Sin coincidencias"
+              disabled={agencies.state === 'loading'}
+              withAsterisk
+              style={{ gridColumn: '1 / -1' }}
+              key={form.key('agencyId')}
+              {...form.getInputProps('agencyId')}
+            />
             <TextInput
               label="Email"
               placeholder="maria@inmobiliaria.com"
@@ -169,6 +194,27 @@ export default function UserForm() {
                 form.setFieldValue('phoneNumber', normalizePhone(event.currentTarget.value))
                 form.validateField('phoneNumber')
               }}
+            />
+            <TextInput
+              label="CUIT"
+              placeholder="20-30123456-7"
+              description="Opcional; para agentes"
+              inputMode="numeric"
+              maxLength={USER_LIMITS.cuit.max}
+              key={form.key('cuit')}
+              {...form.getInputProps('cuit')}
+              onBlur={(event) => {
+                form.setFieldValue('cuit', formatCuit(event.currentTarget.value))
+                form.validateField('cuit')
+              }}
+            />
+            <TextInput
+              label="Matrícula"
+              placeholder="CMCPSI 1234"
+              description="Opcional; para agentes"
+              maxLength={USER_LIMITS.license.max}
+              key={form.key('license')}
+              {...form.getInputProps('license')}
             />
             <PasswordInput
               label="Contraseña"
