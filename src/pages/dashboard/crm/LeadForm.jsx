@@ -17,6 +17,9 @@ import {
 import { useForm } from '@mantine/form'
 import { IconAlertTriangle, IconChevronRight, IconCircleCheck, IconUserPlus } from '@tabler/icons-react'
 
+import { useQueryClient } from '@tanstack/react-query'
+
+import { queryKeys } from '../../../queries/keys.js'
 import { usePeopleOptions, usePropertyOptions, useUserOptions } from '../../../hooks/useSelectOptions.js'
 import { ApiError } from '../../../services/api.js'
 import { CRM_STAGE_OPTIONS, createLead, toLeadRequest } from '../../../services/crm.js'
@@ -45,6 +48,7 @@ function optionProps(source, noun) {
 /** Alta de lead (`/dashboard/consultas/nuevo`): propiedad, interesado, agente y etapa. */
 export default function LeadForm() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [searchParams] = useSearchParams()
   const [status, setStatus] = useState({ state: 'idle' })
   const abortRef = useRef(null)
@@ -83,6 +87,8 @@ export default function LeadForm() {
 
     try {
       const lead = await createLead(toLeadRequest(values), { signal: controller.signal })
+      // Hay un lead más: el listado de leads se vuelve a pedir.
+      queryClient.invalidateQueries({ queryKey: queryKeys.leads.all })
       // Al detalle del lead nuevo, con el aviso "Lead creado".
       navigate(`${LIST_PATH}/${lead.id}`, { state: { created: true } })
     } catch (error) {

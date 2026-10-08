@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
+import { useQueries, useQueryClient } from '@tanstack/react-query'
 import {
   Alert,
   Anchor,
@@ -31,6 +32,7 @@ import {
 
 import { useLookup } from '../../../hooks/useLookup.js'
 import { useUserOptions } from '../../../hooks/useSelectOptions.js'
+import { leadChildKey, queryKeys } from '../../../queries/keys.js'
 import { ApiError } from '../../../services/api.js'
 import {
   CRM_STAGE_COLOR,
@@ -85,37 +87,43 @@ function InfoRow({ label, children }) {
   )
 }
 
-/** Trae el lead y todo lo que cuelga de él. `version` fuerza la recarga. */
+/**
+ * Trae el lead y todo lo que cuelga de él: cuatro consultas en paralelo.
+ * Las claves de historial, ofertas y alertas están debajo de la del lead
+ * ([leads, detail, 7, offers]), así que invalidar [leads] las refresca
+ * a todas juntas, y también el listado de leads.
+ */
 function useLeadData(id) {
-  const [version, setVersion] = useState(0)
-  const [data, setData] = useState(null) // { lead, history, offers, alerts } | { error }
+  const queryClient = useQueryClient()
+  const [lead, history, offers, alerts] = useQueries({
+    queries: [
+      { queryKey: queryKeys.leads.detail(id), queryFn: ({ signal }) => findLead(id, { signal }) },
+      { queryKey: leadChildKey(id, 'history'), queryFn: ({ signal }) => listHistory(id, { signal }) },
+      { queryKey: leadChildKey(id, 'offers'), queryFn: ({ signal }) => listOffers(id, { signal }) },
+      { queryKey: leadChildKey(id, 'alerts'), queryFn: ({ signal }) => listAlerts(id, { signal }) },
+    ],
+  })
 
-  useEffect(() => {
-    const controller = new AbortController()
-    const options = { signal: controller.signal }
+  const all = [lead, history, offers, alerts]
+  const failed = all.find((query) => query.error)
+  const errorMessage = failed
+    ? failed.error instanceof ApiError && failed.error.status === 404
+      ? `No existe un lead con el identificador #${id}.`
+      : failed.error.message
+    : null
 
-    // Los cuatro pedidos salen a la vez (en paralelo) y Promise.all espera a
-    // todos. El resultado llega como array en el mismo orden, y se desestructura
-    // en cuatro variables. Si uno falla, falla todo y se va al catch.
-    Promise.all([findLead(id, options), listHistory(id, options), listOffers(id, options), listAlerts(id, options)])
-      .then(([lead, history, offers, alerts]) => setData({ lead, history, offers, alerts }))
-      .catch((error) => {
-        if (controller.signal.aborted) return
-        // Se conserva lo que ya había (`...current`): si falla una recarga, la
-        // pantalla sigue mostrando los datos anteriores con un aviso.
-        setData((current) => ({
-          ...current,
-          error:
-            error instanceof ApiError && error.status === 404
-              ? `No existe un lead con el identificador #${id}.`
-              : error.message,
-        }))
-      })
+  // Con las cuatro respuestas se arma el objeto de la pantalla. Si falla una
+  // recarga se siguen mostrando los datos anteriores junto con el aviso.
+  let data = null
+  if (all.every((query) => query.data)) {
+    data = { lead: lead.data, history: history.data, offers: offers.data, alerts: alerts.data, error: errorMessage }
+  } else if (errorMessage) {
+    data = { error: errorMessage }
+  }
 
-    return () => controller.abort()
-  }, [id, version])
-
-  const reload = () => setVersion((v) => v + 1)
+  // Un cambio en el lead (etapa, oferta, evento) puede afectar al listado
+  // también: se invalida todo lo de leads.
+  const reload = () => queryClient.invalidateQueries({ queryKey: queryKeys.leads.all })
   return { data, reload }
 }
 

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
   Alert,
   Badge,
@@ -20,6 +20,7 @@ import { IconAlertTriangle, IconChevronRight, IconMessages, IconPlus } from '@ta
 
 import { useLookup } from '../../../hooks/useLookup.js'
 import { useUserOptions } from '../../../hooks/useSelectOptions.js'
+import { queryKeys } from '../../../queries/keys.js'
 import { CRM_STAGE_COLOR, CRM_STAGE_LABEL, listLeads } from '../../../services/crm.js'
 import { formatDate } from '../../../services/format.js'
 import { findPerson } from '../../../services/people.js'
@@ -38,24 +39,18 @@ export default function LeadList() {
   const page = Number(searchParams.get('page') ?? 1)
   const userId = searchParams.get('userId') ?? null
 
-  const clave = `${page}|${userId}`
-  const [resultado, setResultado] = useState(null) // { clave, data, error }
-  const cargando = resultado?.clave !== clave
+  const params = { page: page - 1, size: PAGE_SIZE, userId }
 
-  useEffect(() => {
-    const controller = new AbortController()
+  // Mismo patrón que el listado de propiedades (ver PropertyList).
+  const query = useQuery({
+    queryKey: queryKeys.leads.list(params),
+    queryFn: ({ signal }) => listLeads(params, { signal }),
+    placeholderData: keepPreviousData,
+  })
 
-    listLeads({ page: page - 1, size: PAGE_SIZE, userId }, { signal: controller.signal })
-      .then((data) => setResultado({ clave, data, error: null }))
-      .catch((err) => {
-        if (!controller.signal.aborted) setResultado({ clave, data: null, error: err.message })
-      })
-
-    return () => controller.abort()
-  }, [clave, page, userId])
-
-  const data = resultado?.data ?? null
-  const error = resultado?.error ?? null
+  const data = query.data ?? null
+  const error = query.isError ? query.error.message : null
+  const cargando = query.isPlaceholderData
   const leads = data?.content ?? []
 
   // Tres búsquedas con caché: si varios leads son de la misma persona o del
@@ -115,7 +110,7 @@ export default function LeadList() {
         nothingFoundMessage="Sin coincidencias"
       />
 
-      {cargando && resultado == null && (
+      {query.isPending && (
         <Stack gap="xs">
           {Array.from({ length: 6 }, (_, i) => (
             <Skeleton key={i} height={52} radius="md" />
