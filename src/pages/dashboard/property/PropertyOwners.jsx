@@ -1,16 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ActionIcon, Button, Group, Paper, Select, Skeleton, Stack, Text, TextInput } from '@mantine/core'
 import { IconCheck, IconPencil, IconTrash, IconUserPlus, IconX } from '@tabler/icons-react'
 
 import ConfirmAction from '../../../components/ConfirmAction.jsx'
 import { useLookup } from '../../../hooks/useLookup.js'
 import { usePeopleOptions } from '../../../hooks/useSelectOptions.js'
+import { queryKeys } from '../../../queries/keys.js'
 import { ApiError } from '../../../services/api.js'
 import {
   createOwner,
   deleteOwner,
-  listPropertyOwners,
+  listAllOwners,
   ownerToRequest,
   toOwnerRequest,
   updateOwner,
@@ -168,27 +170,32 @@ function OwnerComment({ owner, disabled, onSave }) {
  * cambios" del formulario: cada vínculo es su propio recurso en el backend.
  */
 export default function PropertyOwners({ propertyId, initialPeopleId }) {
-  // Sumarle 1 a `version` vuelve a ejecutar el efecto de carga (está en sus
-  // dependencias): es la forma de "recargar la lista" después de un cambio.
-  const [version, setVersion] = useState(0)
-  const [data, setData] = useState(null) // { owners } | { error }
+  const queryClient = useQueryClient()
   // Id del dueño que se está guardando o quitando, para atenuar su fila.
   const [busyId, setBusyId] = useState(null)
   const [error, setError] = useState(null)
 
-  useEffect(() => {
-    const controller = new AbortController()
-    listPropertyOwners(propertyId, { signal: controller.signal })
-      .then((owners) => setData({ owners }))
-      .catch((err) => {
-        if (!controller.signal.aborted) setData((current) => ({ ...current, error: err.message }))
-      })
-    return () => controller.abort()
-  }, [propertyId, version])
+  // El backend no filtra por propiedad: se traen todos los vínculos con una
+  // sola clave (compartida por todas las propiedades) y `select` se queda con
+  // los de esta. Pasar de una propiedad a otra no vuelve a pedir la lista.
+  const query = useQuery({
+    queryKey: queryKeys.propertyOwners.all,
+    queryFn: ({ signal }) => listAllOwners({ signal }),
+    select: (owners) => owners.filter((owner) => owner.propertyId === Number(propertyId)),
+  })
+
+  // { owners, error } con lo que haya: si falla una recarga se siguen mostrando
+  // los dueños anteriores junto con el aviso.
+  const data = query.data
+    ? { owners: query.data, error: query.isError ? query.error.message : null }
+    : query.isError
+      ? { error: query.error.message }
+      : null
 
   const owners = data?.owners ?? []
   const people = useLookup('people', owners.map((o) => o.peopleId), findPerson)
-  const reload = () => setVersion((v) => v + 1)
+  // Después de un cambio, la lista de dueños se marca como vieja y se vuelve a pedir.
+  const reload = () => queryClient.invalidateQueries({ queryKey: queryKeys.propertyOwners.all })
 
   /**
    * Ejecuta una acción sobre un dueño (`work` es la función que hace el pedido)

@@ -34,8 +34,11 @@ import {
   IconUsers,
 } from '@tabler/icons-react'
 
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+
 import { ApiError } from '../../../services/api.js'
 import { useAgencyOptions } from '../../../hooks/useAgencyOptions.js'
+import { queryKeys } from '../../../queries/keys.js'
 import {
   PHOTO_LIMITS,
   PROPERTY_CONDITION_OPTIONS,
@@ -127,6 +130,11 @@ function PropertyEditor({ property }) {
   const location = useLocation()
   // Al volver del alta de una persona llega `?peopleId=` para elegirla como dueña.
   const [searchParams] = useSearchParams()
+  // Acceso a la caché de React Query, para invalidarla después de guardar.
+  const queryClient = useQueryClient()
+  // Marca como viejo todo lo de propiedades (listados, detalle, total del menú):
+  // React Query vuelve a pedir lo que se esté mostrando.
+  const invalidateProperties = () => queryClient.invalidateQueries({ queryKey: queryKeys.properties.all })
 
   // Con `property` se edita; sin ella, el id aparece cuando el alta responde.
   const [createdId, setCreatedId] = useState(null)
@@ -246,6 +254,8 @@ function PropertyEditor({ property }) {
   const deletePhoto = async (photo) => {
     await deletePropertyPhoto(propertyId, photo.id)
     setPhotos((current) => current.filter((entry) => entry.id !== photo.id))
+    // Puede haber cambiado la portada que muestra el listado.
+    invalidateProperties()
   }
 
   /** Desplaza la página hasta el campo con error y le pone el cursor. */
@@ -311,6 +321,10 @@ function PropertyEditor({ property }) {
     const failed = await uploadQueue(id, signal)
     if (signal.aborted) return
 
+    // Cambiaron datos, precios o fotos: el listado (portada, precio) y el total
+    // del menú tienen que volver a pedirse.
+    invalidateProperties()
+
     // Alta completa: se pasa a la URL de edición para que recargar no duplique el alta.
     // `replace: true` reemplaza "nueva" en el historial: "Atrás" no vuelve a un
     // formulario de alta vacío.
@@ -339,6 +353,7 @@ function PropertyEditor({ property }) {
     setStatus({ state: 'uploading' })
     const failed = await uploadQueue(propertyId, signal)
     if (signal.aborted) return
+    invalidateProperties()
     setStatus(failed > 0 ? { state: 'partial', failed, isNew: false, id: propertyId } : { state: 'photos-saved' })
   }
 
@@ -695,26 +710,26 @@ function PropertyEditor({ property }) {
  * vacío y la propiedad llegara después, habría que pisar los campos a mano.
  */
 function PropertyLoader({ id }) {
+  // Misma clave que usan los listados y useLookup: si la propiedad ya estaba en
+  // la caché, el editor aparece al instante.
+  const query = useQuery({
+    queryKey: queryKeys.properties.detail(id),
+    queryFn: ({ signal }) => findProperty(id, { signal }),
+  })
+
   // null = cargando; { property } = listo; { error } = falló.
-  const [result, setResult] = useState(null)
-
-  useEffect(() => {
-    const controller = new AbortController()
-
-    findProperty(id, { signal: controller.signal })
-      .then((property) => setResult({ property }))
-      .catch((error) => {
-        if (controller.signal.aborted) return
-        setResult({
+  // Si ya hay datos se usan aunque falle una recarga en segundo plano: así un
+  // corte momentáneo no reemplaza el formulario por un cartel de error.
+  const result = query.data
+    ? { property: query.data }
+    : query.isError
+      ? {
           error:
-            error instanceof ApiError && error.status === 404
+            query.error instanceof ApiError && query.error.status === 404
               ? `No existe una propiedad activa con el identificador #${id}.`
-              : error.message,
-        })
-      })
-
-    return () => controller.abort()
-  }, [id])
+              : query.error.message,
+        }
+      : null
 
   // Mientras carga: rectángulos grises animados (Skeleton) con la forma del formulario.
   // `<>...</>` es un Fragment: agrupa sin agregar un elemento al HTML.

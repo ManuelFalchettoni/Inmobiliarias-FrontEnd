@@ -41,11 +41,6 @@ export async function listAllOwners(options) {
   }
 }
 
-// `Number(propertyId)`: el id puede llegar como texto (de la dirección) y en la
-// respuesta es número; con `===`, "2" y 2 no son iguales.
-export const listPropertyOwners = async (propertyId, options) =>
-  (await listAllOwners(options)).filter((owner) => owner.propertyId === Number(propertyId))
-
 /** POST -> 201. 404 si la propiedad o la persona no existen; 409 si la persona ya es dueña. */
 export const createOwner = (request, options) => post(OWNERS_ENDPOINT, request, options)
 

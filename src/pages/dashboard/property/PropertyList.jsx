@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
   ActionIcon,
   Alert,
@@ -20,6 +20,7 @@ import {
 } from '@mantine/core'
 import { IconAlertTriangle, IconBuildingEstate, IconPencil, IconPlus } from '@tabler/icons-react'
 
+import { queryKeys } from '../../../queries/keys.js'
 import {
   OPERATION_TYPE_LABEL,
   PROPERTY_CONDITION_COLOR,
@@ -36,8 +37,8 @@ const PAGE_SIZE = 20
 
 /**
  * Listado de propiedades (`/dashboard/propiedades`). Es el modelo que siguen
- * todos los listados del panel: página y filtros en la URL, un efecto que pide
- * los datos y una tabla que no "parpadea" al cambiar de página.
+ * todos los listados del panel: página y filtros en la URL, un `useQuery` que
+ * pide los datos y una tabla que no "parpadea" al cambiar de página.
  */
 export default function PropertyList() {
   // La página y los filtros viven en la URL: el listado queda compartible y
@@ -47,35 +48,19 @@ export default function PropertyList() {
   const page = Number(searchParams.get('page') ?? 1) // 1-based, como lo ve el usuario
   const active = searchParams.get('active') ?? 'true'
 
-  // Identifica el pedido en curso. El resultado guarda la clave con la que se
-  // trajo, así "estoy cargando" se deduce comparando: no hace falta un estado
-  // aparte ni un setState dentro del efecto.
-  const clave = `${page}|${active}`
-  const [resultado, setResultado] = useState(null) // { clave, data, error }
-  const cargando = resultado?.clave !== clave
+  const params = { page: page - 1, size: PAGE_SIZE, active } // Spring cuenta desde 0
 
-  // Se vuelve a ejecutar cada vez que cambia algo de la lista de dependencias
-  // (la página o el filtro), o sea, cada vez que hay que pedir otra página.
-  useEffect(() => {
-    const controller = new AbortController()
-
-    listProperties(
-      { page: page - 1, size: PAGE_SIZE, active }, // Spring cuenta desde 0
-      { signal: controller.signal },
-    )
-      .then((pagina) => {
-        if (controller.signal.aborted) return
-        setResultado({ clave, data: pagina, error: null })
-      })
-      .catch((err) => {
-        if (controller.signal.aborted) return
-        setResultado({ clave, data: null, error: err.message })
-      })
-
-    // Cancela el pedido anterior antes de lanzar el nuevo, para que una
-    // respuesta lenta no pise a una más reciente.
-    return () => controller.abort()
-  }, [clave, page, active])
+  // useQuery pide la página y la guarda en la caché con la clave
+  // ['properties', 'list', params]. Cuando cambian la página o el filtro, cambia
+  // la clave y React Query pide la nueva; si ya la tenía (volver a la página 1),
+  // la muestra al instante. También cancela el pedido viejo con el `signal`.
+  const query = useQuery({
+    queryKey: queryKeys.properties.list(params),
+    queryFn: ({ signal }) => listProperties(params, { signal }),
+    // Mientras llega la página nueva se sigue mostrando la anterior: si no, la
+    // tabla y el paginador desaparecen en cada clic y el usuario pierde el lugar.
+    placeholderData: keepPreviousData,
+  })
 
   /** Al cambiar un filtro hay que volver a la página 1, o queda una lista vacía. */
   const setFiltro = (nombre, valor) => {
@@ -92,11 +77,12 @@ export default function PropertyList() {
     setSearchParams(next)
   }
 
-  // Se sigue mostrando el resultado anterior mientras llega el nuevo: si no, la
-  // tabla y el paginador desaparecen en cada clic y el usuario pierde el lugar.
-  const data = resultado?.data ?? null
-  const error = resultado?.error ?? null
-  const primeraCarga = cargando && resultado == null
+  const data = query.data ?? null
+  const error = query.isError ? query.error.message : null
+  // `isPending`: todavía no hay ningún dato (primera carga).
+  const primeraCarga = query.isPending
+  // `isPlaceholderData`: se está mostrando la página anterior mientras llega la nueva.
+  const cargando = query.isPlaceholderData
   const verArchivadas = active === 'false'
 
   return (
