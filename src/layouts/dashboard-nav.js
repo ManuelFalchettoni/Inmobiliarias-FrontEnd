@@ -3,6 +3,7 @@ import {
   IconBuildingEstate,
   IconBuildingSkyscraper,
   IconChartBar,
+  IconFileText,
   IconMap,
   IconMessages,
   IconPlus,
@@ -52,6 +53,13 @@ const sections = [
         icon: IconUsersGroup,
         description: 'Clientes, interesados y propietarios de cada inmobiliaria.',
         action: { to: `${DASHBOARD_ROOT}/personas/nueva`, label: 'Cargar una persona' },
+      },
+      {
+        path: 'contratos',
+        label: 'Contratos',
+        icon: IconFileText,
+        description: 'Contratos de venta y alquiler, con sus partes.',
+        action: { to: `${DASHBOARD_ROOT}/contratos/nuevo`, label: 'Cargar un contrato' },
       },
       {
         path: 'archivados',

@@ -6,7 +6,7 @@ import { useLookup } from '../../../hooks/useLookup.js'
 import { alertToRequest, createAlert, deleteAlert, updateAlert } from '../../../services/crm.js'
 import { formatDateTime, toLocalDateTime } from '../../../services/format.js'
 import { findUser } from '../../../services/users.js'
-import ConfirmAction from './ConfirmAction.jsx'
+import ConfirmAction from '../../../components/ConfirmAction.jsx'
 
 function NewAlertForm({ lead, agents, onSaved }) {
   const [message, setMessage] = useState('')

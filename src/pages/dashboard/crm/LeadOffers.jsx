@@ -13,7 +13,7 @@ import {
 } from '../../../services/crm.js'
 import { formatDate } from '../../../services/format.js'
 import { CURRENCY_OPTIONS, formatPrice } from '../../../services/properties.js'
-import ConfirmAction from './ConfirmAction.jsx'
+import ConfirmAction from '../../../components/ConfirmAction.jsx'
 
 function NewOfferForm({ lead, onSaved }) {
   const [currency, setCurrency] = useState('USD')

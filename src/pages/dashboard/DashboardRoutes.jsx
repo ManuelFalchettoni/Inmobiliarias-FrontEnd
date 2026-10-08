@@ -4,6 +4,9 @@ import DashboardLayout from '../../layouts/DashboardLayout.jsx'
 import { DASHBOARD_INDEX, dashboardNav } from '../../layouts/dashboard-nav.js'
 import AgencyForm from './agency/AgencyForm.jsx'
 import AgencyList from './agency/AgencyList.jsx'
+import ContractDetail from './contract/ContractDetail.jsx'
+import ContractForm from './contract/ContractForm.jsx'
+import ContractList from './contract/ContractList.jsx'
 import LeadDetail from './crm/LeadDetail.jsx'
 import LeadForm from './crm/LeadForm.jsx'
 import LeadList from './crm/LeadList.jsx'
@@ -24,6 +27,7 @@ const IMPLEMENTADAS = new Set([
   'agencias/nueva',
   'usuarios',
   'personas',
+  'contratos',
   'consultas',
 ])
 
@@ -50,6 +54,10 @@ export default function DashboardRoutes() {
         <Route path="personas" element={<PeopleList />} />
         <Route path="personas/nueva" element={<PeopleForm />} />
         <Route path="personas/:id/editar" element={<PeopleForm />} />
+        <Route path="contratos" element={<ContractList />} />
+        <Route path="contratos/nuevo" element={<ContractForm />} />
+        <Route path="contratos/:id" element={<ContractDetail />} />
+        <Route path="contratos/:id/editar" element={<ContractForm />} />
         <Route path="consultas" element={<LeadList />} />
         <Route path="consultas/nuevo" element={<LeadForm />} />
         <Route path="consultas/:id" element={<LeadDetail />} />
