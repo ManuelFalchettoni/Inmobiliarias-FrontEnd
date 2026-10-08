@@ -15,9 +15,12 @@ export const peopleDefaultValues = {
   cuit: '',
 }
 
+// Mismo patrón de email que en usuarios (ver user-form.js).
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const clean = (value) => String(value ?? '').trim().replace(/\s+/g, ' ')
 
+// Una regla por campo; los opcionales (dirección, DNI, CUIT) devuelven null si
+// están vacíos y solo se validan si se escribe algo.
 export const peopleValidation = {
   agencyId: (value) => (value ? null : 'Elija la inmobiliaria.'),
 

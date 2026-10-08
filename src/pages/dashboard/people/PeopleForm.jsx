@@ -94,8 +94,12 @@ function PeopleEditor({ person, returnTo }) {
         ? await updatePerson(person.id, request, { signal: controller.signal })
         : await createPerson(request, { signal: controller.signal })
 
+      // Que los listados y el CRM muestren el nombre nuevo (ver useLookup).
       forgetCached('people', saved.id)
 
+      // Si se vino desde otra pantalla (un lead, un contrato, una propiedad), se
+      // vuelve a ella con el id de la persona. Si la dirección ya tiene `?`, el
+      // parámetro nuevo se agrega con `&`.
       if (returnTo) {
         navigate(`${returnTo}${returnTo.includes('?') ? '&' : '?'}peopleId=${saved.id}`)
         return
@@ -105,6 +109,8 @@ function PeopleEditor({ person, returnTo }) {
     } catch (error) {
       if (controller.signal.aborted) return
 
+      // El 409 de personas no dice qué campo se repitió (lo controla la base de
+      // datos), así que se marcan los dos candidatos: DNI y CUIT.
       if (error instanceof ApiError && error.isConflict) {
         form.setErrors({ dni: PEOPLE_CONFLICT_MESSAGE, cuit: PEOPLE_CONFLICT_MESSAGE })
         setStatus({ state: 'error', message: PEOPLE_CONFLICT_MESSAGE })
@@ -298,7 +304,11 @@ function PeopleLoader({ id }) {
   return <PeopleEditor person={result.person} />
 }
 
-/** Solo se aceptan rutas internas del panel como destino de vuelta. */
+/**
+ * Solo se aceptan rutas internas del panel como destino de vuelta. El valor
+ * viene de la dirección (`?volver=...`) y cualquiera podría armar un link con
+ * `?volver=https://sitio-malo.com`: aceptarlo sería un "open redirect".
+ */
 function safeReturnTo(value) {
   return value?.startsWith('/dashboard/') ? value : undefined
 }
@@ -308,5 +318,6 @@ export default function PeopleForm() {
   const { id } = useParams()
   const [searchParams] = useSearchParams()
   const returnTo = safeReturnTo(searchParams.get('volver'))
+  // Mismo patrón Loader + Editor que propiedades y agencias.
   return id ? <PeopleLoader key={id} id={id} /> : <PeopleEditor key="new" returnTo={returnTo} />
 }

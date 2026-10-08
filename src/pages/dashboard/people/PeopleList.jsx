@@ -24,10 +24,15 @@ import { listPeople } from '../../../services/people.js'
 
 const PAGE_SIZE = 20
 
+/**
+ * Listado de personas. El backend no permite filtrar ni ordenar este recurso,
+ * así que solo hay paginación (en el orden en que se cargaron).
+ */
 export default function PeopleList() {
   const [searchParams, setSearchParams] = useSearchParams()
   const page = Number(searchParams.get('page') ?? 1)
 
+  // Sin filtros, la "clave" del pedido es solo la página (ver PropertyList).
   const [resultado, setResultado] = useState(null) // { page, data, error }
   const cargando = resultado?.page !== page
 
@@ -45,6 +50,7 @@ export default function PeopleList() {
 
   const data = resultado?.data ?? null
   const error = resultado?.error ?? null
+  // Nombre de la inmobiliaria de cada persona (la respuesta trae solo el id).
   const agencies = useLookup('agencies', data?.content.map((p) => p.agencyId) ?? [], findAgency)
 
   const irAPagina = (nuevaPagina) => setSearchParams({ page: String(nuevaPagina) })
