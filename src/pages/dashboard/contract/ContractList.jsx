@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
   Alert,
   Badge,
@@ -18,6 +18,7 @@ import {
 import { IconAlertTriangle, IconChevronRight, IconFileText, IconPlus } from '@tabler/icons-react'
 
 import { useLookup } from '../../../hooks/useLookup.js'
+import { queryKeys } from '../../../queries/keys.js'
 import {
   CONTRACT_ROLE_LABEL,
   CONTRACT_STATUS_COLOR,
@@ -43,31 +44,28 @@ export default function ContractList() {
   const [searchParams, setSearchParams] = useSearchParams()
   const page = Number(searchParams.get('page') ?? 1)
 
-  const [resultado, setResultado] = useState(null) // { page, data, parties, error }
-  const cargando = resultado?.page !== page
+  const params = { page: page - 1, size: PAGE_SIZE }
 
-  useEffect(() => {
-    const controller = new AbortController()
-    const options = { signal: controller.signal }
+  // Dos consultas: la página de contratos y TODAS las partes. Las partes tienen
+  // una sola clave (las comparte el detalle de cada contrato) y `select` las
+  // agrupa: { [contractId]: partes[] }, para buscar las de cada fila por su id.
+  const contractsQuery = useQuery({
+    queryKey: queryKeys.contracts.list(params),
+    queryFn: ({ signal }) => listContracts(params, { signal }),
+    placeholderData: keepPreviousData,
+  })
+  const partiesQuery = useQuery({
+    queryKey: queryKeys.contractParties.all,
+    queryFn: ({ signal }) => listAllParties({ signal }),
+    select: groupPartiesByContract,
+  })
 
-    // Las partes no se pueden pedir por contrato: se traen todas y se agrupan.
-    Promise.all([listContracts({ page: page - 1, size: PAGE_SIZE }, options), listAllParties(options)])
-      // Se guardan agrupadas: { [contractId]: partes[] }, para buscar las de
-      // cada fila directo por su id.
-      .then(([data, parties]) =>
-        setResultado({ page, data, parties: groupPartiesByContract(parties), error: null }),
-      )
-      .catch((err) => {
-        if (!controller.signal.aborted) setResultado({ page, data: null, parties: {}, error: err.message })
-      })
-
-    return () => controller.abort()
-  }, [page])
-
-  const data = resultado?.data ?? null
-  const error = resultado?.error ?? null
+  const data = contractsQuery.data ?? null
+  const failed = contractsQuery.error ?? partiesQuery.error
+  const error = failed ? failed.message : null
+  const cargando = contractsQuery.isPlaceholderData
   const contracts = data?.content ?? []
-  const partiesByContract = resultado?.parties ?? {}
+  const partiesByContract = partiesQuery.data ?? {}
 
   const properties = useLookup('properties', contracts.map((c) => c.propertyId), findProperty)
   // Todos los peopleId de las partes de los contratos de esta página.
@@ -106,7 +104,7 @@ export default function ContractList() {
         </Button>
       </Group>
 
-      {cargando && resultado == null && (
+      {contractsQuery.isPending && (
         <Stack gap="xs">
           {Array.from({ length: 6 }, (_, i) => (
             <Skeleton key={i} height={52} radius="md" />

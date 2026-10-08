@@ -21,7 +21,10 @@ import {
 import { useForm } from '@mantine/form'
 import { IconAlertTriangle, IconChevronRight, IconCircleCheck, IconLink } from '@tabler/icons-react'
 
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+
 import { usePropertyOptions } from '../../../hooks/useSelectOptions.js'
+import { queryKeys } from '../../../queries/keys.js'
 import { ApiError } from '../../../services/api.js'
 import {
   CONTRACT_LIMITS,
@@ -89,6 +92,7 @@ function EndDateInput({ form }) {
 
 function ContractEditor({ contract }) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [searchParams] = useSearchParams()
   const [status, setStatus] = useState({ state: 'idle' })
   const abortRef = useRef(null)
@@ -120,6 +124,8 @@ function ContractEditor({ contract }) {
       const saved = isEdit
         ? await updateContract(contract.id, request, { signal: controller.signal })
         : await createContract(request, { signal: controller.signal })
+      // El listado y el detalle de contratos se vuelven a pedir.
+      queryClient.invalidateQueries({ queryKey: queryKeys.contracts.all })
       // En los dos casos se va al detalle; el `state` dice qué aviso mostrar.
       // Después de un alta, ahí se cargan las partes.
       navigate(`${LIST_PATH}/${saved.id}`, { state: { saved: isEdit ? 'updated' : 'created' } })
@@ -263,23 +269,22 @@ function ContractEditor({ contract }) {
 }
 
 function ContractLoader({ id }) {
-  const [result, setResult] = useState(null)
+  const query = useQuery({
+    queryKey: queryKeys.contracts.detail(id),
+    queryFn: ({ signal }) => findContract(id, { signal }),
+  })
 
-  useEffect(() => {
-    const controller = new AbortController()
-    findContract(id, { signal: controller.signal })
-      .then((contract) => setResult({ contract }))
-      .catch((error) => {
-        if (controller.signal.aborted) return
-        setResult({
+  // Si ya hay datos se usan aunque falle una recarga en segundo plano (ver PropertyLoader).
+  const result = query.data
+    ? { contract: query.data }
+    : query.isError
+      ? {
           error:
-            error instanceof ApiError && error.status === 404
+            query.error instanceof ApiError && query.error.status === 404
               ? `No existe un contrato con el identificador #${id}.`
-              : error.message,
-        })
-      })
-    return () => controller.abort()
-  }, [id])
+              : query.error.message,
+        }
+      : null
 
   if (result?.contract) return <ContractEditor contract={result.contract} />
 

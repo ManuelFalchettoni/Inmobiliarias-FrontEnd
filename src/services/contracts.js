@@ -177,10 +177,6 @@ export async function listAllParties(options) {
   }
 }
 
-/** Las partes de un contrato, en el orden en que se cargaron. */
-export const listContractParties = async (contractId, options) =>
-  (await listAllParties(options)).filter((party) => party.contractId === Number(contractId))
-
 /** Agrupa partes por contrato: `{ [contractId]: party[] }`. */
 export function groupPartiesByContract(parties) {
   const groups = {}

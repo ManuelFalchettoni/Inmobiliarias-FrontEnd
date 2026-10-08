@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Alert,
   Anchor,
@@ -30,6 +31,7 @@ import {
 
 import ConfirmAction from '../../../components/ConfirmAction.jsx'
 import { useLookup } from '../../../hooks/useLookup.js'
+import { queryKeys } from '../../../queries/keys.js'
 import { ApiError } from '../../../services/api.js'
 import {
   CONTRACT_STATUS_COLOR,
@@ -39,7 +41,7 @@ import {
   findContract,
   formatContractTerm,
   isContractOverdue,
-  listContractParties,
+  listAllParties,
 } from '../../../services/contracts.js'
 import { formatDateTime } from '../../../services/format.js'
 import { findProperty, formatPrice, formatPropertyPlace } from '../../../services/properties.js'
@@ -81,30 +83,37 @@ function InfoRow({ label, children }) {
 
 /** Trae el contrato y sus partes. `version` fuerza la recarga. */
 function useContractData(id) {
-  const [version, setVersion] = useState(0)
-  const [data, setData] = useState(null) // { contract, parties } | { error }
+  const queryClient = useQueryClient()
+  const contract = useQuery({
+    queryKey: queryKeys.contracts.detail(id),
+    queryFn: ({ signal }) => findContract(id, { signal }),
+  })
+  // Todas las partes (misma clave que el listado) y `select` deja las de este contrato.
+  const parties = useQuery({
+    queryKey: queryKeys.contractParties.all,
+    queryFn: ({ signal }) => listAllParties({ signal }),
+    select: (all) => all.filter((party) => party.contractId === Number(id)),
+  })
 
-  useEffect(() => {
-    const controller = new AbortController()
-    const options = { signal: controller.signal }
+  const failed = contract.error ?? parties.error
+  const errorMessage = failed
+    ? failed instanceof ApiError && failed.status === 404
+      ? `No existe un contrato con el identificador #${id}.`
+      : failed.message
+    : null
 
-    Promise.all([findContract(id, options), listContractParties(id, options)])
-      .then(([contract, parties]) => setData({ contract, parties }))
-      .catch((error) => {
-        if (controller.signal.aborted) return
-        setData((current) => ({
-          ...current,
-          error:
-            error instanceof ApiError && error.status === 404
-              ? `No existe un contrato con el identificador #${id}.`
-              : error.message,
-        }))
-      })
+  // { contract, parties, error } con lo que haya; si falla una recarga se
+  // siguen mostrando los datos anteriores junto con el aviso.
+  let data = null
+  if (contract.data && parties.data) data = { contract: contract.data, parties: parties.data, error: errorMessage }
+  else if (errorMessage) data = { error: errorMessage }
 
-    return () => controller.abort()
-  }, [id, version])
-
-  return { data, reload: () => setVersion((v) => v + 1) }
+  // Cancelar el contrato o tocar sus partes cambia el listado también.
+  const reload = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.contracts.all })
+    queryClient.invalidateQueries({ queryKey: queryKeys.contractParties.all })
+  }
+  return { data, reload }
 }
 
 /** Detalle de un contrato: sus datos, sus partes y la acción de cancelarlo. */
