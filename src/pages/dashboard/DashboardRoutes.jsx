@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import DashboardLayout from '../../layouts/DashboardLayout.jsx'
 import { DASHBOARD_INDEX, dashboardNav } from '../../layouts/dashboard-nav.js'
 import AgencyForm from './agency/AgencyForm.jsx'
+import AgencyList from './agency/AgencyList.jsx'
 import LeadDetail from './crm/LeadDetail.jsx'
 import LeadForm from './crm/LeadForm.jsx'
 import LeadList from './crm/LeadList.jsx'
@@ -17,6 +18,7 @@ import PagePlaceholder from './PagePlaceholder.jsx'
 const IMPLEMENTADAS = new Set([
   'propiedades',
   'propiedades/nueva',
+  'agencias',
   'agencias/nueva',
   'personas',
   'consultas',
@@ -36,6 +38,7 @@ export default function DashboardRoutes() {
         <Route path="propiedades" element={<PropertyList />} />
         <Route path="propiedades/nueva" element={<PropertyForm />} />
         <Route path="propiedades/:id/editar" element={<PropertyForm />} />
+        <Route path="agencias" element={<AgencyList />} />
         <Route path="agencias/nueva" element={<AgencyForm />} />
         <Route path="usuarios/nuevo" element={<UserForm />} />
         <Route path="personas" element={<PeopleList />} />

@@ -5,7 +5,7 @@
  * (`AgencyRequest` / `AgencyResponse` / `AgencyStatus`). Cualquier cambio acá
  * debe ir acompañado del cambio equivalente en el DTO de Java.
  */
-import { get, pageQuery, post } from './api.js'
+import { del, get, pageQuery, patch, post, put } from './api.js'
 
 export const AGENCIES_ENDPOINT = '/api/agencies'
 
@@ -140,3 +140,27 @@ export const listAgencies = (params, options) =>
   get(`${AGENCIES_ENDPOINT}?${pageQuery(params)}`, options)
 
 export const findAgency = (id, options) => get(`${AGENCIES_ENDPOINT}/${id}`, options)
+
+/**
+ * Un `AgencyResponse` -> `AgencyRequest`, para un `PUT` que cambia un solo
+ * campo: el `PUT` pisa todos, y `id`, `active` y las fechas no se aceptan.
+ */
+export const agencyToRequest = (agency, changes = {}) => ({
+  cuit: agency.cuit,
+  companyName: agency.companyName,
+  publicName: agency.publicName,
+  email: agency.email,
+  phoneNumber: agency.phoneNumber,
+  address: agency.address,
+  webURL: agency.webURL ?? null,
+  socials: agency.socials ?? null,
+  status: agency.status,
+  ...changes,
+})
+
+export const updateAgency = (id, request, options) => put(`${AGENCIES_ENDPOINT}/${id}`, request, options)
+
+/** Baja lógica: 204. No da de baja sus propiedades, pero no se le pueden cargar nuevas. */
+export const deleteAgency = (id, options) => del(`${AGENCIES_ENDPOINT}/${id}`, options)
+
+export const restoreAgency = (id, options) => patch(`${AGENCIES_ENDPOINT}/${id}/restore`, undefined, options)
