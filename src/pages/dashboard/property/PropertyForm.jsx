@@ -27,6 +27,7 @@ import {
   IconBuildingSkyscraper,
   IconChevronRight,
   IconCircleCheck,
+  IconCurrencyDollar,
   IconHome,
   IconMapPin,
   IconPhoto,
@@ -44,12 +45,15 @@ import {
   deletePropertyPhoto,
   findProperty,
   sortPhotos,
+  sortPrices,
+  syncPropertyPrices,
   toPropertyFormValues,
   toPropertyRequest,
   updateProperty,
   uploadPropertyPhotos,
 } from '../../../services/properties.js'
 import PropertyPhotos from './PropertyPhotos.jsx'
+import PropertyPrices from './PropertyPrices.jsx'
 import { propertyDefaultValues, propertyValidation } from './property-form.js'
 
 const LIST_PATH = '/dashboard/propiedades'
@@ -110,6 +114,8 @@ function PropertyEditor({ property }) {
   const propertyId = property?.id ?? createdId
 
   const [photos, setPhotos] = useState(() => sortPhotos(property?.photos))
+  // Lo que hay guardado en el backend; el formulario tiene lo que se quiere guardar.
+  const [prices, setPrices] = useState(() => sortPrices(property?.prices))
   const [queue, setQueue] = useState([])
   const [status, setStatus] = useState(() =>
     location.state?.created ? { state: 'created' } : { state: 'idle' },
@@ -241,17 +247,32 @@ function PropertyEditor({ property }) {
       return
     }
 
+    // Los precios van por su propio endpoint: si fallan, la propiedad ya quedó
+    // guardada y se informa aparte, sin cortar la subida de fotos.
+    let pricesError = null
+    try {
+      setPrices(await syncPropertyPrices(id, prices, values.prices, { signal }))
+    } catch (error) {
+      if (signal.aborted) return
+      setPrices(error.savedPrices ?? prices)
+      pricesError = error instanceof ApiError ? error.message : 'Ocurrió un error inesperado.'
+    }
+
     if (queue.length > 0) setStatus({ state: 'uploading' })
     const failed = await uploadQueue(id, signal)
     if (signal.aborted) return
 
     // Alta completa: se pasa a la URL de edición para que recargar no duplique el alta.
-    if (isNew && failed === 0) {
+    if (isNew && failed === 0 && !pricesError) {
       navigate(editPath(id), { replace: true, state: { created: true } })
       return
     }
 
-    setStatus(failed > 0 ? { state: 'partial', failed, isNew, id } : { state: 'saved' })
+    setStatus(
+      failed > 0 || pricesError
+        ? { state: 'partial', failed, pricesError, isNew, id }
+        : { state: 'saved' },
+    )
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -296,7 +317,13 @@ function PropertyEditor({ property }) {
           <Alert
             color="orange"
             icon={<IconAlertTriangle />}
-            title={status.failed === 1 ? 'Una foto no se pudo subir' : `${status.failed} fotos no se pudieron subir`}
+            title={
+              status.pricesError
+                ? 'Los precios no se guardaron'
+                : status.failed === 1
+                  ? 'Una foto no se pudo subir'
+                  : `${status.failed} fotos no se pudieron subir`
+            }
             mb="lg"
             withCloseButton
             onClose={dismiss}
@@ -304,7 +331,10 @@ function PropertyEditor({ property }) {
             {status.isNew
               ? `La propiedad se creó con el identificador #${status.id}. `
               : 'Los datos se guardaron. '}
-            El motivo figura en cada foto marcada con error: puede quitarla o volver a intentarlo.
+            {status.pricesError &&
+              `Los precios fallaron con "${status.pricesError}": revíselos y vuelva a guardar. `}
+            {status.failed > 0 &&
+              'El motivo de cada foto figura en su miniatura: puede quitarla o volver a intentarlo.'}
           </Alert>
         )}
         {status.state === 'error' && (
@@ -456,6 +486,14 @@ function PropertyEditor({ property }) {
                     {...form.getInputProps('year')}
                   />
                 </SimpleGrid>
+              </SectionCard>
+
+              <SectionCard
+                icon={IconCurrencyDollar}
+                title="Precios"
+                description="Operaciones en las que se ofrece la propiedad y su precio."
+              >
+                <PropertyPrices form={form} disabled={busy} />
               </SectionCard>
 
               <SectionCard

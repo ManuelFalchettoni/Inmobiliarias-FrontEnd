@@ -5,7 +5,13 @@
  * el DTO, pero acá se pide siempre: arranca en 0 (planta baja) y así el dato
  * no queda vacío en el listado.
  */
-import { PROPERTY_LIMITS, toDecimal, toInt } from '../../../services/properties.js'
+import {
+  PRICE_LIMITS,
+  PROPERTY_LIMITS,
+  toDecimal,
+  toInt,
+  toPriceFormValues,
+} from '../../../services/properties.js'
 
 export const propertyDefaultValues = {
   address: '',
@@ -23,6 +29,8 @@ export const propertyDefaultValues = {
   rooms: '',
   // 0 = planta baja; es el caso de casi todo lo que no es un departamento.
   floorNumber: 0,
+  // No viajan en el `PropertyRequest`: se guardan aparte, en /prices.
+  prices: toPriceFormValues(),
 }
 
 /** Tope de un `Integer` de Java: más arriba Jackson responde 400 por overflow. */
@@ -57,6 +65,25 @@ function coordinate(value, { min, max }, other, subject) {
 
 const required = (message) => (value) => (value ? null : message)
 
+/** El monto solo se valida si la operación está habilitada. */
+function priceAmount(value, values, path) {
+  const operationType = path.split('.')[1]
+  if (!values.prices[operationType].enabled) return null
+  if (value === '' || value == null) return 'Indique el monto.'
+
+  const { min, max } = PRICE_LIMITS.amount
+  const amount = toDecimal(value)
+  if (amount == null) return 'Debe ser un número.'
+  if (amount < min) return 'Debe ser mayor a 0.'
+  if (amount > max) return 'El monto es demasiado grande.'
+  return null
+}
+
+const priceValidation = {
+  currency: required('Elija la moneda.'),
+  amount: priceAmount,
+}
+
 export const propertyValidation = {
   address: (value) => text(value, PROPERTY_LIMITS.address, 'la dirección'),
   province: (value) => text(value, PROPERTY_LIMITS.province, 'la provincia'),
@@ -74,4 +101,8 @@ export const propertyValidation = {
   size: (value) => integer(value, PROPERTY_LIMITS.size),
   rooms: (value) => integer(value, PROPERTY_LIMITS.rooms),
   floorNumber: (value) => integer(value, PROPERTY_LIMITS.floorNumber),
+  prices: {
+    SALE: priceValidation,
+    RENT: priceValidation,
+  },
 }

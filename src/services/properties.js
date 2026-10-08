@@ -146,6 +146,7 @@ export function toPropertyFormValues(property) {
     size: property.size ?? '',
     rooms: property.rooms ?? '',
     floorNumber: property.floorNumber ?? 0,
+    prices: toPriceFormValues(property.prices),
   }
 }
 
@@ -254,3 +255,139 @@ export function uploadPropertyPhotos(propertyId, files, options) {
 /** Borra la fila y el archivo en MinIO: no tiene restore. */
 export const deletePropertyPhoto = (propertyId, photoId, options) =>
   del(`${photosEndpoint(propertyId)}/${photoId}`, options)
+
+// ---------------------------------------------------------------- Precios
+
+/** Refleja `OperationType`: una propiedad tiene a lo sumo un precio por operación. */
+export const OPERATION_TYPE_OPTIONS = [
+  { value: 'SALE', label: 'Venta' },
+  { value: 'RENT', label: 'Alquiler' },
+]
+
+export const OPERATION_TYPE_LABEL = toLabelMap(OPERATION_TYPE_OPTIONS)
+
+/** Refleja `Currency`. */
+export const CURRENCY_OPTIONS = [
+  { value: 'USD', label: 'USD' },
+  { value: 'ARS', label: 'ARS' },
+]
+
+/** Moneda con la que arranca cada operación: las ventas se publican en dólares. */
+export const DEFAULT_CURRENCY = { SALE: 'USD', RENT: 'ARS' }
+
+/** `@Positive` y `@Digits(integer = 13, fraction = 2)` del `PropertyPriceRequest`. */
+export const PRICE_LIMITS = {
+  amount: { min: 0.01, max: 9999999999999.99, decimals: 2 },
+}
+
+/** "USD 95.000" o "ARS 450.000,50": los centavos solo aparecen si los hay. */
+export function formatPrice({ currency, amount }) {
+  const value = Number(amount)
+  const number = value.toLocaleString('es-AR', {
+    minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
+    maximumFractionDigits: 2,
+  })
+  return `${currency} ${number}`
+}
+
+/** Venta antes que alquiler, el mismo orden que usa el `GET` del backend. */
+export const sortPrices = (prices = []) =>
+  [...prices].sort(
+    (a, b) =>
+      OPERATION_TYPE_OPTIONS.findIndex((o) => o.value === a.operationType) -
+      OPERATION_TYPE_OPTIONS.findIndex((o) => o.value === b.operationType),
+  )
+
+/**
+ * Precios del response -> valores del formulario, uno por operación. Una
+ * operación sin precio queda deshabilitada con su moneda por defecto.
+ */
+export function toPriceFormValues(prices = []) {
+  return Object.fromEntries(
+    OPERATION_TYPE_OPTIONS.map(({ value: operationType }) => {
+      const price = prices.find((entry) => entry.operationType === operationType)
+      return [
+        operationType,
+        {
+          enabled: price != null,
+          currency: price?.currency ?? DEFAULT_CURRENCY[operationType],
+          amount: price?.amount ?? '',
+        },
+      ]
+    }),
+  )
+}
+
+/**
+ * Compara los precios guardados con el formulario y devuelve las operaciones
+ * a ejecutar: `delete`, `update` o `create`. Los borrados van primero, aunque
+ * hoy no chocan: cada fila del formulario es una operación distinta.
+ */
+export function planPriceChanges(saved = [], formPrices) {
+  const changes = []
+
+  for (const { value: operationType } of OPERATION_TYPE_OPTIONS) {
+    const current = saved.find((price) => price.operationType === operationType)
+    const wanted = formPrices[operationType]
+    const request = {
+      operationType,
+      currency: wanted.currency,
+      amount: Number(wanted.amount),
+    }
+
+    if (!wanted.enabled) {
+      if (current) changes.push({ type: 'delete', price: current })
+    } else if (!current) {
+      changes.push({ type: 'create', request })
+    } else if (current.currency !== request.currency || Number(current.amount) !== request.amount) {
+      changes.push({ type: 'update', price: current, request })
+    }
+  }
+
+  const order = { delete: 0, update: 1, create: 2 }
+  return changes.sort((a, b) => order[a.type] - order[b.type])
+}
+
+const pricesEndpoint = (propertyId) => `${PROPERTIES_ENDPOINT}/${propertyId}/prices`
+
+/** GET -> `PropertyPriceResponse[]` ordenado por `operationType`. */
+export const listPropertyPrices = (propertyId, options) => get(pricesEndpoint(propertyId), options)
+
+/** POST -> 201. 409 si la propiedad ya tiene precio para esa operación. */
+export const createPropertyPrice = (propertyId, request, options) =>
+  post(pricesEndpoint(propertyId), request, options)
+
+export const updatePropertyPrice = (propertyId, priceId, request, options) =>
+  put(`${pricesEndpoint(propertyId)}/${priceId}`, request, options)
+
+/** Borrado físico: 204. */
+export const deletePropertyPrice = (propertyId, priceId, options) =>
+  del(`${pricesEndpoint(propertyId)}/${priceId}`, options)
+
+/**
+ * Aplica los cambios de `planPriceChanges` en orden y devuelve los precios que
+ * quedaron guardados. Corta en el primer error: lo que ya se aplicó queda
+ * reflejado en `error.savedPrices` para no perder el estado real.
+ */
+export async function syncPropertyPrices(propertyId, saved, formPrices, options) {
+  let prices = [...saved]
+
+  try {
+    for (const change of planPriceChanges(saved, formPrices)) {
+      if (change.type === 'delete') {
+        await deletePropertyPrice(propertyId, change.price.id, options)
+        prices = prices.filter((price) => price.id !== change.price.id)
+      } else if (change.type === 'update') {
+        const updated = await updatePropertyPrice(propertyId, change.price.id, change.request, options)
+        prices = prices.map((price) => (price.id === updated.id ? updated : price))
+      } else {
+        prices = [...prices, await createPropertyPrice(propertyId, change.request, options)]
+      }
+    }
+  } catch (error) {
+    error.savedPrices = sortPrices(prices)
+    throw error
+  }
+
+  return sortPrices(prices)
+}

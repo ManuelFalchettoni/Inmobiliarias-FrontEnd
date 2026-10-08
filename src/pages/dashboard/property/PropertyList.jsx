@@ -21,12 +21,15 @@ import {
 import { IconAlertTriangle, IconBuildingEstate, IconPencil, IconPlus } from '@tabler/icons-react'
 
 import {
+  OPERATION_TYPE_LABEL,
   PROPERTY_CONDITION_COLOR,
   PROPERTY_CONDITION_LABEL,
   PROPERTY_TYPE_LABEL,
+  formatPrice,
   formatPropertyPlace,
   listProperties,
   sortPhotos,
+  sortPrices,
 } from '../../../services/properties.js'
 
 const PAGE_SIZE = 20
@@ -162,13 +165,14 @@ export default function PropertyList() {
             shadow="xs"
             style={{ opacity: cargando ? 0.55 : 1, transition: 'opacity 150ms' }}
           >
-            <Table.ScrollContainer minWidth={720}>
+            <Table.ScrollContainer minWidth={860}>
               <Table verticalSpacing="sm" horizontalSpacing="md" highlightOnHover>
                 <Table.Thead>
                   <Table.Tr>
                     <Table.Th>Dirección</Table.Th>
                     <Table.Th>Tipo</Table.Th>
                     <Table.Th>Condición</Table.Th>
+                    <Table.Th>Precio</Table.Th>
                     <Table.Th ta="right">Ambientes</Table.Th>
                     <Table.Th ta="right">Superficie</Table.Th>
                     <Table.Th ta="right">Año</Table.Th>
@@ -204,6 +208,22 @@ export default function PropertyList() {
                         <Badge variant="light" color={PROPERTY_CONDITION_COLOR[propiedad.condition]}>
                           {PROPERTY_CONDITION_LABEL[propiedad.condition] ?? propiedad.condition}
                         </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        {propiedad.prices?.length > 0 ? (
+                          sortPrices(propiedad.prices).map((price) => (
+                            <Text key={price.id} size="sm" style={{ whiteSpace: 'nowrap' }}>
+                              <Text span size="xs" c="dimmed">
+                                {OPERATION_TYPE_LABEL[price.operationType] ?? price.operationType}
+                              </Text>{' '}
+                              {formatPrice(price)}
+                            </Text>
+                          ))
+                        ) : (
+                          <Text size="sm" c="dimmed">
+                            Sin precio
+                          </Text>
+                        )}
                       </Table.Td>
                       <Table.Td ta="right">{propiedad.rooms}</Table.Td>
                       <Table.Td ta="right">{propiedad.size} m²</Table.Td>
