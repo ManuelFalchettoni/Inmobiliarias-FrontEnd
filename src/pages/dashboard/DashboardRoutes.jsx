@@ -11,6 +11,7 @@ import PeopleForm from './people/PeopleForm.jsx'
 import PeopleList from './people/PeopleList.jsx'
 import PropertyForm from './property/PropertyForm.jsx'
 import PropertyList from './property/PropertyList.jsx'
+import UserEdit from './user/UserEdit.jsx'
 import UserForm from './user/UserForm.jsx'
 import UserList from './user/UserList.jsx'
 import PagePlaceholder from './PagePlaceholder.jsx'
@@ -44,6 +45,7 @@ export default function DashboardRoutes() {
         <Route path="agencias/nueva" element={<AgencyForm />} />
         <Route path="usuarios" element={<UserList />} />
         <Route path="usuarios/nuevo" element={<UserForm />} />
+        <Route path="usuarios/:id/editar" element={<UserEdit />} />
         <Route path="personas" element={<PeopleList />} />
         <Route path="personas/nueva" element={<PeopleForm />} />
         <Route path="personas/:id/editar" element={<PeopleForm />} />

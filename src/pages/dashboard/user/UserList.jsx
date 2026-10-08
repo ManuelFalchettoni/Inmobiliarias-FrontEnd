@@ -24,6 +24,7 @@ import {
   IconArchive,
   IconArrowBackUp,
   IconDots,
+  IconPencil,
   IconPlus,
   IconUsers,
 } from '@tabler/icons-react'
@@ -42,7 +43,7 @@ import {
 
 const PAGE_SIZE = 20
 
-/** Acciones de una fila: dar de baja o restaurar. */
+/** Acciones de una fila: editar y dar de baja, o restaurar si está dado de baja. */
 function UserActions({ user, onAction, disabled }) {
   if (user.active === false) {
     return (
@@ -59,22 +60,32 @@ function UserActions({ user, onAction, disabled }) {
   }
 
   return (
-    <Menu position="bottom-end" withinPortal>
-      <Menu.Target>
-        <ActionIcon variant="subtle" color="gray" disabled={disabled} aria-label={`Acciones de ${user.name}`}>
-          <IconDots size={18} />
-        </ActionIcon>
-      </Menu.Target>
-      <Menu.Dropdown>
-        <Menu.Item
-          color="red"
-          leftSection={<IconArchive size={16} />}
-          onClick={() => onAction(user, () => deleteUser(user.id))}
-        >
-          Dar de baja
-        </Menu.Item>
-      </Menu.Dropdown>
-    </Menu>
+    <Group gap={4} wrap="nowrap">
+      <ActionIcon
+        component={Link}
+        to={`/dashboard/usuarios/${user.id}/editar`}
+        variant="subtle"
+        aria-label={`Editar ${user.name}`}
+      >
+        <IconPencil size={18} />
+      </ActionIcon>
+      <Menu position="bottom-end" withinPortal>
+        <Menu.Target>
+          <ActionIcon variant="subtle" color="gray" disabled={disabled} aria-label={`Acciones de ${user.name}`}>
+            <IconDots size={18} />
+          </ActionIcon>
+        </Menu.Target>
+        <Menu.Dropdown>
+          <Menu.Item
+            color="red"
+            leftSection={<IconArchive size={16} />}
+            onClick={() => onAction(user, () => deleteUser(user.id))}
+          >
+            Dar de baja
+          </Menu.Item>
+        </Menu.Dropdown>
+      </Menu>
+    </Group>
   )
 }
 
