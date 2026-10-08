@@ -31,6 +31,13 @@ export const USER_ROL_OPTIONS = [
 
 export const USER_ROL_LABEL = Object.fromEntries(USER_ROL_OPTIONS.map((o) => [o.value, o.label]))
 
+export const USER_ROL_COLOR = {
+  [USER_ROL.USER]: 'gray',
+  [USER_ROL.AGENT]: 'blue',
+  [USER_ROL.AGENCY]: 'grape',
+  [USER_ROL.ADMIN]: 'red',
+}
+
 /** Rol que el backend asigna a las cuentas del registro público. */
 export const PUBLIC_SIGNUP_ROL = USER_ROL.USER
 

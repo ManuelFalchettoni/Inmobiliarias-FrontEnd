@@ -12,6 +12,7 @@ import PeopleList from './people/PeopleList.jsx'
 import PropertyForm from './property/PropertyForm.jsx'
 import PropertyList from './property/PropertyList.jsx'
 import UserForm from './user/UserForm.jsx'
+import UserList from './user/UserList.jsx'
 import PagePlaceholder from './PagePlaceholder.jsx'
 
 /** Rutas ya implementadas: quedan fuera del mapeo a PagePlaceholder. */
@@ -20,6 +21,7 @@ const IMPLEMENTADAS = new Set([
   'propiedades/nueva',
   'agencias',
   'agencias/nueva',
+  'usuarios',
   'personas',
   'consultas',
 ])
@@ -40,6 +42,7 @@ export default function DashboardRoutes() {
         <Route path="propiedades/:id/editar" element={<PropertyForm />} />
         <Route path="agencias" element={<AgencyList />} />
         <Route path="agencias/nueva" element={<AgencyForm />} />
+        <Route path="usuarios" element={<UserList />} />
         <Route path="usuarios/nuevo" element={<UserForm />} />
         <Route path="personas" element={<PeopleList />} />
         <Route path="personas/nueva" element={<PeopleForm />} />
