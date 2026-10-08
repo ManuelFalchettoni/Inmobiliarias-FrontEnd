@@ -19,7 +19,10 @@ import UserForm from './user/UserForm.jsx'
 import UserList from './user/UserList.jsx'
 import PagePlaceholder from './PagePlaceholder.jsx'
 
-/** Rutas ya implementadas: quedan fuera del mapeo a PagePlaceholder. */
+/**
+ * Rutas ya implementadas: quedan fuera del mapeo a PagePlaceholder. Un `Set` es
+ * una lista sin repetidos, y `.has()` pregunta rápido si algo está en ella.
+ */
 const IMPLEMENTADAS = new Set([
   'propiedades',
   'propiedades/nueva',
@@ -38,10 +41,16 @@ const IMPLEMENTADAS = new Set([
 export default function DashboardRoutes() {
   return (
     <Routes>
+      {/* Ruta "envoltorio": no tiene path. Todas las de adentro se dibujan dentro
+          del DashboardLayout, en el lugar donde el layout pone <Outlet />. */}
       <Route element={<DashboardLayout />}>
+        {/* `index`: qué mostrar en /dashboard a secas. `replace` evita que esa
+            dirección quede en el historial. */}
         <Route index element={<Navigate to={DASHBOARD_INDEX} replace />} />
 
-        {/* Pantallas conectadas al backend. */}
+        {/* Pantallas conectadas al backend. `:id` es un parámetro: en
+            /propiedades/7/editar vale "7" y la pantalla lo lee con useParams().
+            La misma pantalla sirve para crear (sin id) y para editar (con id). */}
         <Route path="propiedades" element={<PropertyList />} />
         <Route path="propiedades/nueva" element={<PropertyForm />} />
         <Route path="propiedades/:id/editar" element={<PropertyForm />} />
@@ -62,7 +71,9 @@ export default function DashboardRoutes() {
         <Route path="consultas/nuevo" element={<LeadForm />} />
         <Route path="consultas/:id" element={<LeadDetail />} />
 
-        {/* Secciones del menú que todavía no están disponibles. */}
+        {/* Secciones del menú que todavía no están disponibles: cada ítem del
+            menú sin pantalla propia recibe una "Próximamente", así ningún link
+            del menú lleva a una página rota. */}
         {dashboardNav
           .filter((item) => !IMPLEMENTADAS.has(item.path))
           .map((item) => (
@@ -80,6 +91,7 @@ export default function DashboardRoutes() {
             />
           ))}
 
+        {/* Cualquier otra dirección dentro de /dashboard: página no encontrada. */}
         <Route
           path="*"
           element={

@@ -14,12 +14,21 @@ import {
 
 export const DASHBOARD_ROOT = '/dashboard'
 
-/** Secciones e ítems del menú lateral del panel. */
+/**
+ * Secciones e ítems del menú lateral del panel.
+ *
+ * El menú no está escrito a mano en el JSX: son datos. Cada ítem tiene:
+ * - `path`: la ruta relativa a /dashboard.
+ * - `label` e `icon`: lo que se ve en el menú (el ícono es el componente, sin dibujar).
+ * - `description` y `action`: los usa la pantalla "Próximamente" de las
+ *   secciones que todavía no están hechas.
+ * Agregar una sección al menú es agregar un objeto acá.
+ */
 const sections = [
   {
     title: 'Gestión',
     items: [
-      {
+      { /* lista de objetos, y el layout la recorre para dibujarlo.  */
         path: 'propiedades',
         label: 'Propiedades',
         icon: IconBuildingEstate,
@@ -105,6 +114,9 @@ const sections = [
   },
 ]
 
+// A cada ítem se le agrega `to`, la dirección completa ("/dashboard/propiedades").
+// `...section` y `...item` copian el objeto original y se le suman campos, sin
+// modificar el de arriba.
 export const dashboardSections = sections.map((section) => ({
   ...section,
   items: section.items.map((item) => ({
@@ -113,7 +125,10 @@ export const dashboardSections = sections.map((section) => ({
   })),
 }))
 
-/** Todos los ítems en una sola lista, para generar las rutas. */
+/**
+ * Todos los ítems en una sola lista, para generar las rutas. `flatMap` aplana:
+ * de [[a, b], [c]] (ítems por sección) pasa a [a, b, c].
+ */
 export const dashboardNav = dashboardSections.flatMap((section) => section.items)
 
 /** Ruta a la que entra `/dashboard` sin subruta. */
@@ -128,7 +143,10 @@ export function getActiveNavPath(pathname) {
   let active
 
   for (const { to } of dashboardNav) {
+    // La barra en `${to}/` evita que "/dashboard/propiedades-viejas" cuente como
+    // dentro de "/dashboard/propiedades": solo coinciden las subrutas de verdad.
     const matches = pathname === to || pathname.startsWith(`${to}/`)
+    // Entre varias coincidencias gana la más larga, que es la más específica.
     if (matches && (!active || to.length > active.length)) active = to
   }
 

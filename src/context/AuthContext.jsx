@@ -1,3 +1,9 @@
+/**
+ * Proveedor de sesión de DEMOSTRACIÓN: no está montado en la app ni habla con
+ * el backend. Guardaba usuarios (con contraseña en texto plano) en el
+ * localStorage del navegador para simular un login. Queda como referencia de
+ * cómo se arma un contexto; no debe usarse con datos reales.
+ */
 import { useCallback, useState } from 'react'
 import { AuthContext } from './auth-context.js'
 
@@ -22,6 +28,8 @@ function delay(ms = 600) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+// useCallback guarda la misma función entre renders, para que los componentes
+// que la reciben no se redibujen por recibir una función "nueva".
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try {

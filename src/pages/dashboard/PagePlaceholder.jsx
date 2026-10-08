@@ -2,7 +2,12 @@ import { Box, Button, Card, Container, Group, Stack, Text, ThemeIcon, Title } fr
 import { Link } from 'react-router-dom'
 import { IconArrowRight, IconTool } from '@tabler/icons-react'
 
-/** Pantalla para las secciones del menú que todavía no están disponibles. */
+/**
+ * Pantalla para las secciones del menú que todavía no están disponibles.
+ * `icon: Icon = IconTool` renombra la prop con mayúscula (React exige que los
+ * componentes empiecen con mayúscula para dibujarlos como `<Icon />`) y le da
+ * un valor por defecto si no se pasa.
+ */
 export default function PagePlaceholder({ icon: Icon = IconTool, title, description, action }) {
   return (
     <Container size="xl" py="xl">

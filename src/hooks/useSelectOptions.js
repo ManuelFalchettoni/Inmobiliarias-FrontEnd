@@ -9,8 +9,12 @@ import { USER_ROL_LABEL, findUser, listUsers } from '../services/users.js'
  * en la primera página (por el tope de 100, o porque se acaba de crear) se
  * pide aparte con `findOne` y se suma al principio.
  */
+// Un solo hook genérico; lo que cambia entre propiedades, personas y usuarios
+// llega en el primer parámetro (cómo cargar la lista, cómo buscar uno suelto y
+// cómo convertir un registro en opción del Select).
 function useOptions({ load, findOne, toOption }, currentId) {
   const [result, setResult] = useState({ state: 'loading', options: [] })
+  // La opción que faltaba en la lista y se pidió aparte.
   const [extra, setExtra] = useState(null)
 
   useEffect(() => {
@@ -27,9 +31,12 @@ function useOptions({ load, findOne, toOption }, currentId) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // `some` devuelve true si al menos una opción cumple: ¿está el valor elegido?
   const missing =
     result.state === 'ready' && currentId && !result.options.some((option) => option.value === currentId)
 
+  // Segundo efecto: solo corre cuando falta el valor elegido. Si el registro no
+  // existe, se muestra "#id" para que el Select no quede vacío.
   useEffect(() => {
     if (!missing) return undefined
     const controller = new AbortController()
@@ -48,6 +55,8 @@ function useOptions({ load, findOne, toOption }, currentId) {
   return { ...result, options }
 }
 
+// Las tres configuraciones. `.then((page) => page.content)` saca la lista de
+// adentro del Page de Spring.
 const PROPERTIES = {
   load: (options) =>
     listProperties({ size: 100, active: true }, options).then((page) => page.content),

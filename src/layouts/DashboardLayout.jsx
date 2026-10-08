@@ -22,6 +22,7 @@ import { emptyWorkspaceTotals, getWorkspaceTotals } from '../services/workspace.
 import { DASHBOARD_INDEX, dashboardSections, getActiveNavPath } from './dashboard-nav.js'
 
 const HEADER_HEIGHT = 72
+// Formatea números al estilo argentino: 1234 -> "1.234".
 const NUMBER_FORMAT = new Intl.NumberFormat('es-AR')
 
 /**
@@ -29,23 +30,34 @@ const NUMBER_FORMAT = new Intl.NumberFormat('es-AR')
  * se abortan al desmontar; si fallan, cada valor queda en `null`.
  */
 function useWorkspaceTotals() {
+  // Arranca con los totales en null: el pie del menú muestra "—" hasta que llegan.
   const [totals, setTotals] = useState(emptyWorkspaceTotals)
 
+  // `[]` como dependencias: el efecto corre una sola vez, al montar el panel.
   useEffect(() => {
     const controller = new AbortController()
 
     getWorkspaceTotals({ signal: controller.signal }).then((result) => {
+      // Si el componente ya se desmontó, no se toca el estado.
       if (!controller.signal.aborted) setTotals(result)
     })
 
+    // Limpieza: al desmontar se cancelan los pedidos que sigan en camino.
     return () => controller.abort()
   }, [])
 
   return totals
 }
 
+/**
+ * El marco de todas las pantallas del panel: barra superior, menú lateral y,
+ * en el medio, la pantalla de la ruta actual (`<Outlet />`).
+ */
 export default function DashboardLayout() {
+  // useDisclosure es un atajo de Mantine para un verdadero/falso con funciones
+  // para abrir, cerrar y alternar. Acá controla el menú en celular.
   const [opened, { toggle, close }] = useDisclosure(false)
+  // `pathname` es la dirección actual, por ejemplo "/dashboard/propiedades".
   const { pathname } = useLocation()
   const totals = useWorkspaceTotals()
 
@@ -54,9 +66,13 @@ export default function DashboardLayout() {
     close()
   }, [pathname, close])
 
+  // Qué ítem del menú se pinta como activo (ver getActiveNavPath).
   const activePath = getActiveNavPath(pathname)
 
   return (
+    // AppShell (Mantine) arma la estructura de la pantalla. En pantallas más
+    // chicas que `sm` el menú lateral se esconde (`collapsed.mobile`) y aparece
+    // el botón de hamburguesa para abrirlo.
     <AppShell
       header={{ height: HEADER_HEIGHT }}
       navbar={{ width: 280, breakpoint: 'sm', collapsed: { mobile: !opened } }}
@@ -89,6 +105,7 @@ export default function DashboardLayout() {
             </UnstyledButton>
           </Group>
 
+          {/* Buscador, campana y datos de la agencia: por ahora son estáticos. */}
           <TextInput
             type="search"
             aria-label="Buscar en el panel"
@@ -133,6 +150,8 @@ export default function DashboardLayout() {
 
       <AppShell.Navbar p="md">
         <AppShell.Section grow component="nav" aria-label="Navegación principal">
+          {/* El menú se dibuja recorriendo los datos de dashboard-nav.js: una
+              sección por grupo y un NavLink por ítem. */}
           <Stack gap="lg">
             {dashboardSections.map((section) => (
               <div key={section.title}>
@@ -141,6 +160,9 @@ export default function DashboardLayout() {
                 </Text>
 
                 {section.items.map((item) => (
+                  // `component={RouterNavLink}`: el NavLink de Mantine (el estilo)
+                  // se comporta como el link de React Router (cambia de pantalla
+                  // sin recargar). `<item.icon />` dibuja el ícono guardado en el dato.
                   <NavLink
                     key={item.to}
                     component={RouterNavLink}
@@ -188,6 +210,7 @@ export default function DashboardLayout() {
       </AppShell.Navbar>
 
       <AppShell.Main bg="var(--mantine-color-gray-0)">
+        {/* El "hueco" donde React Router pone la pantalla de la ruta actual. */}
         <Outlet />
       </AppShell.Main>
     </AppShell>
