@@ -28,6 +28,10 @@ import { findUser } from '../../../services/users.js'
 
 const PAGE_SIZE = 20
 
+/**
+ * Listado de leads (`/dashboard/consultas`), filtrable por agente. Cada lead
+ * trae solo ids (persona, propiedad, agente): los nombres se buscan con useLookup.
+ */
 export default function LeadList() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -54,9 +58,12 @@ export default function LeadList() {
   const error = resultado?.error ?? null
   const leads = data?.content ?? []
 
+  // Tres búsquedas con caché: si varios leads son de la misma persona o del
+  // mismo agente, se pide una sola vez.
   const people = useLookup('people', leads.map((l) => l.peopleId), findPerson)
   const properties = useLookup('properties', leads.map((l) => l.propertyId), findProperty)
   const users = useLookup('users', leads.map((l) => l.userId), findUser)
+  // Opciones del filtro por agente.
   const agents = useUserOptions(userId)
 
   const setFiltro = (valor) => {
@@ -163,6 +170,8 @@ export default function LeadList() {
                     const property = properties[lead.propertyId]
                     const detalle = `/dashboard/consultas/${lead.id}`
 
+                    // Toda la fila lleva al detalle. Mientras llegan los nombres
+                    // se muestra el id ("Persona #3") en vez de dejar el lugar vacío.
                     return (
                       <Table.Tr key={lead.id} style={{ cursor: 'pointer' }} onClick={() => navigate(detalle)}>
                         <Table.Td>
@@ -201,6 +210,8 @@ export default function LeadList() {
                             variant="subtle"
                             size="compact-sm"
                             rightSection={<IconChevronRight size={14} />}
+                            // stopPropagation: el clic no "sube" a la fila, que
+                            // también navegaría (se haría dos veces).
                             onClick={(event) => event.stopPropagation()}
                           >
                             Abrir

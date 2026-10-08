@@ -23,6 +23,8 @@ function NewOfferForm({ lead, onSaved }) {
   const submit = async (event) => {
     event.preventDefault()
     const value = Number(amount)
+    // Validación a mano (este formulario no usa Mantine Form). `!(value >= min)`
+    // también atrapa NaN, que no es mayor ni menor que nada.
     if (amount === '' || !(value >= OFFER_LIMITS.amount.min)) {
       setStatus({ state: 'error', message: 'Indique un monto mayor a 0.' })
       return
@@ -30,6 +32,7 @@ function NewOfferForm({ lead, onSaved }) {
 
     setStatus({ state: 'saving' })
     try {
+      // Flujo completo: crea la oferta, deja el evento y adelanta la etapa (crm.js).
       const result = await registerOffer(lead, { amount: value, currency, status: 'PENDING' })
       setAmount('')
       setStatus({ state: 'idle' })
@@ -83,9 +86,11 @@ function NewOfferForm({ lead, onSaved }) {
  * pasa el lead a negociación; aceptarla lo da por ganado.
  */
 export default function LeadOffers({ lead, offers, onChanged }) {
+  // Id de la oferta en proceso (para atenuarla y bloquear los botones).
   const [busyId, setBusyId] = useState(null)
   const [error, setError] = useState(null)
 
+  // Mismo patrón que PropertyOwners: `action` es la función con el pedido.
   const run = async (offer, action) => {
     setBusyId(offer.id)
     setError(null)
@@ -131,6 +136,7 @@ export default function LeadOffers({ lead, offers, onChanged }) {
           </Group>
 
           <Group gap="xs" mt="xs" justify="flex-end">
+            {/* Solo una oferta pendiente se puede aceptar o rechazar. */}
             {offer.status === 'PENDING' && (
               <>
                 <Button

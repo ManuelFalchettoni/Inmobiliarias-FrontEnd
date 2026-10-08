@@ -26,7 +26,10 @@ const SELF_PATH = `${LIST_PATH}/nuevo`
 
 const required = (message) => (value) => (value ? null : message)
 
-/** Placeholder y descripción comunes a los tres Select que cargan del backend. */
+/**
+ * Placeholder y descripción comunes a los tres Select que cargan del backend.
+ * Devuelve un objeto de props que se "desparrama" en cada Select con `{...}`.
+ */
 function optionProps(source, noun) {
   return {
     placeholder: source.state === 'loading' ? `Cargando ${noun}...` : 'Elegir',
@@ -39,6 +42,7 @@ function optionProps(source, noun) {
   }
 }
 
+/** Alta de lead (`/dashboard/consultas/nuevo`): propiedad, interesado, agente y etapa. */
 export default function LeadForm() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -62,6 +66,8 @@ export default function LeadForm() {
     },
   })
 
+  // Se pasan los valores iniciales a los hooks: si la persona recién creada no
+  // está en la lista de opciones, el hook la pide aparte para poder mostrarla.
   const initial = form.getInitialValues()
   const properties = usePropertyOptions(initial.propertyId)
   const people = usePeopleOptions(initial.peopleId)
@@ -77,6 +83,7 @@ export default function LeadForm() {
 
     try {
       const lead = await createLead(toLeadRequest(values), { signal: controller.signal })
+      // Al detalle del lead nuevo, con el aviso "Lead creado".
       navigate(`${LIST_PATH}/${lead.id}`, { state: { created: true } })
     } catch (error) {
       if (controller.signal.aborted) return
@@ -97,6 +104,7 @@ export default function LeadForm() {
   // así que se arma el regreso con la propiedad elegida para no perderla.
   const newPersonLink = () => {
     const back = new URLSearchParams()
+    // getValues lee el valor actual del formulario no controlado en el momento del clic.
     const propertyId = form.getValues().propertyId
     if (propertyId) back.set('propertyId', propertyId)
     const volver = back.size > 0 ? `${SELF_PATH}?${back}` : SELF_PATH

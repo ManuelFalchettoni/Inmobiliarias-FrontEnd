@@ -10,7 +10,9 @@ import ConfirmAction from '../../../components/ConfirmAction.jsx'
 
 function NewAlertForm({ lead, agents, onSaved }) {
   const [message, setMessage] = useState('')
+  // Texto del <input type="datetime-local">: "2026-10-10T10:00".
   const [alertDate, setAlertDate] = useState('')
+  // Por defecto, el recordatorio es para el agente del lead.
   const [userId, setUserId] = useState(String(lead.userId))
   const [status, setStatus] = useState({ state: 'idle' })
 
@@ -26,7 +28,9 @@ function NewAlertForm({ lead, agents, onSaved }) {
       await createAlert(lead.id, {
         userId: Number(userId),
         message: message.trim(),
+        // El backend espera "yyyy-MM-ddTHH:mm:ss": se le agregan los segundos.
         alertDate: toLocalDateTime(alertDate),
+        // Un recordatorio nuevo siempre arranca sin cumplir.
         isRead: false,
       })
       setMessage('')
@@ -120,6 +124,8 @@ export default function LeadAlerts({ lead, alerts, agents, onChanged }) {
       )}
 
       {alerts.map((alert) => {
+        // Vencida: sin cumplir y con la fecha ya pasada. getTime() da los
+        // milisegundos desde 1970, así se comparan dos fechas como números.
         const overdue = !alert.isRead && new Date(alert.alertDate).getTime() < now
 
         return (
@@ -139,6 +145,8 @@ export default function LeadAlerts({ lead, alerts, agents, onChanged }) {
                 checked={alert.isRead}
                 disabled={busyId != null}
                 aria-label={alert.isRead ? 'Marcar como pendiente' : 'Marcar como cumplida'}
+                // Tildar o destildar: PUT de la alerta con solo `isRead` cambiado.
+                // `{ isRead }` es la forma corta de `{ isRead: isRead }`.
                 onChange={(event) => {
                   const isRead = event.currentTarget.checked
                   run(alert, () => updateAlert(lead.id, alert.id, alertToRequest(alert, { isRead })))

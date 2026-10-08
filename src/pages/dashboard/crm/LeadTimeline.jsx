@@ -13,6 +13,8 @@ import { CRM_EVENT_LABEL, MANUAL_EVENT_OPTIONS, createHistoryEvent } from '../..
 import { formatDateTime } from '../../../services/format.js'
 import { findUser } from '../../../services/users.js'
 
+// Ícono y color de cada tipo de evento. Guardar componentes en un objeto
+// permite elegir cuál dibujar según un dato: `const Icon = EVENT_ICON[type]`.
 const EVENT_ICON = {
   NOTE: IconNote,
   CALL: IconPhone,
@@ -30,6 +32,7 @@ function NewEventForm({ lead, onCreated }) {
   const [status, setStatus] = useState({ state: 'idle' })
 
   const submit = async (event) => {
+    // Evita que el <form> recargue la página al enviarse.
     event.preventDefault()
     setStatus({ state: 'saving' })
     try {
@@ -93,7 +96,9 @@ export default function LeadTimeline({ lead, history, onChanged }) {
         </Text>
       ) : (
         <Timeline bulletSize={28} lineWidth={2}>
+          {/* El backend ya manda el historial ordenado, lo más nuevo primero. */}
           {history.map((event) => {
+            // Variable con mayúscula para poder dibujarla como componente: <Icon />.
             const Icon = EVENT_ICON[event.type] ?? IconNote
             return (
               <Timeline.Item
@@ -106,6 +111,7 @@ export default function LeadTimeline({ lead, history, onChanged }) {
                 title={CRM_EVENT_LABEL[event.type] ?? event.type}
               >
                 {event.comments && (
+                  // `pre-wrap` respeta los saltos de línea que se escribieron en el comentario.
                   <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
                     {event.comments}
                   </Text>

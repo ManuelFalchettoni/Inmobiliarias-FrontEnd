@@ -94,10 +94,15 @@ function useLeadData(id) {
     const controller = new AbortController()
     const options = { signal: controller.signal }
 
+    // Los cuatro pedidos salen a la vez (en paralelo) y Promise.all espera a
+    // todos. El resultado llega como array en el mismo orden, y se desestructura
+    // en cuatro variables. Si uno falla, falla todo y se va al catch.
     Promise.all([findLead(id, options), listHistory(id, options), listOffers(id, options), listAlerts(id, options)])
       .then(([lead, history, offers, alerts]) => setData({ lead, history, offers, alerts }))
       .catch((error) => {
         if (controller.signal.aborted) return
+        // Se conserva lo que ya había (`...current`): si falla una recarga, la
+        // pantalla sigue mostrando los datos anteriores con un aviso.
         setData((current) => ({
           ...current,
           error:
@@ -114,6 +119,7 @@ function useLeadData(id) {
   return { data, reload }
 }
 
+/** Detalle de un lead: etapa, historial, datos, ofertas y recordatorios. */
 export default function LeadDetail() {
   const { id } = useParams()
   const location = useLocation()
@@ -122,6 +128,8 @@ export default function LeadDetail() {
   const [action, setAction] = useState({ state: 'idle' })
 
   const lead = data?.lead
+  // Los hooks van ANTES del `if (!lead) return` de abajo: React exige que se
+  // llamen siempre, en el mismo orden, en cada render.
   const person = useLookup('people', [lead?.peopleId], findPerson)[lead?.peopleId]
   const property = useLookup('properties', [lead?.propertyId], findProperty)[lead?.propertyId]
   const agent = useLookup('users', [lead?.userId], findUser)[lead?.userId]
@@ -159,11 +167,13 @@ export default function LeadDetail() {
     reload()
   }
 
+  // El selector de etapas: PUT del lead + evento en el historial (ver crm.js).
   const changeStage = (stage) => {
     if (stage === lead.stage) return
     runLeadAction(() => changeLeadStage(lead, stage))
   }
 
+  // Reasignar el agente: actualiza el lead y deja una nota con el cambio.
   const reassign = (value) => {
     if (!value || Number(value) === lead.userId) return
     const label = agents.options.find((option) => option.value === value)?.label ?? `#${value}`
@@ -245,6 +255,8 @@ export default function LeadDetail() {
             Etapa
           </Text>
           <ScrollArea type="auto" offsetScrollbars>
+            {/* Las 6 etapas como botones contiguos; el seleccionado es la etapa actual.
+                ScrollArea permite deslizarlos de costado en pantallas chicas. */}
             <SegmentedControl
               fullWidth
               miw={560}
@@ -264,6 +276,8 @@ export default function LeadDetail() {
         <Grid gutter="xl">
           <Grid.Col span={{ base: 12, lg: 7 }}>
             <SectionCard icon={IconHistory} title="Historial">
+              {/* Cada sección recibe `reload`: después de un cambio se vuelve a
+                  pedir todo, así se ven juntos la oferta, la etapa y el evento nuevos. */}
               <LeadTimeline lead={lead} history={data.history} onChanged={reload} />
             </SectionCard>
           </Grid.Col>
