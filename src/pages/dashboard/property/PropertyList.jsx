@@ -24,6 +24,7 @@ import {
   PROPERTY_CONDITION_COLOR,
   PROPERTY_CONDITION_LABEL,
   PROPERTY_TYPE_LABEL,
+  formatPropertyPlace,
   listProperties,
   sortPhotos,
 } from '../../../services/properties.js'
@@ -192,7 +193,7 @@ export default function PropertyList() {
                               {propiedad.address}
                             </Text>
                             <Text size="xs" c="dimmed">
-                              {propiedad.location}
+                              {formatPropertyPlace(propiedad)}
                             </Text>
                           </div>
                         </Group>

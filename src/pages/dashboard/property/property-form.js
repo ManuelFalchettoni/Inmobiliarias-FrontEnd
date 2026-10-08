@@ -1,20 +1,23 @@
 /**
  * Valores por defecto y validación del alta / edición de propiedad.
  *
- * Replica las anotaciones del `PropertyRequest`. Los tres `int` primitivos
- * (`size`, `rooms`, `floorNumber`) son obligatorios acá aunque el DTO no tenga
- * `@NotNull`: Jackson convierte un vacío en 0 y la propiedad quedaría guardada
- * con datos inventados.
+ * Replica las anotaciones del `PropertyRequest`. `floorNumber` es opcional en
+ * el DTO, pero acá se pide siempre: arranca en 0 (planta baja) y así el dato
+ * no queda vacío en el listado.
  */
-import { PROPERTY_LIMITS, toInt } from '../../../services/properties.js'
+import { PROPERTY_LIMITS, toDecimal, toInt } from '../../../services/properties.js'
 
 export const propertyDefaultValues = {
   address: '',
-  location: '',
+  province: '',
+  county: '',
+  city: '',
+  latitude: '',
+  longitude: '',
   type: null,
   condition: null,
   occupancy: null,
-  idAgency: null,
+  agencyId: null,
   year: '',
   size: '',
   rooms: '',
@@ -22,12 +25,12 @@ export const propertyDefaultValues = {
   floorNumber: 0,
 }
 
-/** Tope de un `int` de Java: más arriba Jackson responde 400 por overflow. */
+/** Tope de un `Integer` de Java: más arriba Jackson responde 400 por overflow. */
 const JAVA_INT_MAX = 2147483647
 
-function text(value, { max }, subject) {
+function text(value, { max }, subject, { required = true } = {}) {
   const trimmed = String(value ?? '').trim().replace(/\s+/g, ' ')
-  if (!trimmed) return `Indique ${subject}.`
+  if (!trimmed) return required ? `Indique ${subject}.` : null
   if (trimmed.length > max) return `No puede superar los ${max} caracteres.`
   return null
 }
@@ -41,15 +44,32 @@ function integer(value, { min = 0, max = JAVA_INT_MAX } = {}, { required = true 
   return null
 }
 
+/** Latitud y longitud van juntas: una sola no sirve para ubicar el punto. */
+function coordinate(value, { min, max }, other, subject) {
+  const empty = value === '' || value == null
+  const otherEmpty = other === '' || other == null
+  if (empty) return otherEmpty ? null : `Indique también la ${subject}.`
+  const parsed = toDecimal(value)
+  if (parsed == null) return 'Debe ser un número.'
+  if (parsed < min || parsed > max) return `Debe estar entre ${min} y ${max}.`
+  return null
+}
+
 const required = (message) => (value) => (value ? null : message)
 
 export const propertyValidation = {
   address: (value) => text(value, PROPERTY_LIMITS.address, 'la dirección'),
-  location: (value) => text(value, PROPERTY_LIMITS.location, 'la localidad'),
+  province: (value) => text(value, PROPERTY_LIMITS.province, 'la provincia'),
+  county: (value) => text(value, PROPERTY_LIMITS.county, 'el partido', { required: false }),
+  city: (value) => text(value, PROPERTY_LIMITS.city, 'la ciudad'),
+  latitude: (value, values) =>
+    coordinate(value, PROPERTY_LIMITS.latitude, values.longitude, 'latitud'),
+  longitude: (value, values) =>
+    coordinate(value, PROPERTY_LIMITS.longitude, values.latitude, 'longitud'),
   type: required('Elija el tipo de propiedad.'),
   condition: required('Elija la condición.'),
   occupancy: required('Elija la ocupación.'),
-  idAgency: required('Elija la agencia que publica.'),
+  agencyId: required('Elija la agencia que publica.'),
   year: (value) => integer(value, PROPERTY_LIMITS.year, { required: false }),
   size: (value) => integer(value, PROPERTY_LIMITS.size),
   rooms: (value) => integer(value, PROPERTY_LIMITS.rooms),

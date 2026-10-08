@@ -153,7 +153,7 @@ function PropertyEditor({ property }) {
   const queueRef = useRef(queue)
 
   const initialValues = property ? toPropertyFormValues(property) : propertyDefaultValues
-  const agencies = useAgencyOptions(initialValues.idAgency)
+  const agencies = useAgencyOptions(initialValues.agencyId)
 
   const form = useForm({
     mode: 'uncontrolled',
@@ -353,26 +353,64 @@ function PropertyEditor({ property }) {
               <SectionCard
                 icon={IconMapPin}
                 title="Ubicación"
-                description="Dirección exacta del inmueble y la localidad donde se publica."
+                description="Dirección exacta del inmueble y la zona donde se publica."
               >
-                <SimpleGrid cols={{ base: 1, sm: 2 }}>
+                <TextInput
+                  label="Dirección"
+                  placeholder="Av. Colón 1234, 5° B"
+                  description={`Hasta ${PROPERTY_LIMITS.address.max} caracteres`}
+                  withAsterisk
+                  maxLength={PROPERTY_LIMITS.address.max}
+                  key={form.key('address')}
+                  {...form.getInputProps('address')}
+                />
+                <SimpleGrid cols={{ base: 1, sm: 3 }} mt="md">
                   <TextInput
-                    label="Dirección"
-                    placeholder="Av. Colón 1234, 5° B"
-                    description={`Hasta ${PROPERTY_LIMITS.address.max} caracteres`}
+                    label="Provincia"
+                    placeholder="Santa Fe"
                     withAsterisk
-                    maxLength={PROPERTY_LIMITS.address.max}
-                    key={form.key('address')}
-                    {...form.getInputProps('address')}
+                    maxLength={PROPERTY_LIMITS.province.max}
+                    key={form.key('province')}
+                    {...form.getInputProps('province')}
                   />
                   <TextInput
-                    label="Localidad"
-                    placeholder="Córdoba Capital"
-                    description={`Hasta ${PROPERTY_LIMITS.location.max} caracteres`}
+                    label="Partido o departamento"
+                    placeholder="Opcional"
+                    maxLength={PROPERTY_LIMITS.county.max}
+                    key={form.key('county')}
+                    {...form.getInputProps('county')}
+                  />
+                  <TextInput
+                    label="Ciudad"
+                    placeholder="Rosario"
                     withAsterisk
-                    maxLength={PROPERTY_LIMITS.location.max}
-                    key={form.key('location')}
-                    {...form.getInputProps('location')}
+                    maxLength={PROPERTY_LIMITS.city.max}
+                    key={form.key('city')}
+                    {...form.getInputProps('city')}
+                  />
+                </SimpleGrid>
+                <SimpleGrid cols={{ base: 1, sm: 2 }} mt="md">
+                  <NumberInput
+                    label="Latitud"
+                    placeholder="-32.9468"
+                    description="Opcional; va junto con la longitud"
+                    min={PROPERTY_LIMITS.latitude.min}
+                    max={PROPERTY_LIMITS.latitude.max}
+                    decimalScale={7}
+                    thousandSeparator={false}
+                    key={form.key('latitude')}
+                    {...form.getInputProps('latitude')}
+                  />
+                  <NumberInput
+                    label="Longitud"
+                    placeholder="-60.6393"
+                    description="Ubica la propiedad en el mapa"
+                    min={PROPERTY_LIMITS.longitude.min}
+                    max={PROPERTY_LIMITS.longitude.max}
+                    decimalScale={7}
+                    thousandSeparator={false}
+                    key={form.key('longitude')}
+                    {...form.getInputProps('longitude')}
                   />
                 </SimpleGrid>
               </SectionCard>
@@ -490,11 +528,11 @@ function PropertyEditor({ property }) {
                   searchable
                   nothingFoundMessage="Sin coincidencias"
                   withAsterisk
-                  // El backend responde 400 si un PUT cambia idAgency: no se mueve de agencia.
+                  // El backend responde 400 si un PUT cambia agencyId: no se mueve de agencia.
                   disabled={propertyId != null || agencies.state === 'loading'}
                   description={propertyId != null ? 'No se puede cambiar una vez publicada.' : undefined}
-                  key={form.key('idAgency')}
-                  {...form.getInputProps('idAgency')}
+                  key={form.key('agencyId')}
+                  {...form.getInputProps('agencyId')}
                 />
                 {agencies.state === 'error' && (
                   <Text size="sm" c="red" mt="xs">

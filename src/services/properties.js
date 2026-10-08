@@ -56,12 +56,16 @@ export const PROPERTY_CONDITION_COLOR = {
 
 /**
  * Límites tomados de las anotaciones del DTO. `size` arranca en 1 (`@Positive`)
- * y los otros dos en 0 (`@PositiveOrZero`): ese dígito de diferencia es el que
- * decide entre un alta válida y un 400.
+ * y `rooms` y `floorNumber` en 0 (`@PositiveOrZero`): ese dígito de diferencia
+ * es el que decide entre un alta válida y un 400.
  */
 export const PROPERTY_LIMITS = {
   address: { max: 150 },
-  location: { max: 100 },
+  province: { max: 50 },
+  county: { max: 100 },
+  city: { max: 100 },
+  latitude: { min: -90, max: 90 },
+  longitude: { min: -180, max: 180 },
   year: { min: 1800, max: 2100 },
   size: { min: 1 },
   rooms: { min: 0 },
@@ -71,9 +75,8 @@ export const PROPERTY_LIMITS = {
 /**
  * Convierte el valor de un NumberInput a entero.
  *
- * Mantine devuelve '' cuando el campo se vacía. Mandar eso al backend es el
- * origen de los ceros fantasma: Jackson convierte '' y null a 0 en los int
- * primitivos sin protestar.
+ * Mantine devuelve '' cuando el campo se vacía; al backend tiene que llegar
+ * null, que es lo que sus `@NotNull` reconocen como dato faltante.
  */
 export function toInt(value, fallback = null) {
   if (value === '' || value == null) return fallback
@@ -81,49 +84,64 @@ export function toInt(value, fallback = null) {
   return Number.isFinite(parsed) ? Math.trunc(parsed) : fallback
 }
 
+/** Convierte el valor de un NumberInput a número con decimales (coordenadas). */
+export function toDecimal(value) {
+  if (value === '' || value == null) return null
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+const cleanText = (value) => String(value ?? '').trim().replace(/\s+/g, ' ')
+
 /**
  * Traduce los valores del formulario al `PropertyRequest`.
  *
- * Solo salen de acá los 10 campos del DTO: `id`, `active`, `photos` y las
- * marcas de tiempo viven en `PropertyResponse`. El backend corre con
+ * Solo salen de acá los campos del DTO: `id`, `active`, `photos`, `prices` y
+ * las marcas de tiempo viven en `PropertyResponse`. El backend corre con
  * `fail-on-unknown-properties=true`, así que cualquier campo de más convierte
  * el alta en un 400 "Malformed or invalid request body".
  */
 export function toPropertyRequest(values) {
   return {
     // Se colapsan los espacios repetidos antes de medir contra el max del @Size.
-    address: values.address.trim().replace(/\s+/g, ' '),
-    location: values.location.trim().replace(/\s+/g, ' '),
+    address: cleanText(values.address),
+    province: cleanText(values.province),
+    // Opcionales: sin valor viajan como null en lugar de "".
+    county: cleanText(values.county) || null,
+    city: cleanText(values.city),
+    latitude: toDecimal(values.latitude),
+    longitude: toDecimal(values.longitude),
     type: values.type,
     condition: values.condition,
     occupancy: values.occupancy,
     // El Select de Mantine entrega strings; el backend espera un Long.
-    idAgency: toInt(values.idAgency),
-    // `year` es Integer en Java: null es un valor aceptado y saltea @Min/@Max.
+    agencyId: toInt(values.agencyId),
     year: toInt(values.year),
-    // Los tres son int primitivos: nunca pueden viajar como null. El 0 acá es
-    // solo para mantener el payload válido; los vacíos los frena la validación
-    // del formulario antes de llegar a este punto.
-    size: toInt(values.size, 0),
-    rooms: toInt(values.rooms, 0),
-    floorNumber: toInt(values.floorNumber, 0),
+    // Los vacíos los frena la validación del formulario antes de llegar acá.
+    size: toInt(values.size),
+    rooms: toInt(values.rooms),
+    floorNumber: toInt(values.floorNumber),
   }
 }
 
 /**
  * Inversa de `toPropertyRequest`: carga un `PropertyResponse` en el formulario
- * de edición. Los números quedan como números (lo que espera NumberInput) e
- * `idAgency` como string (lo que espera Select). `year` puede no venir: el
- * backend omite los null (`default-property-inclusion=non_null`).
+ * de edición. Los números quedan como números (lo que espera NumberInput) y
+ * `agencyId` como string (lo que espera Select). Los opcionales pueden no
+ * venir: el backend omite los null (`default-property-inclusion=non_null`).
  */
 export function toPropertyFormValues(property) {
   return {
     address: property.address ?? '',
-    location: property.location ?? '',
+    province: property.province ?? '',
+    county: property.county ?? '',
+    city: property.city ?? '',
+    latitude: property.latitude ?? '',
+    longitude: property.longitude ?? '',
     type: property.type ?? null,
     condition: property.condition ?? null,
     occupancy: property.occupancy ?? null,
-    idAgency: property.idAgency != null ? String(property.idAgency) : null,
+    agencyId: property.agencyId != null ? String(property.agencyId) : null,
     year: property.year ?? '',
     size: property.size ?? '',
     rooms: property.rooms ?? '',
@@ -132,9 +150,19 @@ export function toPropertyFormValues(property) {
 }
 
 /**
+ * Ciudad, partido y provincia en una línea. El partido se omite si repite la
+ * ciudad, que es lo habitual en las capitales ("Rosario, Rosario").
+ */
+export function formatPropertyPlace(property) {
+  const { city, county, province } = property ?? {}
+  const parts = [city, county !== city ? county : null, province]
+  return parts.filter(Boolean).join(', ')
+}
+
+/**
  * GET /api/properties -> `Page<PropertyResponse>` de Spring:
  * `{ content, totalElements, totalPages, number, size, first, last }`.
- * Filtros: `idAgency` y `active`.
+ * Filtros: `agencyId` y `active`.
  */
 export const listProperties = (params, options) =>
   get(`${PROPERTIES_ENDPOINT}?${pageQuery(params)}`, options)
@@ -142,7 +170,7 @@ export const listProperties = (params, options) =>
 export const findProperty = (id, options) => get(`${PROPERTIES_ENDPOINT}/${id}`, options)
 export const createProperty = (request, options) => post(PROPERTIES_ENDPOINT, request, options)
 
-/** El backend responde 400 si `idAgency` difiere de la actual: no se mueve de agencia. */
+/** El backend responde 400 si `agencyId` difiere de la actual: no se mueve de agencia. */
 export const updateProperty = (id, request, options) =>
   put(`${PROPERTIES_ENDPOINT}/${id}`, request, options)
 
