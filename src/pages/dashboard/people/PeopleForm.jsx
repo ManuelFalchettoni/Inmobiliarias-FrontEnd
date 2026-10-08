@@ -19,7 +19,7 @@ import {
 import { useForm } from '@mantine/form'
 import { IconAlertTriangle, IconAt, IconChevronRight, IconCircleCheck } from '@tabler/icons-react'
 
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { useAgencyOptions } from '../../../hooks/useAgencyOptions.js'
 import { queryKeys } from '../../../queries/keys.js'
@@ -267,23 +267,22 @@ function PeopleEditor({ person, returnTo }) {
 }
 
 function PeopleLoader({ id }) {
-  const [result, setResult] = useState(null)
+  const query = useQuery({
+    queryKey: queryKeys.people.detail(id),
+    queryFn: ({ signal }) => findPerson(id, { signal }),
+  })
 
-  useEffect(() => {
-    const controller = new AbortController()
-    findPerson(id, { signal: controller.signal })
-      .then((person) => setResult({ person }))
-      .catch((error) => {
-        if (controller.signal.aborted) return
-        setResult({
+  // Si ya hay datos se usan aunque falle una recarga en segundo plano (ver PropertyLoader).
+  const result = query.data
+    ? { person: query.data }
+    : query.isError
+      ? {
           error:
-            error instanceof ApiError && error.status === 404
+            query.error instanceof ApiError && query.error.status === 404
               ? `No existe una persona con el identificador #${id}.`
-              : error.message,
-        })
-      })
-    return () => controller.abort()
-  }, [id])
+              : query.error.message,
+        }
+      : null
 
   if (!result || result.error) {
     return (

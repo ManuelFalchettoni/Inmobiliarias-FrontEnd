@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
   ActionIcon,
   Alert,
@@ -18,6 +18,7 @@ import {
 import { IconAlertTriangle, IconPencil, IconPlus, IconUsersGroup } from '@tabler/icons-react'
 
 import { useLookup } from '../../../hooks/useLookup.js'
+import { queryKeys } from '../../../queries/keys.js'
 import { findAgency } from '../../../services/agencies.js'
 import { formatDate } from '../../../services/format.js'
 import { listPeople } from '../../../services/people.js'
@@ -32,24 +33,18 @@ export default function PeopleList() {
   const [searchParams, setSearchParams] = useSearchParams()
   const page = Number(searchParams.get('page') ?? 1)
 
-  // Sin filtros, la "clave" del pedido es solo la página (ver PropertyList).
-  const [resultado, setResultado] = useState(null) // { page, data, error }
-  const cargando = resultado?.page !== page
+  const params = { page: page - 1, size: PAGE_SIZE }
 
-  useEffect(() => {
-    const controller = new AbortController()
+  // Mismo patrón que el listado de propiedades (ver PropertyList).
+  const query = useQuery({
+    queryKey: queryKeys.people.list(params),
+    queryFn: ({ signal }) => listPeople(params, { signal }),
+    placeholderData: keepPreviousData,
+  })
 
-    listPeople({ page: page - 1, size: PAGE_SIZE }, { signal: controller.signal })
-      .then((data) => setResultado({ page, data, error: null }))
-      .catch((err) => {
-        if (!controller.signal.aborted) setResultado({ page, data: null, error: err.message })
-      })
-
-    return () => controller.abort()
-  }, [page])
-
-  const data = resultado?.data ?? null
-  const error = resultado?.error ?? null
+  const data = query.data ?? null
+  const error = query.isError ? query.error.message : null
+  const cargando = query.isPlaceholderData
   // Nombre de la inmobiliaria de cada persona (la respuesta trae solo el id).
   const agencies = useLookup('agencies', data?.content.map((p) => p.agencyId) ?? [], findAgency)
 
@@ -79,7 +74,7 @@ export default function PeopleList() {
         </Button>
       </Group>
 
-      {cargando && resultado == null && (
+      {query.isPending && (
         <Stack gap="xs">
           {Array.from({ length: 6 }, (_, i) => (
             <Skeleton key={i} height={52} radius="md" />
