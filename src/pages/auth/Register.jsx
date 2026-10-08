@@ -6,7 +6,7 @@ import { IconAlertTriangle } from '@tabler/icons-react'
 
 import AuthLayout from '../../layouts/AuthLayout.jsx'
 import { normalizePhone } from '../../services/agencies.js'
-import { PUBLIC_SIGNUP_ROL, USER_LIMITS, createUser, toUserRequest } from '../../services/users.js'
+import { USER_LIMITS, registerUser, toRegisterRequest } from '../../services/users.js'
 import { describeUserError, userDefaultValues, userValidation } from './user-form.js'
 
 export default function Register() {
@@ -30,10 +30,7 @@ export default function Register() {
     setStatus({ state: 'submitting' })
 
     try {
-      // El rol no sale del formulario: desde el registro público solo se crean USER.
-      const user = await createUser(toUserRequest({ ...values, rol: PUBLIC_SIGNUP_ROL }), {
-        signal: controller.signal,
-      })
+      const user = await registerUser(toRegisterRequest(values), { signal: controller.signal })
       navigate('/login', { state: { registered: { name: user.name, email: user.email } } })
     } catch (error) {
       if (controller.signal.aborted) return

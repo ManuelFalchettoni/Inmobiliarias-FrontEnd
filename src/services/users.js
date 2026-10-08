@@ -12,6 +12,7 @@ import { del, get, pageQuery, patch, post, put } from './api.js'
 import { normalizePhone } from './agencies.js'
 
 export const USERS_ENDPOINT = '/api/users'
+export const REGISTER_ENDPOINT = '/api/auth/register'
 
 /** Refleja `enums/user/UserRol`. */
 export const USER_ROL = {
@@ -30,7 +31,7 @@ export const USER_ROL_OPTIONS = [
 
 export const USER_ROL_LABEL = Object.fromEntries(USER_ROL_OPTIONS.map((o) => [o.value, o.label]))
 
-/** Rol de las cuentas que se crean desde el registro público. */
+/** Rol que el backend asigna a las cuentas del registro público. */
 export const PUBLIC_SIGNUP_ROL = USER_ROL.USER
 
 /** Refleja las anotaciones `@Size` del `UserRequest`. */
@@ -74,6 +75,22 @@ export function toUserUpdateRequest(values) {
     phoneNumber: normalizePhone(values.phoneNumber),
   }
 }
+
+/**
+ * Valores del formulario -> `RegisterRequest`. Sin rol ni agencia: el backend
+ * crea la cuenta como USER y sin inmobiliaria.
+ */
+export function toRegisterRequest(values) {
+  return {
+    name: cleanName(values.name),
+    email: cleanEmail(values.email),
+    password: values.password,
+    phoneNumber: normalizePhone(values.phoneNumber),
+  }
+}
+
+/** POST /api/auth/register -> 201 con el `UserResponse` creado. */
+export const registerUser = (request, options) => post(REGISTER_ENDPOINT, request, options)
 
 /** POST /api/users -> 201 con el `UserResponse` creado. */
 export const createUser = (request, options) => post(USERS_ENDPOINT, request, options)
