@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import DashboardLayout from '../../layouts/DashboardLayout.jsx'
 import { DASHBOARD_INDEX, dashboardNav } from '../../layouts/dashboard-nav.js'
 import AgencyForm from './agency/AgencyForm.jsx'
+import LeadDetail from './crm/LeadDetail.jsx'
 import LeadForm from './crm/LeadForm.jsx'
 import LeadList from './crm/LeadList.jsx'
 import PeopleForm from './people/PeopleForm.jsx'
@@ -42,6 +43,7 @@ export default function DashboardRoutes() {
         <Route path="personas/:id/editar" element={<PeopleForm />} />
         <Route path="consultas" element={<LeadList />} />
         <Route path="consultas/nuevo" element={<LeadForm />} />
+        <Route path="consultas/:id" element={<LeadDetail />} />
 
         {/* Secciones del menú que todavía no están disponibles. */}
         {dashboardNav
