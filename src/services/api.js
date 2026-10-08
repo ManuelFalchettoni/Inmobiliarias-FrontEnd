@@ -4,17 +4,32 @@
  * La API es abierta en desarrollo (SecurityConfig: `anyRequest().permitAll()`) y
  * no usa cookies ni sesión, por eso no se envían credenciales. El CORS del backend
  * habilita http://localhost:5173 y http://localhost:3000.
+ *
+ * Es el único archivo que hace `fetch`. Las pantallas llaman a un servicio
+ * (`properties.js`, `crm.js`...) y el servicio llama a las funciones de acá.
+ * Así la dirección del backend, el tiempo máximo y la lectura de errores
+ * viven en un solo lugar.
  */
 
+// `import.meta.env` son las variables de entorno del archivo `.env`. Vite solo
+// expone las que empiezan con `VITE_`. `??` usa el valor de la derecha si la
+// variable no existe. El `replace` borra las barras del final para no armar
+// direcciones con `//` (por ejemplo `http://localhost:8080//api/...`).
 const BASE_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:8080').replace(/\/+$/, '')
-const DEFAULT_TIMEOUT = 15000
+const DEFAULT_TIMEOUT = 15000 // 15 segundos
 
 /**
  * Error de API con el detalle del `ApiErrorResponse` del backend:
  * `{ timestamp, status, error, message, path }`.
+ *
+ * `extends Error` lo hace un error "de verdad" (tiene `message`, se puede
+ * lanzar con `throw` y atrapar con `catch`), con datos extra para la pantalla.
+ * `status = 0` significa "no hubo respuesta": ningún código HTTP real es 0.
  */
 export class ApiError extends Error {
   constructor(message, { status = 0, path = '', fieldErrors = {}, detail = message, cause } = {}) {
+    // `super` llama al constructor de Error. `cause` guarda el error original
+    // (por ejemplo, el TypeError de fetch) para poder rastrearlo al depurar.
     super(message, { cause })
     this.name = 'ApiError'
     this.status = status
@@ -23,6 +38,9 @@ export class ApiError extends Error {
     /** Mensaje tal cual lo mandó el backend, para depurar. */
     this.detail = detail
   }
+
+  // Los `get` son propiedades calculadas: se leen como `error.isConflict`, sin
+  // paréntesis, y se recalculan cada vez a partir de `status` y `fieldErrors`.
 
   /** No hubo respuesta del servidor (caído, CORS, timeout o red). */
   get isNetworkError() {
@@ -51,15 +69,30 @@ function parseFieldErrors(message) {
   if (typeof message !== 'string' || !message.includes(':')) return {}
 
   const fieldErrors = {}
+  // La regex corta en cada coma seguida de `nombreDeCampo:`. El `(?=...)` es un
+  // "lookahead": mira lo que viene después sin consumirlo, así el nombre del
+  // campo queda en el pedazo siguiente.
+  // Ejemplo: "email: must be valid, name: size must be between 3 and 20"
+  //       -> ["email: must be valid", "name: size must be between 3 and 20"]
   for (const part of message.split(/,\s*(?=[a-zA-Z][a-zA-Z0-9]*:\s)/)) {
+    // Separa "campo: mensaje" en dos grupos: match[1] = campo, match[2] = mensaje.
+    // La bandera `s` deja que `.` también acepte saltos de línea.
     const match = /^([a-zA-Z][a-zA-Z0-9]*):\s*(.+)$/s.exec(part.trim())
     if (!match) return {}
     fieldErrors[match[1]] = match[2].trim()
   }
+  // Resultado: { email: 'must be valid', name: 'size must be...' }, que el
+  // formulario pone debajo de cada input con `form.setErrors`.
   return fieldErrors
 }
 
+/**
+ * Lee el cuerpo de la respuesta según lo que haya. Nunca lanza: una respuesta
+ * mal formada se trata como "sin cuerpo" (`null`).
+ */
 async function readBody(response) {
+  // 204 "No Content": salió bien pero no hay nada que leer (borrar, dar de baja,
+  // cambiar la contraseña). Intentar leer JSON acá fallaría.
   if (response.status === 204 || response.headers.get('content-length') === '0') return null
 
   const contentType = response.headers.get('content-type') ?? ''
@@ -77,8 +110,11 @@ async function readBody(response) {
  * partes y el `@RequestPart("files")` falla.
  */
 function encodeBody(body, headers) {
+  // Sin cuerpo (un GET o un restore): no se manda nada ni `Content-Type`.
   if (body === undefined) return { body: undefined, headers }
+  // Archivos: el FormData tal cual (ver el comentario de arriba).
   if (body instanceof FormData) return { body, headers }
+  // Datos: el objeto convertido a texto JSON, avisando que es JSON.
   return { body: JSON.stringify(body), headers: { 'Content-Type': 'application/json', ...headers } }
 }
 
@@ -91,11 +127,16 @@ function encodeBody(body, headers) {
  * @param {number} [options.timeout]
  */
 export async function request(path, { method = 'GET', body, signal, timeout = DEFAULT_TIMEOUT, headers } = {}) {
+  // Dos formas de cortar el pedido: que se cumpla el tiempo máximo
+  // (`AbortSignal.timeout`) o que el componente lo cancele (`signal`, de un
+  // AbortController). `AbortSignal.any` las combina: corta lo que pase primero.
   const signals = [AbortSignal.timeout(timeout)]
   if (signal) signals.push(signal)
 
   let response
   try {
+    // `await` espera la respuesta sin bloquear la página. Si no hay respuesta
+    // (servidor caído, CORS, corte), `fetch` lanza un error y se va al `catch`.
     response = await fetch(`${BASE_URL}${path}`, {
       method,
       signal: AbortSignal.any(signals),
@@ -119,6 +160,8 @@ export async function request(path, { method = 'GET', body, signal, timeout = DE
 
   const payload = await readBody(response)
 
+  // `response.ok` es true para los códigos 200 a 299. Un 400, 404 o 409 NO hace
+  // fallar a `fetch`: hay que revisarlo a mano y convertirlo en un ApiError.
   if (!response.ok) {
     const detail =
       (typeof payload === 'string' ? payload : payload?.message) ||
@@ -143,6 +186,8 @@ export async function request(path, { method = 'GET', body, signal, timeout = DE
   return payload
 }
 
+// Atajos por método HTTP. El `...options` copia las opciones que se reciban
+// (por ejemplo `signal` o `timeout`) y después se fija el método.
 export const get = (path, options) => request(path, { ...options, method: 'GET' })
 export const post = (path, body, options) => request(path, { ...options, method: 'POST', body })
 export const put = (path, body, options) => request(path, { ...options, method: 'PUT', body })
@@ -165,8 +210,12 @@ export const patch = (path, body, options) => request(path, { ...options, method
  * viajan; ojo, un `!value` acá descartaría `active=false`.
  */
 export function pageQuery({ page = 0, size = 20, sort = 'createdAt,desc', ...filters } = {}) {
+  // `...filters` junta todo lo que no sea page, size ni sort: { active, agencyId... }.
+  // URLSearchParams arma el texto y codifica los caracteres especiales
+  // (la coma de "createdAt,desc" viaja como %2C).
   const params = new URLSearchParams({ page: String(page), size: String(size), sort })
 
+  // Object.entries convierte { active: true } en [['active', true]].
   for (const [key, value] of Object.entries(filters)) {
     if (value != null && value !== '') params.set(key, String(value))
   }

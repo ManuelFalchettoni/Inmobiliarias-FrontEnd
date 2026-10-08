@@ -7,6 +7,7 @@
  */
 import { get } from './api.js'
 
+// Los tres totales como datos: agregar uno nuevo es sumar una fila acá.
 const TOTALS = [
   { key: 'properties', label: 'Propiedades activas', endpoint: '/api/properties' },
   { key: 'agencies', label: 'Agencias activas', endpoint: '/api/agencies' },
@@ -21,10 +22,15 @@ export const emptyWorkspaceTotals = TOTALS.map((entry) => ({ ...entry, total: nu
  * la barra lateral muestra un guion en lugar de romper el panel entero.
  */
 export async function getWorkspaceTotals(options) {
+  // Promise.allSettled espera los tres pedidos aunque alguno falle, y devuelve
+  // el resultado de cada uno: { status: 'fulfilled', value } o { status: 'rejected', reason }.
+  // Con Promise.all, un solo fallo haría perder los tres totales.
+  // `size=1`: se pide una sola fila; solo interesa `totalElements`.
   const results = await Promise.allSettled(
     TOTALS.map(({ endpoint }) => get(`${endpoint}?active=true&page=0&size=1`, options)),
   )
 
+  // Los resultados vienen en el mismo orden que TOTALS: se unen por `index`.
   return TOTALS.map((entry, index) => {
     const result = results[index]
     const total = result.status === 'fulfilled' ? result.value?.totalElements : null
