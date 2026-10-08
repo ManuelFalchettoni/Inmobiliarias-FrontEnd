@@ -81,7 +81,7 @@ function InfoRow({ label, children }) {
   )
 }
 
-/** Trae el contrato y sus partes. `version` fuerza la recarga. */
+/** Trae el contrato y sus partes. `reload` invalida la caché para volver a pedirlos. */
 function useContractData(id) {
   const queryClient = useQueryClient()
   const contract = useQuery({

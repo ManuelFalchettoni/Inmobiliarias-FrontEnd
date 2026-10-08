@@ -3,7 +3,7 @@
 Panel web de administración de la plataforma de inmobiliarias. Consume la API del
 [backend](https://github.com/ManuelFalchettoni/Inmobiliarias-BackEnd) (Spring Boot + MySQL + MinIO).
 
-React 19 · Vite · Mantine 9 · React Router 7.
+React 19 · Vite · Mantine 9 · React Router 7 · TanStack Query 5.
 
 ## Levantarlo
 
@@ -56,7 +56,8 @@ src/
 │   ├── api.js        fetch, timeout, cancelación y errores (ApiError)
 │   ├── format.js     Fechas
 │   └── agencies, users, properties, people, owners, contracts, crm, workspace
-├── hooks/        useAgencyOptions, useSelectOptions (opciones de Select), useLookup (caché de registros por id)
+├── queries/      React Query: cliente (client.js) y claves de caché (keys.js)
+├── hooks/        useAgencyOptions, useSelectOptions (opciones de Select), useLookup (ids a registros)
 ├── components/   Componentes compartidos (ConfirmAction)
 ├── layouts/      AuthLayout, DashboardLayout y el menú (dashboard-nav.js)
 ├── pages/
@@ -72,11 +73,16 @@ src/
   400 cualquier campo desconocido.
 - **Formularios.** Mantine Form en modo no controlado. Las reglas viven en un `*-form.js` junto a la
   pantalla y reproducen las del backend. Los errores 400 y 409 se muestran en el campo que los causó.
+- **Lecturas con React Query.** Toda lectura del backend es un `useQuery` con una clave de
+  `queries/keys.js` (`['properties', 'list', params]`, `['properties', 'detail', 7]`). Los datos
+  quedan en una caché compartida, frescos por 30 s. Solo se reintenta una vez, ante errores de red o 5xx.
+- **Escrituras.** Después de crear, editar o borrar se invalida la clave del recurso
+  (`invalidateQueries({ queryKey: ['properties'] })`): se refrescan listados, detalles y el total
+  del menú. Las acciones de las filas usan `useMutation`.
 - **Listados.** Página y filtros en la URL (`?page=2&active=false`). La página se muestra desde 1 y se
-  pide desde 0.
+  pide desde 0. Mientras llega una página se muestra la anterior (`keepPreviousData`).
 - **Ids a nombres.** Las respuestas del CRM, contratos y dueños traen solo ids; `useLookup` los
-  resuelve con una caché compartida.
-- **Cancelación.** Cada pedido lleva un `AbortSignal` y se cancela al desmontar o al repetirse.
+  resuelve con la misma clave que el detalle, así cada registro se pide una sola vez.
 
 ## Limitaciones actuales
 
