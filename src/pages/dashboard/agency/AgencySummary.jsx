@@ -4,6 +4,10 @@ import { IconEye, IconShieldCheck } from '@tabler/icons-react'
 import { AGENCY_STATUS_COLOR, AGENCY_STATUS_SHORT_LABEL, formatCuit, normalizePhone, normalizeWebUrl } from '../../../services/agencies.js'
 import { getProgress } from './agency-form.js'
 
+/**
+ * Iniciales para el avatar: "Habitat Prime" -> "HP". Separa por espacios,
+ * descarta vacíos, toma las dos primeras palabras y la primera letra de cada una.
+ */
 function getInitials(name) {
   const initials = String(name ?? '')
     .trim()
@@ -15,6 +19,7 @@ function getInitials(name) {
   return initials || 'AG'
 }
 
+/** Una fila "etiqueta ... valor". `mono` usa letra de ancho fijo (para CUIT y teléfono). */
 function SummaryRow({ label, children, mono = false }) {
   return (
     <Group justify="space-between" wrap="nowrap" gap="md" align="flex-start">
@@ -61,6 +66,7 @@ export default function AgencySummary({ form, rules, isEdit = false }) {
     acceptTerms,
   }
 
+  // Se recalcula en cada tecla, porque este componente se redibuja con cada campo.
   const progress = getProgress(values, rules)
   const isReady = progress === 100
   const statusLabel = AGENCY_STATUS_SHORT_LABEL[status] ?? status

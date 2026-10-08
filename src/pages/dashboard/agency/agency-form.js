@@ -40,8 +40,13 @@ export const REQUIRED_FIELDS = [
   'acceptTerms',
 ]
 
+// "la razón social" -> "La razón social", para empezar el mensaje con mayúscula.
 const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1)
 
+/**
+ * Regla genérica de largo. `subject` es cómo se nombra el campo en el mensaje.
+ * Con `min` 0 el campo es opcional; `Infinity` como máximo significa "sin tope".
+ */
 function sized(value, { min = 0, max = Infinity }, subject) {
   const trimmed = String(value ?? '').trim()
   if (min > 0 && !trimmed) return `Indique ${subject}.`
@@ -103,6 +108,7 @@ export const validation = {
  * Si se cambia, se valida completo.
  */
 export function editValidation(savedCuit) {
+  // Copia todas las reglas y reemplaza solo la del CUIT.
   return {
     ...validation,
     cuit: (value, values) => {
@@ -114,16 +120,25 @@ export function editValidation(savedCuit) {
 
 /** Porcentaje de campos obligatorios ya completados y válidos. */
 export function getProgress(values, rules = validation) {
+  // Un campo cuenta como completo si tiene valor y su regla no da error.
+  // Reutiliza las mismas reglas del formulario: no hay una segunda definición.
   const completed = REQUIRED_FIELDS.filter((field) => {
     const value = values[field]
     if (typeof value === 'boolean') return value
     if (!String(value ?? '').trim()) return false
+    // `?.(...)` llama a la regla solo si existe para ese campo.
     return rules[field]?.(value, values) == null
   })
 
   return Math.round((completed.length / REQUIRED_FIELDS.length) * 100)
 }
 
+/**
+ * Borrador en `localStorage`: una memoria del navegador que sobrevive a
+ * recargar la página. Solo guarda texto, por eso se usa JSON.stringify al
+ * guardar y JSON.parse al leer. Todo va en try/catch porque puede fallar
+ * (modo incógnito, memoria llena o un borrador corrupto).
+ */
 export function loadDraft() {
   try {
     const draft = JSON.parse(localStorage.getItem(DRAFT_KEY))

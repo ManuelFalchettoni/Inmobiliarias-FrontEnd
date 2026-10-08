@@ -86,6 +86,8 @@ function SectionCard({ icon: Icon, title, description, children }) {
  */
 function conflictFieldErrors(message) {
   const normalized = String(message ?? '').toLowerCase()
+  // `find` devuelve el primer campo único que aparece en el mensaje del
+  // backend ("Email already registered: ..." -> 'email').
   const field = AGENCY_UNIQUE_FIELDS.find((name) => normalized.includes(name.toLowerCase()))
   return field ? { [field]: 'Este valor ya está registrado en otra agencia.' } : {}
 }
@@ -97,10 +99,15 @@ function conflictFieldErrors(message) {
 function AgencyEditor({ agency }) {
   const isEdit = agency != null
   const [status, setStatus] = useState({ state: 'idle' })
+  // Hora del último borrador guardado, para el texto de la barra inferior.
   const [draftSavedAt, setDraftSavedAt] = useState(null)
 
+  // El temporizador del borrador vive en un ref: cambiarlo no redibuja.
   const draftTimer = useRef(null)
   const abortRef = useRef(null)
+  // Las reglas se eligen una sola vez: en edición, el CUIT ya guardado no se
+  // revisa con el dígito verificador (ver editValidation en agency-form.js).
+  // Se usa useState solo para conservar el mismo objeto entre renders.
   const [rules] = useState(() => (isEdit ? editValidation(agency.cuit) : validation))
 
   const form = useForm({
@@ -110,6 +117,9 @@ function AgencyEditor({ agency }) {
     initialValues: isEdit ? toAgencyFormValues(agency) : loadDraft(),
     validateInputOnBlur: true,
     validate: rules,
+    // Borrador automático con "debounce": cada cambio reinicia un temporizador
+    // y recién se guarda cuando se deja de escribir por DRAFT_DEBOUNCE_MS.
+    // En la edición no hay borrador: los datos ya están en el backend.
     onValuesChange: (values) => {
       if (isEdit) return
       clearTimeout(draftTimer.current)
@@ -126,6 +136,8 @@ function AgencyEditor({ agency }) {
       ? [...AGENCY_STATUS_OPTIONS, { value: agency.status, label: AGENCY_STATUS_SHORT_LABEL[agency.status] ?? agency.status }]
       : AGENCY_STATUS_OPTIONS
 
+  // Solo limpieza: al salir de la pantalla se cancela el borrador pendiente y
+  // el pedido en curso.
   useEffect(
     () => () => {
       clearTimeout(draftTimer.current)
@@ -167,6 +179,7 @@ function AgencyEditor({ agency }) {
 
       const created = await createAgency(toAgencyRequest(values), { signal: controller.signal })
 
+      // Alta exitosa: se borra el borrador y el formulario vuelve a vacío.
       clearDraft()
       setDraftSavedAt(null)
       form.setInitialValues(defaultValues)
@@ -177,6 +190,7 @@ function AgencyEditor({ agency }) {
       if (controller.signal.aborted) return
 
       if (error instanceof ApiError) {
+        // 400 con campos -> esos errores; 409 -> el campo repetido; si no, ninguno.
         const fieldErrors = error.hasFieldErrors
           ? error.fieldErrors
           : error.isConflict
@@ -201,11 +215,13 @@ function AgencyEditor({ agency }) {
     if (firstPath) focusFirstError(firstPath)
   }
 
+  // Botón "Guardar borrador": guarda ya, sin esperar el temporizador.
   const handleSaveDraft = () => {
     clearTimeout(draftTimer.current)
     setDraftSavedAt(saveDraft(form.getValues()) ? new Date() : null)
   }
 
+  // Botón "Descartar": borra el borrador y deja el formulario vacío.
   const handleCancel = () => {
     clearTimeout(draftTimer.current)
     clearDraft()
@@ -216,6 +232,7 @@ function AgencyEditor({ agency }) {
   }
 
   /** Normaliza el valor al salir del campo; en modo no controlado esto remonta el input. */
+  // Devuelve un manejador de onBlur para un campo: normalizeOnBlur('cuit', formatCuit).
   const normalizeOnBlur = (path, normalize) => (event) => {
     form.setFieldValue(path, normalize(event.currentTarget.value))
   }
@@ -321,10 +338,13 @@ function AgencyEditor({ agency }) {
                     placeholder="30-71234567-1"
                     description="11 dígitos; se valida el dígito verificador"
                     withAsterisk
+                    // `inputMode="numeric"` muestra el teclado numérico en el celular.
                     inputMode="numeric"
                     maxLength={AGENCY_LIMITS.cuit.max}
                     key={form.key('cuit')}
                     {...form.getInputProps('cuit')}
+                    // Va después de getInputProps para reemplazar su onBlur: al
+                    // salir del campo se le ponen los guiones al CUIT.
                     onBlur={normalizeOnBlur('cuit', formatCuit)}
                   />
                   <Select
@@ -422,6 +442,7 @@ function AgencyEditor({ agency }) {
                 </SimpleGrid>
               </SectionCard>
 
+              {/* Las condiciones se aceptan una sola vez, en el alta. */}
               {!isEdit && (
                 <Card withBorder radius="lg" padding="lg" shadow="xs">
                   <Checkbox
@@ -435,6 +456,7 @@ function AgencyEditor({ agency }) {
           </Grid.Col>
 
           <Grid.Col span={{ base: 12, lg: 4 }}>
+            {/* Vista previa en vivo: recibe el `form` y se suscribe a sus campos. */}
             <AgencySummary form={form} rules={rules} isEdit={isEdit} />
           </Grid.Col>
         </Grid>
@@ -456,6 +478,7 @@ function AgencyEditor({ agency }) {
                   ? `Borrador guardado a las ${draftSavedAt.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })}.`
                   : 'El borrador se guarda solo en este navegador.'}
             </Text>
+            {/* Botones distintos en alta (borrador) y en edición. */}
             {isEdit ? (
               <Group gap="sm" ml="auto" wrap="nowrap">
                 <Button component={Link} to="/dashboard/agencias" variant="subtle" color="gray" disabled={isSubmitting}>
@@ -490,7 +513,10 @@ function AgencyEditor({ agency }) {
   )
 }
 
-/** Trae la agencia antes de montar el editor, así el formulario nace con sus valores. */
+/**
+ * Trae la agencia antes de montar el editor, así el formulario nace con sus valores.
+ * Es el mismo patrón Loader + Editor del formulario de propiedades.
+ */
 function AgencyLoader({ id }) {
   const [result, setResult] = useState(null)
 

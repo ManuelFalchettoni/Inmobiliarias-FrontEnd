@@ -56,6 +56,9 @@ function getInitials(name) {
 
 /** Acciones de una fila: cambiar el estado de verificación, dar de baja o restaurar. */
 function AgencyActions({ agency, onAction, disabled }) {
+  // `onAction(agency, work)`: el listado ejecuta `work` (el pedido) y después
+  // recarga la página. Acá solo se decide QUÉ pedido hacer.
+  // Una agencia dada de baja solo se puede restaurar.
   if (agency.active === false) {
     return (
       <Button
@@ -88,6 +91,8 @@ function AgencyActions({ agency, onAction, disabled }) {
         </Menu.Target>
         <Menu.Dropdown>
           <Menu.Label>Estado de verificación</Menu.Label>
+          {/* Un ítem por cada estado distinto del actual. El PUT pisa todos los
+              campos, así que se arma con agencyToRequest y solo cambia `status`. */}
           {AGENCY_STATUS_OPTIONS.filter((option) => option.value !== agency.status).map((option) => (
             <Menu.Item
               key={option.value}
@@ -113,6 +118,7 @@ function AgencyActions({ agency, onAction, disabled }) {
   )
 }
 
+/** Listado de agencias: mismo patrón que el de propiedades, con acciones por fila. */
 export default function AgencyList() {
   const [searchParams, setSearchParams] = useSearchParams()
   const page = Number(searchParams.get('page') ?? 1)
@@ -144,6 +150,8 @@ export default function AgencyList() {
     setSearchParams(next)
   }
 
+  // Ejecuta la acción de una fila y, salga bien o mal, recarga la página para
+  // mostrar el estado real del backend.
   const runAction = async (agency, work) => {
     setAccion({ state: 'saving', id: agency.id })
     try {
@@ -152,6 +160,7 @@ export default function AgencyList() {
     } catch (error) {
       setAccion({ state: 'error', message: `${agency.publicName}: ${error.message}` })
     }
+    // `(v) => v + 1` usa el valor anterior: es la forma segura de sumar sobre un estado.
     setVersion((v) => v + 1)
   }
 
