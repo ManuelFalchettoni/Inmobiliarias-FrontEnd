@@ -11,7 +11,6 @@ import {
   Container,
   Grid,
   Group,
-  PasswordInput,
   Select,
   SimpleGrid,
   Stack,
@@ -28,7 +27,6 @@ import {
   IconChevronRight,
   IconCircleCheck,
   IconDeviceFloppy,
-  IconLock,
   IconMapPin,
   IconWorld,
 } from '@tabler/icons-react'
@@ -210,8 +208,9 @@ export default function AgencyForm() {
             Alta de nueva agencia inmobiliaria
           </Title>
           <Text c="dimmed" maw={820}>
-            Registre la entidad, sus datos de contacto y las credenciales de acceso. El alta queda
-            pendiente de verificación hasta que un administrador la apruebe.
+            Registre la entidad y sus datos de contacto. El alta queda pendiente de verificación
+            hasta que un administrador la apruebe. Para entrar al panel, la agencia necesita un
+            usuario con rol Agencia vinculado a ella.
           </Text>
         </Container>
       </Box>
@@ -231,9 +230,14 @@ export default function AgencyForm() {
               {status.agency?.id != null && ` con el identificador #${status.agency.id}`}. Estado
               actual: <b>{status.agency?.status}</b>.
             </Text>
-            <Anchor component={Link} to="/dashboard/agencias" size="sm" fw={500}>
-              Ver el listado de agencias
-            </Anchor>
+            <Group gap="md">
+              <Anchor component={Link} to="/dashboard/usuarios/nuevo" size="sm" fw={500}>
+                Crear el usuario de la agencia
+              </Anchor>
+              <Anchor component={Link} to="/dashboard/agencias" size="sm" fw={500}>
+                Ver el listado de agencias
+              </Anchor>
+            </Group>
           </Alert>
         )}
 
@@ -365,39 +369,13 @@ export default function AgencyForm() {
                 </SimpleGrid>
               </SectionCard>
 
-              <SectionCard
-                icon={IconLock}
-                title="Credenciales de acceso"
-                description="Con estos datos la agencia inicia sesión. No se guardan en el borrador local."
-              >
-                <SimpleGrid cols={{ base: 1, sm: 2 }}>
-                  <PasswordInput
-                    label="Contraseña"
-                    placeholder="Entre 8 y 20 caracteres"
-                    autoComplete="new-password"
-                    withAsterisk
-                    maxLength={AGENCY_LIMITS.password.max}
-                    key={form.key('password')}
-                    {...form.getInputProps('password')}
-                  />
-                  <PasswordInput
-                    label="Repetir contraseña"
-                    placeholder="Vuelva a escribirla"
-                    autoComplete="new-password"
-                    withAsterisk
-                    maxLength={AGENCY_LIMITS.password.max}
-                    key={form.key('confirmPassword')}
-                    {...form.getInputProps('confirmPassword')}
-                  />
-                </SimpleGrid>
-
+              <Card withBorder radius="lg" padding="lg" shadow="xs">
                 <Checkbox
-                  mt="lg"
                   label="Acepto las condiciones del servicio y el tratamiento de los datos de la agencia"
                   key={form.key('acceptTerms')}
                   {...form.getInputProps('acceptTerms', { type: 'checkbox' })}
                 />
-              </SectionCard>
+              </Card>
             </Stack>
           </Grid.Col>
 
@@ -418,7 +396,7 @@ export default function AgencyForm() {
           <Group justify="space-between" gap="sm" wrap="nowrap">
             <Text size="xs" c="dimmed" visibleFrom="md">
               {draftSavedAt
-                ? `Borrador guardado a las ${draftSavedAt.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })}. La contraseña nunca se almacena.`
+                ? `Borrador guardado a las ${draftSavedAt.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })}.`
                 : 'El borrador se guarda solo en este navegador.'}
             </Text>
             <Group gap="sm" ml="auto" wrap="nowrap">

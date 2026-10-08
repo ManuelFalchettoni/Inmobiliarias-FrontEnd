@@ -45,8 +45,6 @@ export default function AgencySummary({ form }) {
   const address = form.useWatchValue('address')
   const webURL = form.useWatchValue('webURL')
   const socials = form.useWatchValue('socials')
-  const password = form.useWatchValue('password')
-  const confirmPassword = form.useWatchValue('confirmPassword')
   const status = form.useWatchValue('status')
   const acceptTerms = form.useWatchValue('acceptTerms')
 
@@ -59,8 +57,6 @@ export default function AgencySummary({ form }) {
     address,
     webURL,
     socials,
-    password,
-    confirmPassword,
     status,
     acceptTerms,
   }

@@ -25,8 +25,6 @@ export const defaultValues = {
   address: '',
   webURL: '',
   socials: '',
-  password: '',
-  confirmPassword: '',
   status: AGENCY_STATUS.PENDING,
   acceptTerms: false,
 }
@@ -39,13 +37,8 @@ export const REQUIRED_FIELDS = [
   'email',
   'phoneNumber',
   'address',
-  'password',
-  'confirmPassword',
   'acceptTerms',
 ]
-
-/** Nunca se persiste la contraseña en el navegador. */
-const DRAFT_OMITTED_FIELDS = ['password', 'confirmPassword']
 
 const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1)
 
@@ -100,13 +93,6 @@ export const validation = {
   socials: (value) =>
     String(value ?? '').trim() ? sized(value, AGENCY_LIMITS.socials, 'las redes') : null,
 
-  password: (value) => sized(value, AGENCY_LIMITS.password, 'la contraseña'),
-
-  confirmPassword: (value, values) => {
-    if (!value) return 'Repita la contraseña.'
-    return value === values.password ? null : 'Las contraseñas no coinciden.'
-  },
-
   acceptTerms: (value) => (value ? null : 'Debe aceptar las condiciones del servicio.'),
 }
 
@@ -131,7 +117,6 @@ export function loadDraft() {
     // o manipulado no debe inyectar campos ni romper el render del resumen.
     const restored = { ...defaultValues }
     for (const [key, fallback] of Object.entries(defaultValues)) {
-      if (DRAFT_OMITTED_FIELDS.includes(key)) continue
       const value = draft[key]
       if (typeof value === typeof fallback) restored[key] = value
     }
@@ -143,9 +128,7 @@ export function loadDraft() {
 
 export function saveDraft(values) {
   try {
-    const serializable = { ...values }
-    for (const field of DRAFT_OMITTED_FIELDS) delete serializable[field]
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(serializable))
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(values))
     return true
   } catch {
     return false

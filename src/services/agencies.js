@@ -14,8 +14,10 @@ export const AGENCY_STATUS = {
   PENDING: 'PENDING',
   VERIFY: 'VERIFY',
   DENIED: 'DENIED',
+  DELETED: 'DELETED',
 }
 
+/** `DELETED` no se ofrece en el formulario: no tiene sentido como estado de un alta. */
 export const AGENCY_STATUS_OPTIONS = [
   { value: AGENCY_STATUS.PENDING, label: 'Pendiente de verificación' },
   { value: AGENCY_STATUS.VERIFY, label: 'Verificada' },
@@ -27,12 +29,14 @@ export const AGENCY_STATUS_SHORT_LABEL = {
   [AGENCY_STATUS.PENDING]: 'Pendiente',
   [AGENCY_STATUS.VERIFY]: 'Verificada',
   [AGENCY_STATUS.DENIED]: 'Rechazada',
+  [AGENCY_STATUS.DELETED]: 'Eliminada',
 }
 
 export const AGENCY_STATUS_COLOR = {
   [AGENCY_STATUS.PENDING]: 'yellow',
   [AGENCY_STATUS.VERIFY]: 'teal',
   [AGENCY_STATUS.DENIED]: 'red',
+  [AGENCY_STATUS.DELETED]: 'gray',
 }
 
 /**
@@ -44,7 +48,6 @@ export const AGENCY_LIMITS = {
   companyName: { min: 3, max: 30 },
   publicName: { min: 3, max: 30 },
   email: { min: 3, max: 100 },
-  password: { min: 8, max: 20 },
   phoneNumber: { min: 8, max: 15 },
   address: { min: 6, max: 40 },
   webURL: { max: 255 },
@@ -117,7 +120,6 @@ export function toAgencyRequest(values) {
     companyName: values.companyName.trim(),
     publicName: values.publicName.trim(),
     email: values.email.trim().toLowerCase(),
-    password: values.password,
     phoneNumber: normalizePhone(values.phoneNumber),
     address: values.address.trim().replace(/\s+/g, ' '),
     // Opcionales en el DTO: sin valor se mandan como null en lugar de "".
