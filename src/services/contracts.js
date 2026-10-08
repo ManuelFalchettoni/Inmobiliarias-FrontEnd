@@ -118,7 +118,11 @@ export const cancelContract = (id, options) => del(`${CONTRACTS_ENDPOINT}/${id}`
 /** Fecha local de hoy en "yyyy-MM-dd", comparable como texto con un `LocalDate`. */
 function todayIso() {
   const now = new Date()
+  // padStart completa con ceros a la izquierda: 3 -> "03".
   const pad = (n) => String(n).padStart(2, '0')
+  // getMonth() cuenta desde 0 (enero = 0), por eso el + 1.
+  // Comparar "yyyy-MM-dd" como texto da el mismo orden que como fecha: año,
+  // mes y día van de mayor a menor importancia.
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
 
@@ -131,6 +135,7 @@ export const isContractOverdue = (contract) =>
 
 /** "01/03/2024 → 01/03/2026", o "Desde 01/03/2024" si no tiene fin. */
 export function formatContractTerm({ startDate, endDate }) {
+  // "2024-03-01" -> ["2024", "03", "01"] -> ["01", "03", "2024"] -> "01/03/2024".
   const format = (value) => (value ? value.split('-').reverse().join('/') : '')
   return endDate ? `${format(startDate)} → ${format(endDate)}` : `Desde ${format(startDate)}`
 }
@@ -163,6 +168,8 @@ const ALL_PAGE_SIZE = 500
  */
 export async function listAllParties(options) {
   const parties = []
+  // Mismo recorrido de páginas que listAllOwners (owners.js): pide hasta que
+  // Spring marca `last` en la respuesta.
   for (let page = 0; ; page += 1) {
     const result = await get(`${PARTIES_ENDPOINT}?page=${page}&size=${ALL_PAGE_SIZE}`, options)
     parties.push(...result.content)
@@ -177,6 +184,8 @@ export const listContractParties = async (contractId, options) =>
 /** Agrupa partes por contrato: `{ [contractId]: party[] }`. */
 export function groupPartiesByContract(parties) {
   const groups = {}
+  // `??=` asigna solo si no hay valor: la primera parte de cada contrato crea su
+  // lista vacía y las siguientes reutilizan la que ya existe.
   for (const party of parties) (groups[party.contractId] ??= []).push(party)
   return groups
 }

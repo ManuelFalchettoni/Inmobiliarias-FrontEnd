@@ -11,6 +11,9 @@ import { formatPrice } from './properties.js'
 
 export const LEADS_ENDPOINT = '/api/crm_properties'
 
+// Lista de opciones -> diccionario { NEW: 'Nuevo', ... } para traducir códigos.
+// Cada enum se expone de las dos formas: _OPTIONS para los Select y _LABEL
+// para pintar tablas (ver properties.js).
 const toLabelMap = (options) => Object.fromEntries(options.map((o) => [o.value, o.label]))
 
 /** Refleja `CrmStage`, en el orden en que avanza un lead. */
@@ -97,6 +100,8 @@ export const updateLead = (id, request, options) => put(`${LEADS_ENDPOINT}/${id}
 
 // -------------------------------------------- Ofertas, historial y alertas
 
+// Ofertas, historial y alertas "cuelgan" del lead en la dirección:
+// /api/crm_properties/7/offers. Esta función arma ese prefijo una sola vez.
 const nested = (leadId, resource) => `${LEADS_ENDPOINT}/${leadId}/${resource}`
 
 /** GET -> array sin paginar, las más nuevas primero. */
@@ -137,6 +142,11 @@ export const alertToRequest = (alert, changes = {}) => ({
 })
 
 // --------------------------------------------------------------- Flujos
+//
+// El backend tiene endpoints sueltos (actualizar lead, crear evento, crear
+// oferta). Estas funciones los combinan en una acción de negocio completa,
+// siguiendo los casos de uso del README del backend. Los pedidos van uno
+// después del otro con `await`: el segundo solo se hace si el primero salió bien.
 
 /**
  * Cambia la etapa y deja el evento `STAGE_CHANGE` en el historial, como pide
@@ -150,6 +160,7 @@ export async function changeLeadStage(lead, stage, options) {
     {
       userId: lead.userId,
       type: 'STAGE_CHANGE',
+      // Queda en el historial como "Contactado → Negociación".
       comments: `${CRM_STAGE_LABEL[lead.stage] ?? lead.stage} → ${CRM_STAGE_LABEL[stage] ?? stage}`,
     },
     options,
@@ -171,9 +182,11 @@ export async function registerOffer(lead, request, options) {
     { userId: lead.userId, type: 'OFFER', comments: `Oferta de ${formatPrice(offer)}` },
     options,
   )
+  // Si el lead ya estaba en negociación (o más adelante), no se toca la etapa.
   const updatedLead = BEFORE_NEGOTIATION.includes(lead.stage)
     ? await changeLeadStage(lead, 'NEGOTIATION', options)
     : lead
+  // Devuelve las dos cosas en un objeto: la pantalla usa el lead actualizado.
   return { offer, lead: updatedLead }
 }
 

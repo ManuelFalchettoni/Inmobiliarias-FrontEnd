@@ -22,6 +22,9 @@ export const USER_ROL = {
   ADMIN: 'ADMIN',
 }
 
+// Los enums se exponen como lista `{ value, label }`: es el formato que espera
+// el `data` de un Select de Mantine. `value` es el código que entiende el
+// backend; `label`, lo que lee el usuario.
 export const USER_ROL_OPTIONS = [
   { value: USER_ROL.USER, label: 'Usuario' },
   { value: USER_ROL.AGENT, label: 'Agente' },
@@ -29,6 +32,9 @@ export const USER_ROL_OPTIONS = [
   { value: USER_ROL.ADMIN, label: 'Administrador' },
 ]
 
+// El mismo dato como diccionario { AGENT: 'Agente', ... }, para traducir rápido
+// al pintar una tabla. Se deriva de la lista para que nunca queden desfasados:
+// `map` arma pares [clave, valor] y `Object.fromEntries` los vuelve objeto.
 export const USER_ROL_LABEL = Object.fromEntries(USER_ROL_OPTIONS.map((o) => [o.value, o.label]))
 
 export const USER_ROL_COLOR = {
@@ -62,14 +68,23 @@ export function userConflictField(message) {
   return null
 }
 
+// `trim` saca los espacios de los extremos y el `replace` junta los espacios
+// repetidos del medio: "  Juan   Pérez " -> "Juan Pérez".
 const cleanName = (value) => String(value ?? '').trim().replace(/\s+/g, ' ')
+// El email se guarda en minúsculas para que "Juan@Mail.com" y "juan@mail.com"
+// cuenten como el mismo (el backend controla que no se repita).
 const cleanEmail = (value) => String(value ?? '').trim().toLowerCase()
 
 /** CUIT y matrícula son opcionales: sin valor viajan como null en lugar de "". */
 const optionalCuit = (value) => (onlyDigits(value) ? formatCuit(value) : null)
+// `||` devuelve el de la derecha si el de la izquierda es "falso" (un texto vacío lo es).
 const optionalText = (value) => cleanName(value) || null
 
-/** Valores del formulario -> `UserRequest`. */
+/**
+ * Valores del formulario -> `UserRequest`. Se arma un objeto nuevo con
+ * EXACTAMENTE los campos del DTO: si se mandara el formulario tal cual (con
+ * `confirmPassword`, por ejemplo), el backend respondería 400 por campo desconocido.
+ */
 export function toUserRequest(values) {
   return {
     name: cleanName(values.name),
@@ -121,7 +136,11 @@ export const findUser = (id, options) => get(`${USERS_ENDPOINT}/${id}`, options)
 
 export const updateUser = (id, request, options) => put(`${USERS_ENDPOINT}/${id}`, request, options)
 
-/** PATCH `{ currentPassword, password }` -> 204. 400 si la actual no coincide. */
+/**
+ * PATCH `{ currentPassword, password }` -> 204. 400 si la actual no coincide.
+ * La desestructuración en los parámetros toma solo esos dos campos del objeto
+ * recibido: aunque llegue `confirmPassword`, no viaja.
+ */
 export const updateUserPassword = (id, { currentPassword, password }, options) =>
   patch(`${USERS_ENDPOINT}/${id}/password`, { currentPassword, password }, options)
 

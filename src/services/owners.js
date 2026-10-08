@@ -30,13 +30,19 @@ const ALL_PAGE_SIZE = 500
  */
 export async function listAllOwners(options) {
   const owners = []
+  // `for` sin condición de corte (`;;`): termina con el `return` de adentro.
   for (let page = 0; ; page += 1) {
     const result = await get(`${OWNERS_ENDPOINT}?page=${page}&size=${ALL_PAGE_SIZE}`, options)
+    // `...result.content` agrega cada elemento de la página, no la lista entera.
     owners.push(...result.content)
+    // `last` lo manda Spring en cada Page: es true en la última página. Se corta
+    // también si una página viene vacía, para no quedar en un bucle infinito.
     if (result.last || result.content.length === 0) return owners
   }
 }
 
+// `Number(propertyId)`: el id puede llegar como texto (de la dirección) y en la
+// respuesta es número; con `===`, "2" y 2 no son iguales.
 export const listPropertyOwners = async (propertyId, options) =>
   (await listAllOwners(options)).filter((owner) => owner.propertyId === Number(propertyId))
 

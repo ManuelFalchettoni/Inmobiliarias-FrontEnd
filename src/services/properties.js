@@ -79,8 +79,10 @@ export const PROPERTY_LIMITS = {
  * null, que es lo que sus `@NotNull` reconocen como dato faltante.
  */
 export function toInt(value, fallback = null) {
+  // `== null` (con dos iguales) es verdadero para null Y para undefined.
   if (value === '' || value == null) return fallback
   const parsed = Number(value)
+  // isFinite descarta NaN e Infinity; Math.trunc corta los decimales (3.7 -> 3).
   return Number.isFinite(parsed) ? Math.trunc(parsed) : fallback
 }
 
@@ -155,8 +157,10 @@ export function toPropertyFormValues(property) {
  * ciudad, que es lo habitual en las capitales ("Rosario, Rosario").
  */
 export function formatPropertyPlace(property) {
+  // Desestructuración: saca esos tres campos del objeto en variables sueltas.
   const { city, county, province } = property ?? {}
   const parts = [city, county !== city ? county : null, province]
+  // `filter(Boolean)` saca los vacíos (null, undefined, '') antes de unir con comas.
   return parts.filter(Boolean).join(', ')
 }
 
@@ -193,6 +197,8 @@ export const restoreProperty = (id, options) =>
  */
 export const PHOTO_LIMITS = {
   maxPhotos: 20,
+  // 1 KB = 1024 bytes y 1 MB = 1024 KB: son 5.242.880 bytes. Se escribe como
+  // multiplicación para que se lea "5 MB".
   maxFileSize: 5 * 1024 * 1024, // spring.servlet.multipart.max-file-size
   extensions: ['jpg', 'jpeg', 'png', 'webp'],
 }
@@ -204,18 +210,23 @@ export const PHOTO_ACCEPT = {
   'image/webp': ['.webp'],
 }
 
+/** "Frente.JPG" -> "jpg". Busca el ÚLTIMO punto, así "foto.final.png" da "png". */
 function extensionOf(name) {
   const text = String(name ?? '')
   const dot = text.lastIndexOf('.')
   return dot < 0 ? '' : text.slice(dot + 1).toLowerCase()
 }
 
+/** Tamaño legible: 2.300.000 bytes -> "2.2 MB"; 800 bytes -> "1 KB". */
 export const formatFileSize = (bytes) =>
   bytes >= 1024 * 1024
     ? `${(bytes / 1024 / 1024).toFixed(1)} MB`
     : `${Math.max(1, Math.round(bytes / 1024))} KB`
 
 /** Mismas reglas que `MinioPhotoStorage.store`, para no gastar un viaje en un 400 seguro. */
+// Devuelve el mensaje de error o null si el archivo sirve. Se controla la
+// extensión (la elige quien nombra el archivo) y también el tipo que informa el
+// navegador: así un .exe renombrado a .jpg no pasa.
 export function validatePhotoFile(file) {
   if (!file || file.size === 0) return 'El archivo está vacío.'
   if (!PHOTO_LIMITS.extensions.includes(extensionOf(file.name))) {
@@ -232,6 +243,9 @@ export function validatePhotoFile(file) {
  * El backend no ordena la lista de fotos del response: se ordena por
  * `position`, y la primera es la portada.
  */
+// `[...photos]` hace una copia: `sort` modifica el array sobre el que se llama,
+// y no hay que tocar el que vino del backend (puede ser estado de React).
+// `a.position - b.position` negativo pone `a` primero: orden ascendente.
 export const sortPhotos = (photos = []) => [...photos].sort((a, b) => a.position - b.position)
 
 const photosEndpoint = (propertyId) => `${PROPERTIES_ENDPOINT}/${propertyId}/photos`
@@ -247,8 +261,11 @@ export const listPropertyPhotos = (propertyId, options) => get(photosEndpoint(pr
  * falló. El timeout es más largo que el de JSON porque cada archivo pesa hasta 5 MB.
  */
 export function uploadPropertyPhotos(propertyId, files, options) {
+  // FormData es el formato de un <form> HTML con archivos (multipart). El
+  // nombre 'files' tiene que coincidir con @RequestPart("files") del controller.
   const body = new FormData()
   for (const file of files) body.append('files', file, file.name)
+  // 60 s en vez de 15: subir una foto de 5 MB puede tardar más que un JSON.
   return post(photosEndpoint(propertyId), body, { timeout: 60000, ...options })
 }
 
@@ -282,7 +299,9 @@ export const PRICE_LIMITS = {
 
 /** "USD 95.000" o "ARS 450.000,50": los centavos solo aparecen si los hay. */
 export function formatPrice({ currency, amount }) {
+  // El backend manda BigDecimal; en JSON llega como número (95000.00 -> 95000).
   const value = Number(amount)
+  // toLocaleString con 'es-AR' usa punto de miles y coma decimal.
   const number = value.toLocaleString('es-AR', {
     minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
     maximumFractionDigits: 2,
@@ -291,6 +310,8 @@ export function formatPrice({ currency, amount }) {
 }
 
 /** Venta antes que alquiler, el mismo orden que usa el `GET` del backend. */
+// Ordena según la posición de cada operación en OPERATION_TYPE_OPTIONS
+// (SALE es 0, RENT es 1), no alfabéticamente.
 export const sortPrices = (prices = []) =>
   [...prices].sort(
     (a, b) =>
@@ -303,6 +324,9 @@ export const sortPrices = (prices = []) =>
  * operación sin precio queda deshabilitada con su moneda por defecto.
  */
 export function toPriceFormValues(prices = []) {
+  // Resultado: { SALE: { enabled, currency, amount }, RENT: { ... } }.
+  // `{ value: operationType }` desestructura y renombra: toma `value` de cada
+  // opción y lo llama `operationType`.
   return Object.fromEntries(
     OPERATION_TYPE_OPTIONS.map(({ value: operationType }) => {
       const price = prices.find((entry) => entry.operationType === operationType)
@@ -335,15 +359,19 @@ export function planPriceChanges(saved = [], formPrices) {
       amount: Number(wanted.amount),
     }
 
+    // Apagado en el formulario y guardado en el backend -> borrar.
     if (!wanted.enabled) {
       if (current) changes.push({ type: 'delete', price: current })
+    // Prendido y sin precio guardado -> crear.
     } else if (!current) {
       changes.push({ type: 'create', request })
+    // Prendido, guardado y distinto -> actualizar. Si es igual, no se hace nada.
     } else if (current.currency !== request.currency || Number(current.amount) !== request.amount) {
       changes.push({ type: 'update', price: current, request })
     }
   }
 
+  // Un diccionario de prioridades para ordenar: borrados, después cambios, después altas.
   const order = { delete: 0, update: 1, create: 2 }
   return changes.sort((a, b) => order[a.type] - order[b.type])
 }
@@ -370,9 +398,11 @@ export const deletePropertyPrice = (propertyId, priceId, options) =>
  * reflejado en `error.savedPrices` para no perder el estado real.
  */
 export async function syncPropertyPrices(propertyId, saved, formPrices, options) {
+  // `prices` va reflejando lo que queda guardado después de cada pedido.
   let prices = [...saved]
 
   try {
+    // `await` dentro del `for`: un pedido por vez, en el orden del plan.
     for (const change of planPriceChanges(saved, formPrices)) {
       if (change.type === 'delete') {
         await deletePropertyPrice(propertyId, change.price.id, options)
@@ -385,6 +415,8 @@ export async function syncPropertyPrices(propertyId, saved, formPrices, options)
       }
     }
   } catch (error) {
+    // Se le "cuelga" al error lo que sí se guardó y se relanza: quien llama
+    // decide qué mostrar, pero sabe el estado real del backend.
     error.savedPrices = sortPrices(prices)
     throw error
   }

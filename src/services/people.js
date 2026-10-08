@@ -37,7 +37,9 @@ export function toPeopleRequest(values) {
     email: cleanText(values.email).toLowerCase(),
     phone: normalizePhone(values.phone),
     address: cleanText(values.address) || null,
+    // El DNI viaja solo con dígitos: "30.123.456" -> "30123456".
     dni: onlyDigits(values.dni) || null,
+    // El CUIT, con su formato de guiones (13 caracteres, dentro del 11–13 del backend).
     cuit: onlyDigits(values.cuit) ? formatCuit(values.cuit) : null,
   }
 }
@@ -59,6 +61,8 @@ export function toPeopleFormValues(person) {
  * GET /api/people -> `Page<PeopleResponse>`. Solo acepta `page` y `size`: sin
  * orden ni filtro por inmobiliaria, y sin tope de página (5 por defecto).
  */
+// No usa `pageQuery` (api.js) porque este endpoint no acepta `sort` ni filtros:
+// la dirección se arma a mano. `= {}` permite llamar a listPeople() sin argumentos.
 export const listPeople = ({ page = 0, size = 20 } = {}, options) =>
   get(`${PEOPLE_ENDPOINT}?page=${page}&size=${size}`, options)
 

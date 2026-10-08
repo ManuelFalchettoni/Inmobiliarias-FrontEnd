@@ -24,7 +24,11 @@ export const AGENCY_STATUS_OPTIONS = [
   { value: AGENCY_STATUS.DENIED, label: 'Rechazada' },
 ]
 
-/** Etiqueta corta para chips y badges donde el texto completo no entra. */
+/**
+ * Etiqueta corta para chips y badges donde el texto completo no entra.
+ * `[AGENCY_STATUS.PENDING]` entre corchetes usa el VALOR de la constante como
+ * clave: es lo mismo que escribir `PENDING: 'Pendiente'`, sin repetir el texto.
+ */
 export const AGENCY_STATUS_SHORT_LABEL = {
   [AGENCY_STATUS.PENDING]: 'Pendiente',
   [AGENCY_STATUS.VERIFY]: 'Verificada',
@@ -32,6 +36,7 @@ export const AGENCY_STATUS_SHORT_LABEL = {
   [AGENCY_STATUS.DELETED]: 'Eliminada',
 }
 
+/** Color de Mantine para el Badge de cada estado. */
 export const AGENCY_STATUS_COLOR = {
   [AGENCY_STATUS.PENDING]: 'yellow',
   [AGENCY_STATUS.VERIFY]: 'teal',
@@ -57,12 +62,18 @@ export const AGENCY_LIMITS = {
 /** Campos con restricción `unique` en la tabla `agencies`: un 409 apunta a alguno de estos. */
 export const AGENCY_UNIQUE_FIELDS = ['cuit', 'companyName', 'email', 'phoneNumber', 'address']
 
+// Pesos oficiales del algoritmo de AFIP para el dígito verificador del CUIT:
+// cada uno de los primeros 10 dígitos se multiplica por su peso.
 const CUIT_WEIGHTS = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2]
 
+// `\D` es "cualquier cosa que no sea un dígito" y la `g` reemplaza todas las
+// apariciones: "30-71234567-1" -> "30712345671". `?? ''` evita romper con null.
 export const onlyDigits = (value) => String(value ?? '').replace(/\D/g, '')
 
 /** Aplica la máscara `XX-XXXXXXXX-X` (13 caracteres, dentro del rango 11–13 del backend). */
 export function formatCuit(value) {
+  // Pone los guiones según cuántos dígitos haya, así también funciona con un
+  // CUIT a medio escribir. `slice(0, 11)` descarta lo que sobre.
   const digits = onlyDigits(value).slice(0, 11)
   if (digits.length <= 2) return digits
   if (digits.length <= 10) return `${digits.slice(0, 2)}-${digits.slice(2)}`
@@ -74,9 +85,15 @@ export function isValidCuit(value) {
   const digits = onlyDigits(value)
   if (digits.length !== 11) return false
 
+  // `reduce` recorre los pesos acumulando: suma de (peso × dígito) para los 10
+  // primeros. Ejemplo con 30-71234567-1: la suma da 142.
   const sum = CUIT_WEIGHTS.reduce((acc, weight, index) => acc + weight * Number(digits[index]), 0)
+  // `%` es el resto de la división: 142 % 11 = 10, y 11 - 10 = 1.
   const remainder = 11 - (sum % 11)
+  // Casos especiales del algoritmo: si da 11 el dígito es 0, si da 10 es 9.
   const checkDigit = remainder === 11 ? 0 : remainder === 10 ? 9 : remainder
+
+  // El resultado tiene que coincidir con el último dígito (el verificador).
 
   return checkDigit === Number(digits[10])
 }
@@ -88,6 +105,7 @@ export function isValidCuit(value) {
 export function normalizePhone(value) {
   const raw = String(value ?? '').trim()
   const digits = onlyDigits(raw)
+  // Conserva el + del código de país: "+54 9 351 555-0001" -> "+5493515550001".
   return raw.startsWith('+') ? `+${digits}` : digits
 }
 
@@ -95,9 +113,16 @@ export function normalizePhone(value) {
 export function normalizeWebUrl(value) {
   const raw = String(value ?? '').trim()
   if (!raw) return ''
+  // `https?` = "http" con o sin "s"; la `i` ignora mayúsculas.
+  // "habitat.com.ar" -> "https://habitat.com.ar".
   return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`
 }
 
+/**
+ * `new URL()` es el analizador de direcciones del navegador: si el texto no es
+ * una dirección válida lanza un error, que se atrapa con try/catch. Además se
+ * exige un punto en el dominio, así `https://hola` no pasa.
+ */
 export function isValidWebUrl(value) {
   const normalized = normalizeWebUrl(value)
   if (!normalized) return true // campo opcional
@@ -175,6 +200,8 @@ export const agencyToRequest = (agency, changes = {}) => ({
   webURL: agency.webURL ?? null,
   socials: agency.socials ?? null,
   status: agency.status,
+  // Lo que viene después pisa a lo anterior: con { status: 'VERIFY' } solo
+  // cambia el estado y el resto queda igual a lo que mandó el backend.
   ...changes,
 })
 
@@ -183,4 +210,5 @@ export const updateAgency = (id, request, options) => put(`${AGENCIES_ENDPOINT}/
 /** Baja lógica: 204. No da de baja sus propiedades, pero no se le pueden cargar nuevas. */
 export const deleteAgency = (id, options) => del(`${AGENCIES_ENDPOINT}/${id}`, options)
 
+// `undefined` como body: un restore no lleva cuerpo (ver encodeBody en api.js).
 export const restoreAgency = (id, options) => patch(`${AGENCIES_ENDPOINT}/${id}/restore`, undefined, options)
