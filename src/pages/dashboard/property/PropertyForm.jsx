@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   Alert,
   Anchor,
@@ -31,6 +31,7 @@ import {
   IconHome,
   IconMapPin,
   IconPhoto,
+  IconUsers,
 } from '@tabler/icons-react'
 
 import { ApiError } from '../../../services/api.js'
@@ -53,6 +54,7 @@ import {
   uploadPropertyPhotos,
 } from '../../../services/properties.js'
 import PropertyPhotos from './PropertyPhotos.jsx'
+import PropertyOwners from './PropertyOwners.jsx'
 import PropertyPrices from './PropertyPrices.jsx'
 import { propertyDefaultValues, propertyValidation } from './property-form.js'
 
@@ -108,6 +110,8 @@ function PageHeader({ propertyId }) {
 function PropertyEditor({ property }) {
   const navigate = useNavigate()
   const location = useLocation()
+  // Al volver del alta de una persona llega `?peopleId=` para elegirla como dueña.
+  const [searchParams] = useSearchParams()
 
   // Con `property` se edita; sin ella, el id aparece cuando el alta responde.
   const [createdId, setCreatedId] = useState(null)
@@ -494,6 +498,24 @@ function PropertyEditor({ property }) {
                 description="Operaciones en las que se ofrece la propiedad y su precio."
               >
                 <PropertyPrices form={form} disabled={busy} />
+              </SectionCard>
+
+              <SectionCard
+                icon={IconUsers}
+                title="Dueños"
+                description={
+                  propertyId
+                    ? 'Se guardan al instante, aparte de los cambios de la propiedad.'
+                    : 'Se cargan después de publicar la propiedad.'
+                }
+              >
+                {propertyId ? (
+                  <PropertyOwners propertyId={propertyId} initialPeopleId={searchParams.get('peopleId')} />
+                ) : (
+                  <Text size="sm" c="dimmed">
+                    Publique la propiedad y después agregue a sus dueños desde esta misma pantalla.
+                  </Text>
+                )}
               </SectionCard>
 
               <SectionCard
