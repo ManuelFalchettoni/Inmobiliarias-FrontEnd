@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ActionIcon,
   Alert,
@@ -33,6 +33,7 @@ import { useAgencyOptions } from '../../../hooks/useAgencyOptions.js'
 import { useLookup } from '../../../hooks/useLookup.js'
 import { findAgency } from '../../../services/agencies.js'
 import { formatDate } from '../../../services/format.js'
+import { queryKeys } from '../../../queries/keys.js'
 import {
   USER_ROL_COLOR,
   USER_ROL_LABEL,
@@ -99,27 +100,25 @@ export default function UserList() {
   const active = searchParams.get('active') ?? 'true'
   const agencyId = searchParams.get('agencyId') ?? null
 
-  // `version` vuelve a pedir la página después de una acción.
-  const [version, setVersion] = useState(0)
-  const clave = `${page}|${active}|${agencyId}|${version}`
-  const [resultado, setResultado] = useState(null) // { clave, data, error }
-  const cargando = resultado?.clave !== clave
-  const [accion, setAccion] = useState({ state: 'idle' })
+  const queryClient = useQueryClient()
+  const params = { page: page - 1, size: PAGE_SIZE, active, agencyId }
 
-  useEffect(() => {
-    const controller = new AbortController()
+  // Mismo patrón que el listado de agencias (ver AgencyList).
+  const query = useQuery({
+    queryKey: queryKeys.users.list(params),
+    queryFn: ({ signal }) => listUsers(params, { signal }),
+    placeholderData: keepPreviousData,
+  })
 
-    listUsers({ page: page - 1, size: PAGE_SIZE, active, agencyId }, { signal: controller.signal })
-      .then((data) => setResultado({ clave, data, error: null }))
-      .catch((err) => {
-        if (!controller.signal.aborted) setResultado({ clave, data: null, error: err.message })
-      })
+  // Dar de baja o restaurar: al terminar se invalida la caché de usuarios.
+  const action = useMutation({
+    mutationFn: ({ work }) => work(),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.users.all }),
+  })
 
-    return () => controller.abort()
-  }, [clave, page, active, agencyId])
-
-  const data = resultado?.data ?? null
-  const error = resultado?.error ?? null
+  const data = query.data ?? null
+  const error = query.isError ? query.error.message : null
+  const cargando = query.isPlaceholderData
   // Los usuarios traen solo `agencyId`: useLookup busca el nombre de cada agencia
   // (con caché, así una agencia con 10 usuarios se pide una sola vez).
   const agencyNames = useLookup('agencies', data?.content.map((u) => u.agencyId) ?? [], findAgency)
@@ -142,16 +141,7 @@ export default function UserList() {
     setSearchParams(next)
   }
 
-  const runAction = async (user, work) => {
-    setAccion({ state: 'saving' })
-    try {
-      await work()
-      setAccion({ state: 'idle' })
-    } catch (err) {
-      setAccion({ state: 'error', message: `${user.name}: ${err.message}` })
-    }
-    setVersion((v) => v + 1)
-  }
+  const runAction = (user, work) => action.mutate({ user, work })
 
   const verArchivados = active === 'false'
 
@@ -203,20 +193,20 @@ export default function UserList() {
         />
       </Group>
 
-      {accion.state === 'error' && (
+      {action.isError && (
         <Alert
           color="red"
           icon={<IconAlertTriangle />}
           title="No se pudo completar la acción"
           mb="md"
           withCloseButton
-          onClose={() => setAccion({ state: 'idle' })}
+          onClose={action.reset}
         >
-          {accion.message}
+          {action.variables?.user.name}: {action.error.message}
         </Alert>
       )}
 
-      {cargando && resultado == null && (
+      {query.isPending && (
         <Stack gap="xs">
           {Array.from({ length: 6 }, (_, i) => (
             <Skeleton key={i} height={52} radius="md" />
@@ -322,7 +312,7 @@ export default function UserList() {
                         <Text size="sm">{formatDate(user.createdAt)}</Text>
                       </Table.Td>
                       <Table.Td>
-                        <UserActions user={user} onAction={runAction} disabled={accion.state === 'saving'} />
+                        <UserActions user={user} onAction={runAction} disabled={action.isPending} />
                       </Table.Td>
                     </Table.Tr>
                   ))}

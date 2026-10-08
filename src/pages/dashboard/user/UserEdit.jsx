@@ -29,7 +29,7 @@ import {
   IconUser,
 } from '@tabler/icons-react'
 
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { useLookup } from '../../../hooks/useLookup.js'
 import { queryKeys } from '../../../queries/keys.js'
@@ -350,23 +350,22 @@ function PasswordCard({ user }) {
 /** `/usuarios/:id/editar`. */
 export default function UserEdit() {
   const { id } = useParams()
-  const [result, setResult] = useState(null) // { user } | { error }
-
-  useEffect(() => {
-    const controller = new AbortController()
-    findUser(id, { signal: controller.signal })
-      .then((user) => setResult({ user }))
-      .catch((error) => {
-        if (controller.signal.aborted) return
-        setResult({
+  const queryClient = useQueryClient()
+  const query = useQuery({
+    queryKey: queryKeys.users.detail(id),
+    queryFn: ({ signal }) => findUser(id, { signal }),
+  })
+  // Si ya hay datos se usan aunque falle una recarga en segundo plano (ver PropertyLoader).
+  const result = query.data
+    ? { user: query.data }
+    : query.isError
+      ? {
           error:
-            error instanceof ApiError && error.status === 404
+            query.error instanceof ApiError && query.error.status === 404
               ? `No existe un usuario activo con el identificador #${id}. Si está dado de baja, restáurelo desde el listado.`
-              : error.message,
-        })
-      })
-    return () => controller.abort()
-  }, [id])
+              : query.error.message,
+        }
+      : null
 
   const user = result?.user
   // useLookup con un solo id: devuelve { [id]: agencia } y se toma la de ese id.
@@ -403,7 +402,7 @@ export default function UserEdit() {
             {/* El rol y la inmobiliaria se muestran arriba solo para consulta:
                 el backend no permite cambiarlos. Al guardar, AccountCard
                 devuelve el usuario actualizado y se reemplaza el de la página. */}
-            <AccountCard key={user.id} user={user} onSaved={(saved) => setResult({ user: saved })} />
+            <AccountCard key={user.id} user={user} onSaved={(saved) => queryClient.setQueryData(queryKeys.users.detail(id), saved)} />
             <PasswordCard user={user} />
 
             <Group>
