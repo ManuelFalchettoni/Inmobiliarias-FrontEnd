@@ -26,6 +26,7 @@ import {
   IconArrowBackUp,
   IconBuildingSkyscraper,
   IconDots,
+  IconPencil,
   IconPlus,
 } from '@tabler/icons-react'
 
@@ -70,35 +71,45 @@ function AgencyActions({ agency, onAction, disabled }) {
   }
 
   return (
-    <Menu position="bottom-end" withinPortal>
-      <Menu.Target>
-        <ActionIcon variant="subtle" color="gray" disabled={disabled} aria-label={`Acciones de ${agency.publicName}`}>
-          <IconDots size={18} />
-        </ActionIcon>
-      </Menu.Target>
-      <Menu.Dropdown>
-        <Menu.Label>Estado de verificación</Menu.Label>
-        {AGENCY_STATUS_OPTIONS.filter((option) => option.value !== agency.status).map((option) => (
+    <Group gap={4} wrap="nowrap">
+      <ActionIcon
+        component={Link}
+        to={`/dashboard/agencias/${agency.id}/editar`}
+        variant="subtle"
+        aria-label={`Editar ${agency.publicName}`}
+      >
+        <IconPencil size={18} />
+      </ActionIcon>
+      <Menu position="bottom-end" withinPortal>
+        <Menu.Target>
+          <ActionIcon variant="subtle" color="gray" disabled={disabled} aria-label={`Acciones de ${agency.publicName}`}>
+            <IconDots size={18} />
+          </ActionIcon>
+        </Menu.Target>
+        <Menu.Dropdown>
+          <Menu.Label>Estado de verificación</Menu.Label>
+          {AGENCY_STATUS_OPTIONS.filter((option) => option.value !== agency.status).map((option) => (
+            <Menu.Item
+              key={option.value}
+              leftSection={<Badge size="xs" circle color={AGENCY_STATUS_COLOR[option.value]} />}
+              onClick={() =>
+                onAction(agency, () => updateAgency(agency.id, agencyToRequest(agency, { status: option.value })))
+              }
+            >
+              Pasar a {option.label.toLowerCase()}
+            </Menu.Item>
+          ))}
+          <Menu.Divider />
           <Menu.Item
-            key={option.value}
-            leftSection={<Badge size="xs" circle color={AGENCY_STATUS_COLOR[option.value]} />}
-            onClick={() =>
-              onAction(agency, () => updateAgency(agency.id, agencyToRequest(agency, { status: option.value })))
-            }
+            color="red"
+            leftSection={<IconArchive size={16} />}
+            onClick={() => onAction(agency, () => deleteAgency(agency.id))}
           >
-            Pasar a {option.label.toLowerCase()}
+            Dar de baja
           </Menu.Item>
-        ))}
-        <Menu.Divider />
-        <Menu.Item
-          color="red"
-          leftSection={<IconArchive size={16} />}
-          onClick={() => onAction(agency, () => deleteAgency(agency.id))}
-        >
-          Dar de baja
-        </Menu.Item>
-      </Menu.Dropdown>
-    </Menu>
+        </Menu.Dropdown>
+      </Menu>
+    </Group>
   )
 }
 

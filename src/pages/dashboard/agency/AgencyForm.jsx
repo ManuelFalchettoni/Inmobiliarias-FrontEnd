@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import {
   Alert,
   Anchor,
@@ -13,6 +13,7 @@ import {
   Group,
   Select,
   SimpleGrid,
+  Skeleton,
   Stack,
   Text,
   TextInput,
@@ -31,18 +32,30 @@ import {
   IconWorld,
 } from '@tabler/icons-react'
 
+import { forgetCached } from '../../../hooks/useLookup.js'
 import { ApiError } from '../../../services/api.js'
 import {
   AGENCY_LIMITS,
   AGENCY_STATUS_OPTIONS,
+  AGENCY_STATUS_SHORT_LABEL,
   AGENCY_UNIQUE_FIELDS,
   createAgency,
+  findAgency,
   formatCuit,
   normalizePhone,
+  toAgencyFormValues,
   toAgencyRequest,
+  updateAgency,
 } from '../../../services/agencies.js'
 import AgencySummary from './AgencySummary.jsx'
-import { clearDraft, defaultValues, loadDraft, saveDraft, validation } from './agency-form.js'
+import {
+  clearDraft,
+  defaultValues,
+  editValidation,
+  loadDraft,
+  saveDraft,
+  validation,
+} from './agency-form.js'
 
 const DRAFT_DEBOUNCE_MS = 800
 
@@ -77,27 +90,41 @@ function conflictFieldErrors(message) {
   return field ? { [field]: 'Este valor ya está registrado en otra agencia.' } : {}
 }
 
-export default function AgencyForm() {
+/**
+ * Alta y edición. Con `agency` se edita: no hay borrador local ni casilla de
+ * condiciones, y se guarda con un `PUT` que pisa todos los campos.
+ */
+function AgencyEditor({ agency }) {
+  const isEdit = agency != null
   const [status, setStatus] = useState({ state: 'idle' })
   const [draftSavedAt, setDraftSavedAt] = useState(null)
 
   const draftTimer = useRef(null)
   const abortRef = useRef(null)
+  const [rules] = useState(() => (isEdit ? editValidation(agency.cuit) : validation))
 
   const form = useForm({
     // Modo no controlado: tipear actualiza la referencia interna sin re-renderizar
     // la página. Solo se vuelve a renderizar quien se suscribe (AgencySummary).
     mode: 'uncontrolled',
-    initialValues: loadDraft(),
+    initialValues: isEdit ? toAgencyFormValues(agency) : loadDraft(),
     validateInputOnBlur: true,
-    validate: validation,
+    validate: rules,
     onValuesChange: (values) => {
+      if (isEdit) return
       clearTimeout(draftTimer.current)
       draftTimer.current = setTimeout(() => {
         if (saveDraft(values)) setDraftSavedAt(new Date())
       }, DRAFT_DEBOUNCE_MS)
     },
   })
+
+  // Una agencia en `DELETED` igual tiene que mostrar su estado en el Select.
+  const statusOptions = AGENCY_STATUS_OPTIONS.some((option) => option.value === agency?.status)
+    ? AGENCY_STATUS_OPTIONS
+    : isEdit
+      ? [...AGENCY_STATUS_OPTIONS, { value: agency.status, label: AGENCY_STATUS_SHORT_LABEL[agency.status] ?? agency.status }]
+      : AGENCY_STATUS_OPTIONS
 
   useEffect(
     () => () => {
@@ -127,13 +154,24 @@ export default function AgencyForm() {
     clearTimeout(draftTimer.current)
 
     try {
-      const agency = await createAgency(toAgencyRequest(values), { signal: controller.signal })
+      if (isEdit) {
+        const saved = await updateAgency(agency.id, toAgencyRequest(values), { signal: controller.signal })
+        forgetCached('agencies', agency.id)
+        // Lo guardado pasa a ser el nuevo punto de partida del formulario.
+        form.setInitialValues(toAgencyFormValues(saved))
+        form.resetDirty()
+        setStatus({ state: 'saved', agency: saved })
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+        return
+      }
+
+      const created = await createAgency(toAgencyRequest(values), { signal: controller.signal })
 
       clearDraft()
       setDraftSavedAt(null)
       form.setInitialValues(defaultValues)
       form.reset()
-      setStatus({ state: 'created', agency })
+      setStatus({ state: 'created', agency: created })
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (error) {
       if (controller.signal.aborted) return
@@ -151,7 +189,7 @@ export default function AgencyForm() {
         }
         setStatus({ state: 'error', message: error.message })
       } else {
-        setStatus({ state: 'error', message: 'Ocurrió un error inesperado al crear la agencia.' })
+        setStatus({ state: 'error', message: 'Ocurrió un error inesperado.' })
       }
 
       window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -200,17 +238,17 @@ export default function AgencyForm() {
               Agencias
             </Anchor>
             <Text size="xs" c="var(--mantine-primary-color-filled)" tt="uppercase" fw={600}>
-              Nueva agencia
+              {isEdit ? `Agencia #${agency.id}` : 'Nueva agencia'}
             </Text>
           </Breadcrumbs>
 
           <Title order={1} size="h2" mb={4}>
-            Alta de nueva agencia inmobiliaria
+            {isEdit ? `Editar ${agency.publicName}` : 'Alta de nueva agencia inmobiliaria'}
           </Title>
           <Text c="dimmed" maw={820}>
-            Registre la entidad y sus datos de contacto. El alta queda pendiente de verificación
-            hasta que un administrador la apruebe. Para entrar al panel, la agencia necesita un
-            usuario con rol Agencia vinculado a ella.
+            {isEdit
+              ? 'Se guardan todos los datos juntos. El CUIT, la razón social, el email, el teléfono y la dirección no pueden repetirse con otra agencia.'
+              : 'Registre la entidad y sus datos de contacto. El alta queda pendiente de verificación hasta que un administrador la apruebe. Para entrar al panel, la agencia necesita un usuario con rol Agencia vinculado a ella.'}
           </Text>
         </Container>
       </Box>
@@ -241,11 +279,26 @@ export default function AgencyForm() {
           </Alert>
         )}
 
+        {status.state === 'saved' && (
+          <Alert
+            color="teal"
+            icon={<IconCircleCheck />}
+            title="Cambios guardados"
+            mb="lg"
+            withCloseButton
+            onClose={() => setStatus({ state: 'idle' })}
+          >
+            <Anchor component={Link} to="/dashboard/agencias" size="sm" fw={500}>
+              Volver al listado de agencias
+            </Anchor>
+          </Alert>
+        )}
+
         {status.state === 'error' && (
           <Alert
             color="red"
             icon={<IconAlertTriangle />}
-            title="No se pudo crear la agencia"
+            title={isEdit ? 'No se pudieron guardar los cambios' : 'No se pudo crear la agencia'}
             mb="lg"
             withCloseButton
             onClose={() => setStatus({ state: 'idle' })}
@@ -276,8 +329,8 @@ export default function AgencyForm() {
                   />
                   <Select
                     label="Estado de la agencia"
-                    description="Un alta nueva debería quedar pendiente"
-                    data={AGENCY_STATUS_OPTIONS}
+                    description={isEdit ? 'Circuito de verificación' : 'Un alta nueva debería quedar pendiente'}
+                    data={statusOptions}
                     allowDeselect={false}
                     withAsterisk
                     key={form.key('status')}
@@ -369,18 +422,20 @@ export default function AgencyForm() {
                 </SimpleGrid>
               </SectionCard>
 
-              <Card withBorder radius="lg" padding="lg" shadow="xs">
-                <Checkbox
-                  label="Acepto las condiciones del servicio y el tratamiento de los datos de la agencia"
-                  key={form.key('acceptTerms')}
-                  {...form.getInputProps('acceptTerms', { type: 'checkbox' })}
-                />
-              </Card>
+              {!isEdit && (
+                <Card withBorder radius="lg" padding="lg" shadow="xs">
+                  <Checkbox
+                    label="Acepto las condiciones del servicio y el tratamiento de los datos de la agencia"
+                    key={form.key('acceptTerms')}
+                    {...form.getInputProps('acceptTerms', { type: 'checkbox' })}
+                  />
+                </Card>
+              )}
             </Stack>
           </Grid.Col>
 
           <Grid.Col span={{ base: 12, lg: 4 }}>
-            <AgencySummary form={form} />
+            <AgencySummary form={form} rules={rules} isEdit={isEdit} />
           </Grid.Col>
         </Grid>
       </Container>
@@ -395,29 +450,92 @@ export default function AgencyForm() {
         <Container size="xl">
           <Group justify="space-between" gap="sm" wrap="nowrap">
             <Text size="xs" c="dimmed" visibleFrom="md">
-              {draftSavedAt
-                ? `Borrador guardado a las ${draftSavedAt.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })}.`
-                : 'El borrador se guarda solo en este navegador.'}
+              {isEdit
+                ? 'Los cambios se guardan al confirmar.'
+                : draftSavedAt
+                  ? `Borrador guardado a las ${draftSavedAt.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })}.`
+                  : 'El borrador se guarda solo en este navegador.'}
             </Text>
-            <Group gap="sm" ml="auto" wrap="nowrap">
-              <Button variant="subtle" color="gray" onClick={handleCancel} disabled={isSubmitting}>
-                Descartar
-              </Button>
-              <Button
-                variant="default"
-                leftSection={<IconDeviceFloppy size={18} />}
-                onClick={handleSaveDraft}
-                disabled={isSubmitting}
-              >
-                Guardar borrador
-              </Button>
-              <Button type="submit" leftSection={<IconCircleCheck size={18} />} loading={isSubmitting}>
-                Crear agencia
-              </Button>
-            </Group>
+            {isEdit ? (
+              <Group gap="sm" ml="auto" wrap="nowrap">
+                <Button component={Link} to="/dashboard/agencias" variant="subtle" color="gray" disabled={isSubmitting}>
+                  Volver al listado
+                </Button>
+                <Button type="submit" leftSection={<IconCircleCheck size={18} />} loading={isSubmitting}>
+                  Guardar cambios
+                </Button>
+              </Group>
+            ) : (
+              <Group gap="sm" ml="auto" wrap="nowrap">
+                <Button variant="subtle" color="gray" onClick={handleCancel} disabled={isSubmitting}>
+                  Descartar
+                </Button>
+                <Button
+                  variant="default"
+                  leftSection={<IconDeviceFloppy size={18} />}
+                  onClick={handleSaveDraft}
+                  disabled={isSubmitting}
+                >
+                  Guardar borrador
+                </Button>
+                <Button type="submit" leftSection={<IconCircleCheck size={18} />} loading={isSubmitting}>
+                  Crear agencia
+                </Button>
+              </Group>
+            )}
           </Group>
         </Container>
       </Box>
     </form>
   )
+}
+
+/** Trae la agencia antes de montar el editor, así el formulario nace con sus valores. */
+function AgencyLoader({ id }) {
+  const [result, setResult] = useState(null)
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    findAgency(id, { signal: controller.signal })
+      .then((agency) => setResult({ agency }))
+      .catch((error) => {
+        if (controller.signal.aborted) return
+        setResult({
+          error:
+            error instanceof ApiError && error.status === 404
+              ? `No existe una agencia activa con el identificador #${id}. Si está dada de baja, restáurela desde el listado.`
+              : error.message,
+        })
+      })
+
+    return () => controller.abort()
+  }, [id])
+
+  if (result?.agency) return <AgencyEditor agency={result.agency} />
+
+  return (
+    <Container size="xl" py="xl">
+      {result?.error ? (
+        <Alert color="red" icon={<IconAlertTriangle />} title="No se puede editar la agencia">
+          {result.error}{' '}
+          <Anchor component={Link} to="/dashboard/agencias" size="sm" fw={500}>
+            Volver al listado
+          </Anchor>
+        </Alert>
+      ) : (
+        <Stack gap="xl">
+          <Skeleton height={90} radius="lg" />
+          <Skeleton height={260} radius="lg" />
+          <Skeleton height={200} radius="lg" />
+        </Stack>
+      )}
+    </Container>
+  )
+}
+
+/** `/agencias/nueva` y `/agencias/:id/editar`. */
+export default function AgencyForm() {
+  const { id } = useParams()
+  return id ? <AgencyLoader key={id} id={id} /> : <AgencyEditor key="new" />
 }

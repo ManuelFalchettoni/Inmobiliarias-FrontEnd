@@ -96,13 +96,29 @@ export const validation = {
   acceptTerms: (value) => (value ? null : 'Debe aceptar las condiciones del servicio.'),
 }
 
+/**
+ * Validación de la edición. Si el CUIT es el que ya estaba guardado no se
+ * revisa el dígito verificador: el backend solo exige el largo, y un dato
+ * cargado antes con el dígito mal impediría editar cualquier otro campo.
+ * Si se cambia, se valida completo.
+ */
+export function editValidation(savedCuit) {
+  return {
+    ...validation,
+    cuit: (value, values) => {
+      if (onlyDigits(value) !== onlyDigits(savedCuit)) return validation.cuit(value, values)
+      return onlyDigits(value).length === 11 ? null : 'El CUIT debe tener 11 dígitos.'
+    },
+  }
+}
+
 /** Porcentaje de campos obligatorios ya completados y válidos. */
-export function getProgress(values) {
+export function getProgress(values, rules = validation) {
   const completed = REQUIRED_FIELDS.filter((field) => {
     const value = values[field]
     if (typeof value === 'boolean') return value
     if (!String(value ?? '').trim()) return false
-    return validation[field]?.(value, values) == null
+    return rules[field]?.(value, values) == null
   })
 
   return Math.round((completed.length / REQUIRED_FIELDS.length) * 100)

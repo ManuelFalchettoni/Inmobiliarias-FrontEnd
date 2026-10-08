@@ -36,7 +36,7 @@ function SummaryRow({ label, children, mono = false }) {
  * `form.useWatchValue` (un `useSyncExternalStore` por ruta), de modo que el
  * re-render por tecleo queda acotado a esta tarjeta.
  */
-export default function AgencySummary({ form }) {
+export default function AgencySummary({ form, rules, isEdit = false }) {
   const cuit = form.useWatchValue('cuit')
   const companyName = form.useWatchValue('companyName')
   const publicName = form.useWatchValue('publicName')
@@ -61,7 +61,7 @@ export default function AgencySummary({ form }) {
     acceptTerms,
   }
 
-  const progress = getProgress(values)
+  const progress = getProgress(values, rules)
   const isReady = progress === 100
   const statusLabel = AGENCY_STATUS_SHORT_LABEL[status] ?? status
 
@@ -119,7 +119,7 @@ export default function AgencySummary({ form }) {
 
       <Group justify="space-between" mb={6}>
         <Text size="sm" fw={600}>
-          Progreso del alta
+          {isEdit ? 'Datos obligatorios' : 'Progreso del alta'}
         </Text>
         <Text size="sm" fw={600} c={isReady ? 'teal' : 'var(--mantine-primary-color-filled)'}>
           {progress}%
@@ -133,7 +133,9 @@ export default function AgencySummary({ form }) {
             <IconShieldCheck size={16} />
           </ThemeIcon>
           <Text size="xs" c="dimmed">
-            Todos los datos obligatorios están completos. Ya puede crear la agencia.
+            {isEdit
+              ? 'Todos los datos obligatorios están completos y son válidos.'
+              : 'Todos los datos obligatorios están completos. Ya puede crear la agencia.'}
           </Text>
         </Group>
       )}

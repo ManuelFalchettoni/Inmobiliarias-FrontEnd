@@ -129,6 +129,26 @@ export function toAgencyRequest(values) {
   }
 }
 
+/**
+ * Inversa de `toAgencyRequest`: carga un `AgencyResponse` en el formulario de
+ * edición. Los opcionales pueden no venir (el backend omite los null), y las
+ * condiciones ya se aceptaron en el alta.
+ */
+export function toAgencyFormValues(agency) {
+  return {
+    cuit: agency.cuit ?? '',
+    companyName: agency.companyName ?? '',
+    publicName: agency.publicName ?? '',
+    email: agency.email ?? '',
+    phoneNumber: agency.phoneNumber ?? '',
+    address: agency.address ?? '',
+    webURL: agency.webURL ?? '',
+    socials: agency.socials ?? '',
+    status: agency.status,
+    acceptTerms: true,
+  }
+}
+
 /** POST /api/agencies -> 201 con el `AgencyResponse` creado. */
 export const createAgency = (agencyRequest, options) => post(AGENCIES_ENDPOINT, agencyRequest, options)
 

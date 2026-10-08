@@ -43,6 +43,7 @@ export default function DashboardRoutes() {
         <Route path="propiedades/:id/editar" element={<PropertyForm />} />
         <Route path="agencias" element={<AgencyList />} />
         <Route path="agencias/nueva" element={<AgencyForm />} />
+        <Route path="agencias/:id/editar" element={<AgencyForm />} />
         <Route path="usuarios" element={<UserList />} />
         <Route path="usuarios/nuevo" element={<UserForm />} />
         <Route path="usuarios/:id/editar" element={<UserEdit />} />
