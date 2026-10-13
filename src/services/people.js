@@ -4,7 +4,7 @@
  * Replica `PeopleRequest` / `PeopleResponse` del backend. Cambiar algo acá
  * exige el cambio equivalente en Java.
  */
-import { get, post, put } from './api.js'
+import { get, pageQuery, post, put } from './api.js'
 import { formatCuit, normalizePhone, onlyDigits } from './agencies.js'
 
 export const PEOPLE_ENDPOINT = '/api/people'
@@ -66,7 +66,17 @@ export function toPeopleFormValues(person) {
 export const listPeople = ({ page = 0, size = 20 } = {}, options) =>
   get(`${PEOPLE_ENDPOINT}?page=${page}&size=${size}`, options)
 
-export const findPerson = (id, options) => get(`${PEOPLE_ENDPOINT}/${id}`, options)
+/** Filtros de GET /api/people/search, además del `agencyId`. Todos de texto parcial. */
+export const PEOPLE_SEARCH_FILTERS = ['name', 'email', 'phone', 'address', 'dni', 'cuit']
+
+/**
+ * GET /api/people/search -> `Page<PeopleResponse>`, ordenado por nombre.
+ * `agencyId` es obligatorio (sin él da 400): cada inmobiliaria busca en su cartera.
+ */
+export const searchPeople = (params, options) =>
+  get(`${PEOPLE_ENDPOINT}/search?${pageQuery({ ...params, sort: null })}`, options)
+
+export const findPerson =(id, options) => get(`${PEOPLE_ENDPOINT}/${id}`, options)
 
 /** POST -> 201. 409 si el DNI o el CUIT ya están en la inmobiliaria. */
 export const createPerson = (request, options) => post(PEOPLE_ENDPOINT, request, options)

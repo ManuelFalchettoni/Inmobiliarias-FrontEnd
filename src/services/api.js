@@ -208,12 +208,16 @@ export const patch = (path, body, options) => request(path, { ...options, method
  * Todo lo que no sea paginación se trata como filtro, así sumar filtros nuevos
  * en el backend no obliga a tocar los servicios. Los filtros sin valor no
  * viajan; ojo, un `!value` acá descartaría `active=false`.
+ *
+ * Con `sort: null` no se manda orden: es para los endpoints que lo fijan del
+ * lado del backend (las búsquedas de personas y contratos).
  */
 export function pageQuery({ page = 0, size = 20, sort = 'createdAt,desc', ...filters } = {}) {
   // `...filters` junta todo lo que no sea page, size ni sort: { active, agencyId... }.
   // URLSearchParams arma el texto y codifica los caracteres especiales
   // (la coma de "createdAt,desc" viaja como %2C).
-  const params = new URLSearchParams({ page: String(page), size: String(size), sort })
+  const params = new URLSearchParams({ page: String(page), size: String(size) })
+  if (sort) params.set('sort', sort)
 
   // Object.entries convierte { active: true } en [['active', true]].
   for (const [key, value] of Object.entries(filters)) {

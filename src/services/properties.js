@@ -172,6 +172,31 @@ export function formatPropertyPlace(property) {
 export const listProperties = (params, options) =>
   get(`${PROPERTIES_ENDPOINT}?${pageQuery(params)}`, options)
 
+/**
+ * Filtros de GET /api/properties/search. Todos opcionales; los de texto son
+ * parciales y no distinguen mayúsculas ni acentos.
+ */
+export const PROPERTY_SEARCH_FILTERS = [
+  'type',
+  'condition',
+  'occupancy',
+  'province',
+  'county',
+  'city',
+  'rooms',
+  'minSize',
+  'maxSize',
+  'minYear',
+  'maxYear',
+]
+
+/**
+ * GET /api/properties/search -> `Page<PropertyResponse>`. Solo trae activas y no
+ * filtra por `agencyId` ni `active`. Mismo paginado que el listado.
+ */
+export const searchProperties = (params, options) =>
+  get(`${PROPERTIES_ENDPOINT}/search?${pageQuery(params)}`, options)
+
 export const findProperty = (id, options) => get(`${PROPERTIES_ENDPOINT}/${id}`, options)
 export const createProperty = (request, options) => post(PROPERTIES_ENDPOINT, request, options)
 

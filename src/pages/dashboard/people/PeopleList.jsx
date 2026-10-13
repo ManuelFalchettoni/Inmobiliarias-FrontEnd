@@ -1,4 +1,4 @@
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
   ActionIcon,
@@ -8,6 +8,8 @@ import {
   Container,
   Group,
   Pagination,
+  Select,
+  SimpleGrid,
   Skeleton,
   Stack,
   Table,
@@ -15,30 +17,39 @@ import {
   ThemeIcon,
   Title,
 } from '@mantine/core'
-import { IconAlertTriangle, IconPencil, IconPlus, IconUsersGroup } from '@tabler/icons-react'
+import { IconAlertTriangle, IconFilterOff, IconPencil, IconPlus, IconUsersGroup } from '@tabler/icons-react'
 
+import FilterInput from '../../../components/FilterInput.jsx'
+import { useAgencyOptions } from '../../../hooks/useAgencyOptions.js'
 import { useLookup } from '../../../hooks/useLookup.js'
+import { useUrlFilters } from '../../../hooks/useUrlFilters.js'
 import { queryKeys } from '../../../queries/keys.js'
 import { findAgency } from '../../../services/agencies.js'
 import { formatDate } from '../../../services/format.js'
-import { listPeople } from '../../../services/people.js'
+import { PEOPLE_SEARCH_FILTERS, listPeople, searchPeople } from '../../../services/people.js'
 
 const PAGE_SIZE = 20
 
 /**
- * Listado de personas. El backend no permite filtrar ni ordenar este recurso,
- * así que solo hay paginación (en el orden en que se cargaron).
+ * Listado de personas. Sin inmobiliaria elegida es el listado general, en el
+ * orden en que se cargaron. Con una, pasa a la búsqueda del backend, que exige
+ * `agencyId` y ordena por nombre: recién ahí se puede filtrar por texto.
  */
 export default function PeopleList() {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const page = Number(searchParams.get('page') ?? 1)
+  const { searchParams, page, pick, setFilter, clearFilters, goToPage } = useUrlFilters()
+  const agencyId = searchParams.get('agencyId') ?? null
+  const filters = pick(PEOPLE_SEARCH_FILTERS)
+  const filtrando = Object.keys(filters).length > 0
 
-  const params = { page: page - 1, size: PAGE_SIZE }
+  // Los filtros de texto sin inmobiliaria no se mandan: el backend daría 400.
+  const params = agencyId
+    ? { page: page - 1, size: PAGE_SIZE, agencyId, ...filters }
+    : { page: page - 1, size: PAGE_SIZE }
 
   // Mismo patrón que el listado de propiedades (ver PropertyList).
   const query = useQuery({
     queryKey: queryKeys.people.list(params),
-    queryFn: ({ signal }) => listPeople(params, { signal }),
+    queryFn: ({ signal }) => (agencyId ? searchPeople : listPeople)(params, { signal }),
     placeholderData: keepPreviousData,
   })
 
@@ -47,8 +58,14 @@ export default function PeopleList() {
   const cargando = query.isPlaceholderData
   // Nombre de la inmobiliaria de cada persona (la respuesta trae solo el id).
   const agencies = useLookup('agencies', data?.content.map((p) => p.agencyId) ?? [], findAgency)
+  // Opciones del filtro por inmobiliaria.
+  const agencyOptions = useAgencyOptions(agencyId)
 
-  const irAPagina = (nuevaPagina) => setSearchParams({ page: String(nuevaPagina) })
+  const textFilter = (name) => ({
+    value: searchParams.get(name) ?? '',
+    onChange: (valor) => setFilter(name, valor, { replace: true }),
+    disabled: !agencyId,
+  })
 
   return (
     <Container size="xl" py="xl">
@@ -63,7 +80,9 @@ export default function PeopleList() {
             </Title>
             <Text c="dimmed">
               {data
-                ? `${data.totalElements} ${data.totalElements === 1 ? 'persona' : 'personas'}, en el orden en que se cargaron`
+                ? `${data.totalElements} ${data.totalElements === 1 ? 'persona' : 'personas'}, ${
+                    agencyId ? 'por nombre' : 'en el orden en que se cargaron'
+                  }`
                 : 'Cargando el listado...'}
             </Text>
           </div>
@@ -73,6 +92,44 @@ export default function PeopleList() {
           Nueva persona
         </Button>
       </Group>
+
+      {/* Todos los de texto son parciales: "garc" encuentra "García", "3012" un DNI que lo contenga. */}
+      <Card withBorder radius="lg" shadow="xs" mb="md">
+        <SimpleGrid cols={{ base: 1, xs: 2, md: 4 }}>
+          <Select
+            label="Inmobiliaria"
+            placeholder={agencyOptions.state === 'loading' ? 'Cargando inmobiliarias...' : 'Todas'}
+            data={agencyOptions.options}
+            value={agencyId}
+            onChange={(valor) => setFilter('agencyId', valor)}
+            searchable
+            clearable
+            nothingFoundMessage="Sin coincidencias"
+          />
+          <FilterInput label="Nombre" {...textFilter('name')} />
+          <FilterInput label="DNI" {...textFilter('dni')} />
+          <FilterInput label="CUIT" {...textFilter('cuit')} />
+          <FilterInput label="Teléfono" {...textFilter('phone')} />
+          <FilterInput label="Email" {...textFilter('email')} />
+          <FilterInput label="Dirección" {...textFilter('address')} />
+          {filtrando && (
+            <Button
+              variant="subtle"
+              color="gray"
+              leftSection={<IconFilterOff size={16} />}
+              style={{ alignSelf: 'end' }}
+              onClick={() => clearFilters(PEOPLE_SEARCH_FILTERS)}
+            >
+              Limpiar filtros
+            </Button>
+          )}
+        </SimpleGrid>
+        {!agencyId && (
+          <Text size="xs" c="dimmed" mt="sm">
+            Elegí una inmobiliaria para buscar: cada una busca solo en su cartera.
+          </Text>
+        )}
+      </Card>
 
       {query.isPending && (
         <Stack gap="xs">
@@ -94,10 +151,22 @@ export default function PeopleList() {
             <ThemeIcon variant="light" color="gray" size={56} radius="xl">
               <IconUsersGroup size={28} />
             </ThemeIcon>
-            <Text fw={600}>Todavía no hay personas cargadas</Text>
-            <Button component={Link} to="/dashboard/personas/nueva" mt="md" variant="light">
-              Cargar la primera
-            </Button>
+            <Text fw={600}>
+              {agencyId && filtrando
+                ? 'Ninguna persona coincide con los filtros'
+                : agencyId
+                  ? 'Esta inmobiliaria no tiene personas cargadas'
+                  : 'Todavía no hay personas cargadas'}
+            </Text>
+            {agencyId && filtrando ? (
+              <Button mt="md" variant="light" onClick={() => clearFilters(PEOPLE_SEARCH_FILTERS)}>
+                Limpiar filtros
+              </Button>
+            ) : (
+              <Button component={Link} to="/dashboard/personas/nueva" mt="md" variant="light">
+                Cargar la primera
+              </Button>
+            )}
           </Stack>
         </Card>
       )}
@@ -179,7 +248,7 @@ export default function PeopleList() {
 
           {data.totalPages > 1 && (
             <Group justify="center" mt="lg">
-              <Pagination total={data.totalPages} value={page} onChange={irAPagina} />
+              <Pagination total={data.totalPages} value={page} onChange={goToPage} />
             </Group>
           )}
         </>

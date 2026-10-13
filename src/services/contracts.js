@@ -5,7 +5,7 @@
  * `ContractPartyRequest` / `ContractPartyResponse` y los enums `ContractType`,
  * `ContractStatus` y `ContractRole` del backend.
  */
-import { del, get, post, put } from './api.js'
+import { del, get, pageQuery, post, put } from './api.js'
 
 export const CONTRACTS_ENDPOINT = '/api/property_contracts'
 export const PARTIES_ENDPOINT = '/api/contract_parties'
@@ -104,7 +104,31 @@ export const contractToRequest = (contract, changes = {}) => ({
 export const listContracts = ({ page = 0, size = 20 } = {}, options) =>
   get(`${CONTRACTS_ENDPOINT}?page=${page}&size=${size}`, options)
 
-export const findContract = (id, options) => get(`${CONTRACTS_ENDPOINT}/${id}`, options)
+/**
+ * Filtros de GET /api/property_contracts/search, además del `agencyId`. Las
+ * fechas van como "yyyy-MM-dd": `endFrom`/`endTo` son los que vencen en un período.
+ */
+export const CONTRACT_SEARCH_FILTERS = [
+  'type',
+  'status',
+  'currency',
+  'minAmount',
+  'maxAmount',
+  'startFrom',
+  'startTo',
+  'endFrom',
+  'endTo',
+]
+
+/**
+ * GET /api/property_contracts/search -> `Page<PropertyContractResponse>`, el
+ * que empieza más tarde primero. `agencyId` es obligatorio (sin él da 400): el
+ * backend busca por la inmobiliaria de la propiedad.
+ */
+export const searchContracts = (params, options) =>
+  get(`${CONTRACTS_ENDPOINT}/search?${pageQuery({ ...params, sort: null })}`, options)
+
+export const findContract =(id, options) => get(`${CONTRACTS_ENDPOINT}/${id}`, options)
 
 /** POST -> 201. El backend no valida que la propiedad exista. */
 export const createContract = (request, options) => post(CONTRACTS_ENDPOINT, request, options)

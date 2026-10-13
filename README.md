@@ -30,7 +30,7 @@ acepta `localhost:5173` y `localhost:3000`: si Vite arranca en otro puerto, los 
 | ----------------------------------- | ------------------------------------------------------------------- |
 | `/registro`                         | Registro público (`POST /api/auth/register`)                        |
 | `/login`                            | Formulario de login (sin conexión al backend)                       |
-| `/dashboard/propiedades`            | Listado de propiedades, activas o dadas de baja                     |
+| `/dashboard/propiedades`            | Listado de propiedades, activas o dadas de baja, con búsqueda por filtros |
 | `/dashboard/propiedades/nueva`      | Alta de propiedad con precios y fotos                               |
 | `/dashboard/propiedades/:id/editar` | Edición de propiedad: datos, precios, dueños y fotos                |
 | `/dashboard/agencias`               | Listado de agencias: estado de verificación, baja y restauración    |
@@ -39,8 +39,8 @@ acepta `localhost:5173` y `localhost:3000`: si Vite arranca en otro puerto, los 
 | `/dashboard/usuarios`               | Listado de usuarios, filtrable por agencia                          |
 | `/dashboard/usuarios/nuevo`         | Alta de usuario con rol, agencia, CUIT y matrícula                  |
 | `/dashboard/usuarios/:id/editar`    | Edición de usuario y cambio de contraseña                           |
-| `/dashboard/personas`               | Listado, alta y edición de personas (clientes y propietarios)       |
-| `/dashboard/contratos`              | Listado de contratos de venta y alquiler                            |
+| `/dashboard/personas`               | Personas (clientes y propietarios), con búsqueda por inmobiliaria    |
+| `/dashboard/contratos`              | Contratos de venta y alquiler, filtrables por estado, fechas y monto |
 | `/dashboard/contratos/:id`          | Detalle del contrato y sus partes                                   |
 | `/dashboard/consultas`              | Leads del CRM, filtrables por agente                                |
 | `/dashboard/consultas/:id`          | Lead: etapa, historial, ofertas y recordatorios                     |
@@ -57,8 +57,9 @@ src/
 │   ├── format.js     Fechas
 │   └── agencies, users, properties, people, owners, contracts, crm, workspace
 ├── queries/      React Query: cliente (client.js) y claves de caché (keys.js)
-├── hooks/        useAgencyOptions, useSelectOptions (opciones de Select), useLookup (ids a registros)
-├── components/   Componentes compartidos (ConfirmAction)
+├── hooks/        useAgencyOptions, useSelectOptions (opciones de Select), useLookup (ids a registros),
+│                 useUrlFilters (página y filtros en la URL)
+├── components/   Componentes compartidos (ConfirmAction, FilterInput)
 ├── layouts/      AuthLayout, DashboardLayout y el menú (dashboard-nav.js)
 ├── pages/
 │   ├── auth/         Login, registro y reglas de usuario
@@ -81,12 +82,18 @@ src/
   del menú. Las acciones de las filas usan `useMutation`.
 - **Listados.** Página y filtros en la URL (`?page=2&active=false`). La página se muestra desde 1 y se
   pide desde 0. Mientras llega una página se muestra la anterior (`keepPreviousData`).
+- **Búsqueda.** Propiedades, personas y contratos pasan a `GET .../search` en cuanto hay un filtro
+  (personas y contratos, cuando se elige inmobiliaria: allí `agencyId` es obligatorio). Los campos de
+  texto (`FilterInput`) escriben en la URL 400 ms después de la última tecla, así no se pide una vez
+  por letra. La búsqueda de propiedades solo trae publicadas: con "Dadas de baja" no se filtra.
 - **Ids a nombres.** Las respuestas del CRM, contratos y dueños traen solo ids; `useLookup` los
   resuelve con la misma clave que el detalle, así cada registro se pide una sola vez.
 
 ## Limitaciones actuales
 
 - No hay login: el backend no lo expone, y el panel accede a los datos de todas las agencias.
-- `/api/people`, `/api/property_contracts`, `/api/contract_parties` y `/api/property_owners` no
-  filtran ni ordenan. Partes y dueños se traen completos y se filtran en el cliente.
+- Los listados de `/api/people` y `/api/property_contracts` sin inmobiliaria elegida no filtran ni
+  ordenan. `/api/contract_parties` y `/api/property_owners` tampoco: partes y dueños se traen
+  completos y se filtran en el cliente.
+- La búsqueda de propiedades no recibe `agencyId`: busca en las de todas las inmobiliarias.
 - La barra superior (búsqueda, notificaciones y nombre de la agencia) es estática.
