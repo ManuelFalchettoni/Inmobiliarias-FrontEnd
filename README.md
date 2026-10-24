@@ -29,7 +29,7 @@ acepta `localhost:5173` y `localhost:3000`: si Vite arranca en otro puerto, los 
 | Ruta                                | Pantalla                                                            |
 | ----------------------------------- | ------------------------------------------------------------------- |
 | `/registro`                         | Registro público (`POST /api/auth/register`)                        |
-| `/login`                            | Formulario de login (sin conexión al backend)                       |
+| `/login`                            | Login (`POST /api/auth/login`): guarda el usuario en la sesión      |
 | `/dashboard/propiedades`            | Listado de propiedades, activas o dadas de baja, con búsqueda por filtros |
 | `/dashboard/propiedades/nueva`      | Alta de propiedad con precios y fotos                               |
 | `/dashboard/propiedades/:id/editar` | Edición de propiedad: datos, precios, dueños y fotos                |
@@ -44,8 +44,9 @@ acepta `localhost:5173` y `localhost:3000`: si Vite arranca en otro puerto, los 
 | `/dashboard/contratos/:id`          | Detalle del contrato y sus partes                                   |
 | `/dashboard/consultas`              | Leads del CRM, filtrables por agente                                |
 | `/dashboard/consultas/:id`          | Lead: etapa, historial, ofertas y recordatorios                     |
+| `/dashboard/configuracion`          | Cuenta del usuario logueado: datos, contraseña e inmobiliaria (solo lectura) |
 
-Archivados, Explorador & Mapa, Analítica & Reportes y Configuración muestran una pantalla
+Archivados, Explorador & Mapa y Analítica & Reportes muestran una pantalla
 "Próximamente".
 
 ## Estructura
@@ -55,7 +56,7 @@ src/
 ├── services/     Un módulo por recurso del backend. Única capa que hace pedidos HTTP.
 │   ├── api.js        fetch, timeout, cancelación y errores (ApiError)
 │   ├── format.js     Fechas
-│   └── agencies, users, properties, people, owners, contracts, crm, workspace
+│   └── auth, agencies, users, properties, people, owners, contracts, crm, workspace
 ├── queries/      React Query: cliente (client.js) y claves de caché (keys.js)
 ├── hooks/        useAgencyOptions, useSelectOptions (opciones de Select), useLookup (ids a registros),
 │                 useUrlFilters (página y filtros en la URL)
@@ -63,8 +64,8 @@ src/
 ├── layouts/      AuthLayout, DashboardLayout y el menú (dashboard-nav.js)
 ├── pages/
 │   ├── auth/         Login, registro y reglas de usuario
-│   └── dashboard/    agency/, user/, property/, people/, contract/, crm/ y DashboardRoutes.jsx
-└── context/      AuthContext de demostración (no está montado)
+│   └── dashboard/    account/, agency/, user/, property/, people/, contract/, crm/ y DashboardRoutes.jsx
+└── context/      AuthContext: el usuario que inició sesión (`useAuth()`)
 ```
 
 ## Convenciones
@@ -91,7 +92,10 @@ src/
 
 ## Limitaciones actuales
 
-- No hay login: el backend no lo expone, y el panel accede a los datos de todas las agencias.
+- El login guarda el usuario (`id`, `name`, `email`, `rol`, `agencyId`) en `sessionStorage`, o en
+  `localStorage` con "Mantener sesión iniciada"; el JWT queda en la cookie HttpOnly del backend
+  (por eso `api.js` llama con `credentials: 'include'`). El panel no exige sesión: solo Configuración
+  la usa. No hay endpoint de logout, así que "Cerrar sesión" limpia el front y la cookie vence sola.
 - Los listados de `/api/people` y `/api/property_contracts` sin inmobiliaria elegida no filtran ni
   ordenan. `/api/contract_parties` y `/api/property_owners` tampoco: partes y dueños se traen
   completos y se filtran en el cliente.
