@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Link, NavLink as RouterNavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink as RouterNavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   ActionIcon,
   AppShell,
@@ -20,7 +20,9 @@ import { IconBell, IconHome, IconLogout, IconPlus, IconSearch } from '@tabler/ic
 
 import { useQueries } from '@tanstack/react-query'
 
+import { useAuth } from '../context/auth-context.js'
 import { queryKeys } from '../queries/keys.js'
+import { USER_ROL_COLOR, USER_ROL_LABEL } from '../services/users.js'
 import { WORKSPACE_TOTALS, fetchWorkspaceTotal } from '../services/workspace.js'
 import { DASHBOARD_INDEX, dashboardSections, getActiveNavPath } from './dashboard-nav.js'
 
@@ -61,6 +63,13 @@ export default function DashboardLayout() {
   // `pathname` es la dirección actual, por ejemplo "/dashboard/propiedades".
   const { pathname } = useLocation()
   const totals = useWorkspaceTotals()
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login', { replace: true })
+  }
 
   // En móvil el menú se superpone al contenido: al navegar hay que cerrarlo.
   useEffect(() => {
@@ -106,7 +115,7 @@ export default function DashboardLayout() {
             </UnstyledButton>
           </Group>
 
-          {/* Buscador, campana y datos de la agencia: por ahora son estáticos. */}
+          {/* Buscador y campana: por ahora son estáticos. */}
           <TextInput
             type="search"
             aria-label="Buscar en el panel"
@@ -132,19 +141,37 @@ export default function DashboardLayout() {
             >
               Crear propiedad
             </Button>
-            <Group gap="xs" wrap="nowrap" visibleFrom="lg">
-              <Avatar radius="xl" color="teal">
-                HR
-              </Avatar>
-              <div>
-                <Text size="sm" fw={600} lh={1.2}>
-                  Habitat Real Estate
-                </Text>
-                <Text size="xs" c="dimmed">
-                  Córdoba HQ
-                </Text>
-              </div>
-            </Group>
+            {/* Con sesión, el usuario que entró (lleva a Configuración); sin
+                sesión, los datos estáticos de la agencia de muestra. */}
+            {user ? (
+              <UnstyledButton component={Link} to="/dashboard/configuracion" visibleFrom="lg" aria-label="Ir a la configuración de la cuenta">
+                <Group gap="xs" wrap="nowrap">
+                  <Avatar radius="xl" color={USER_ROL_COLOR[user.rol] ?? 'teal'} name={user.name} />
+                  <div>
+                    <Text size="sm" fw={600} lh={1.2}>
+                      {user.name}
+                    </Text>
+                    <Text size="xs" c="dimmed">
+                      {USER_ROL_LABEL[user.rol] ?? user.rol}
+                    </Text>
+                  </div>
+                </Group>
+              </UnstyledButton>
+            ) : (
+              <Group gap="xs" wrap="nowrap" visibleFrom="lg">
+                <Avatar radius="xl" color="teal">
+                  HR
+                </Avatar>
+                <div>
+                  <Text size="sm" fw={600} lh={1.2}>
+                    Habitat Real Estate
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    Córdoba HQ
+                  </Text>
+                </div>
+              </Group>
+            )}
           </Group>
         </Group>
       </AppShell.Header>
@@ -196,17 +223,30 @@ export default function DashboardLayout() {
             ))}
           </Stack>
 
-          <Button
-            component={Link}
-            to="/login"
-            variant="subtle"
-            color="gray"
-            fullWidth
-            justify="flex-start"
-            leftSection={<IconLogout size={18} />}
-          >
-            Salir al portal de acceso
-          </Button>
+          {user ? (
+            <Button
+              variant="subtle"
+              color="gray"
+              fullWidth
+              justify="flex-start"
+              leftSection={<IconLogout size={18} />}
+              onClick={handleLogout}
+            >
+              Cerrar sesión
+            </Button>
+          ) : (
+            <Button
+              component={Link}
+              to="/login"
+              variant="subtle"
+              color="gray"
+              fullWidth
+              justify="flex-start"
+              leftSection={<IconLogout size={18} />}
+            >
+              Salir al portal de acceso
+            </Button>
+          )}
         </AppShell.Section>
       </AppShell.Navbar>
 
