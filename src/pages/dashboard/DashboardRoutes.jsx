@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 
 import DashboardLayout from '../../layouts/DashboardLayout.jsx'
+import AccountSettings from './account/AccountSettings.jsx'
 import { DASHBOARD_INDEX, dashboardNav } from '../../layouts/dashboard-nav.js'
 import AgencyForm from './agency/AgencyForm.jsx'
 import AgencyList from './agency/AgencyList.jsx'
@@ -32,6 +33,7 @@ const IMPLEMENTADAS = new Set([
   'personas',
   'contratos',
   'consultas',
+  'configuracion',
 ])
 
 /**
@@ -70,6 +72,7 @@ export default function DashboardRoutes() {
         <Route path="consultas" element={<LeadList />} />
         <Route path="consultas/nuevo" element={<LeadForm />} />
         <Route path="consultas/:id" element={<LeadDetail />} />
+        <Route path="configuracion" element={<AccountSettings />} />
 
         {/* Secciones del menú que todavía no están disponibles: cada ítem del
             menú sin pantalla propia recibe una "Próximamente", así ningún link
