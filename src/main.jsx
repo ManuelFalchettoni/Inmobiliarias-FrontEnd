@@ -18,6 +18,7 @@ import '@mantine/dropzone/styles.css'
 import './index.css'
 
 import App from './App.jsx'
+import { AuthProvider } from './context/AuthContext.jsx'
 import { queryClient } from './queries/client.js'
 import { theme } from './theme.js'
 
@@ -28,12 +29,15 @@ createRoot(document.getElementById('root')).render(
   // MantineProvider: aplica el tema (color, bordes, tipografía) a todos los componentes.
   // BrowserRouter: permite cambiar de pantalla según la dirección sin recargar la página.
   // QueryClientProvider: comparte la caché de React Query con toda la app.
+  // AuthProvider: el usuario que inició sesión, para el login y Configuración.
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <MantineProvider theme={theme} defaultColorScheme="light">
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
+        <AuthProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </AuthProvider>
       </MantineProvider>
     </QueryClientProvider>
   </StrictMode>,

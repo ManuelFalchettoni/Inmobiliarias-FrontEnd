@@ -1,80 +1,113 @@
 /**
- * Proveedor de sesión de DEMOSTRACIÓN: no está montado en la app ni habla con
- * el backend. Guardaba usuarios (con contraseña en texto plano) en el
- * localStorage del navegador para simular un login. Queda como referencia de
- * cómo se arma un contexto; no debe usarse con datos reales.
+ * Proveedor de sesión. Está montado en `main.jsx`, así cualquier pantalla puede
+ * leer el usuario que entró con `useAuth()`.
+ *
+ * El backend manda el JWT en una cookie HttpOnly que JavaScript no puede leer:
+ * lo que se guarda acá es solo el usuario que devolvió el login (`id`, `name`,
+ * `email`, `rol`, `agencyId`), para saber de quién es la cuenta sin volver a
+ * preguntar. Nunca se guarda la contraseña.
+ *
+ * - Con "Mantener sesión iniciada" se guarda en `localStorage` (sobrevive a
+ *   cerrar el navegador, como la cookie de 24 h del backend).
+ * - Sin eso, en `sessionStorage` (se borra al cerrar la pestaña).
  */
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+
 import { AuthContext } from './auth-context.js'
+import { loginUser, toLoginRequest } from '../services/auth.js'
 
+const SESSION_KEY = 'inmobiliarias.session'
 
-const STORAGE_KEY = 'inmobiliarias.demo.users'
-const SESSION_KEY = 'inmobiliarias.demo.session'
-
-function readUsers() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) ?? []
-  } catch {
-    return []
+/** Se queda solo con los datos que hacen falta para identificar la cuenta. */
+function toSessionUser(user) {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    rol: user.rol,
+    agencyId: user.agencyId ?? null,
   }
 }
 
-function writeUsers(users) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(users))
-}
-
-/** Simula la latencia de red para que se vea el estado de carga del botón. */
-function delay(ms = 600) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
-// useCallback guarda la misma función entre renders, para que los componentes
-// que la reciben no se redibujen por recibir una función "nueva".
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
+// El acceso al storage puede fallar (navegación privada, storage bloqueado):
+// en ese caso la sesión vive solo en memoria mientras la página esté abierta.
+function readSession() {
+  for (const storage of [sessionStorage, localStorage]) {
     try {
-      return JSON.parse(sessionStorage.getItem(SESSION_KEY))
+      const raw = storage.getItem(SESSION_KEY)
+      if (raw) return JSON.parse(raw)
     } catch {
-      return null
+      // Se ignora: se prueba con el otro storage.
     }
-  })
+  }
+  return null
+}
 
-  const login = useCallback(async ({ email, password }) => {
-    await delay()
-    const found = readUsers().find(
-      (u) => u.email.toLowerCase() === email.trim().toLowerCase(),
-    )
+function writeSession(user, remember) {
+  clearSession()
+  try {
+    ;(remember ? localStorage : sessionStorage).setItem(SESSION_KEY, JSON.stringify(user))
+  } catch {
+    // Sin storage la sesión queda solo en memoria.
+  }
+}
 
-    if (!found || found.password !== password) {
-      throw new Error('Email o contraseña incorrectos.')
+function clearSession() {
+  for (const storage of [sessionStorage, localStorage]) {
+    try {
+      storage.removeItem(SESSION_KEY)
+    } catch {
+      // Nada que limpiar.
     }
+  }
+}
 
-    const session = { name: found.name, email: found.email }
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session))
+/** ¿La sesión actual está en localStorage? Se usa para no cambiarla de lugar al actualizarla. */
+function isRemembered() {
+  try {
+    return localStorage.getItem(SESSION_KEY) != null
+  } catch {
+    return false
+  }
+}
+
+export function AuthProvider({ children }) {
+  // La función dentro de useState se ejecuta una sola vez, al montar.
+  const [user, setUser] = useState(readSession)
+
+  /** Llama al backend y, si sale bien, guarda el usuario. Lanza el ApiError si falla. */
+  const login = useCallback(async (values, options) => {
+    const request = toLoginRequest(values)
+    const response = await loginUser(request, options)
+    const session = toSessionUser(response)
+    writeSession(session, request.remember)
     setUser(session)
     return session
   }, [])
 
-  const register = useCallback(async ({ name, email, password }) => {
-    await delay()
-    const users = readUsers()
-    const normalized = email.trim().toLowerCase()
-
-    if (users.some((u) => u.email.toLowerCase() === normalized)) {
-      throw new Error('Ya existe una cuenta con ese email.')
-    }
-
-    const created = { name: name.trim(), email: email.trim(), password }
-    writeUsers([...users, created])
-    return created
-  }, [])
-
+  /**
+   * Cierra la sesión del lado del front. El backend todavía no tiene un
+   * endpoint de logout, y la cookie HttpOnly no se puede borrar desde
+   * JavaScript: vence sola (al cerrar el navegador o a las 24 h).
+   */
   const logout = useCallback(() => {
-    sessionStorage.removeItem(SESSION_KEY)
+    clearSession()
     setUser(null)
   }, [])
 
-  return (
-    <AuthContext value={{ user, login, register, logout }}>{children}</AuthContext>
-  )
+  /**
+   * Refresca los datos guardados después de editar la cuenta (por ejemplo, si
+   * cambió el nombre o el email), en el mismo storage donde estaban.
+   */
+  const refreshUser = useCallback((updated) => {
+    const session = toSessionUser(updated)
+    writeSession(session, isRemembered())
+    setUser(session)
+  }, [])
+
+  // useMemo: el objeto del contexto cambia solo cuando cambia el usuario, así
+  // los componentes que leen la sesión no se redibujan de más.
+  const value = useMemo(() => ({ user, login, logout, refreshUser }), [user, login, logout, refreshUser])
+
+  return <AuthContext value={value}>{children}</AuthContext>
 }
