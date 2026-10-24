@@ -1,9 +1,11 @@
 /**
  * Cliente HTTP del backend (Spring Boot: ManuelFalchettoni/Inmobiliarias-BackEnd).
  *
- * La API es abierta en desarrollo (SecurityConfig: `anyRequest().permitAll()`) y
- * no usa cookies ni sesión, por eso no se envían credenciales. El CORS del backend
- * habilita http://localhost:5173 y http://localhost:3000.
+ * La API es abierta en desarrollo (SecurityConfig: `anyRequest().permitAll()`).
+ * El login deja el JWT en una cookie HttpOnly (`token`), así que todos los pedidos
+ * salen con `credentials: 'include'`: sin eso el navegador no guarda la cookie ni
+ * la reenvía al backend, que corre en otro puerto. El CORS del backend habilita
+ * http://localhost:5173, http://localhost:5174 y http://localhost:3000.
  *
  * Es el único archivo que hace `fetch`. Las pantallas llaman a un servicio
  * (`properties.js`, `crm.js`...) y el servicio llama a las funciones de acá.
@@ -139,6 +141,8 @@ export async function request(path, { method = 'GET', body, signal, timeout = DE
     // (servidor caído, CORS, corte), `fetch` lanza un error y se va al `catch`.
     response = await fetch(`${BASE_URL}${path}`, {
       method,
+      // Manda y recibe la cookie del login aunque el backend esté en otro puerto.
+      credentials: 'include',
       signal: AbortSignal.any(signals),
       ...encodeBody(body, headers),
     })
