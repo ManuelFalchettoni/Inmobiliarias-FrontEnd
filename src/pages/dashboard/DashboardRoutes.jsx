@@ -5,6 +5,7 @@ import AccountSettings from './account/AccountSettings.jsx'
 import { DASHBOARD_INDEX, dashboardNav } from '../../layouts/dashboard-nav.js'
 import AgencyForm from './agency/AgencyForm.jsx'
 import AgencyList from './agency/AgencyList.jsx'
+import AlertAgenda from './crm/AlertAgenda.jsx'
 import ContractDetail from './contract/ContractDetail.jsx'
 import ContractForm from './contract/ContractForm.jsx'
 import ContractList from './contract/ContractList.jsx'
@@ -33,6 +34,7 @@ const IMPLEMENTADAS = new Set([
   'personas',
   'contratos',
   'consultas',
+  'avisos',
   'configuracion',
 ])
 
@@ -72,6 +74,7 @@ export default function DashboardRoutes() {
         <Route path="consultas" element={<LeadList />} />
         <Route path="consultas/nuevo" element={<LeadForm />} />
         <Route path="consultas/:id" element={<LeadDetail />} />
+        <Route path="avisos" element={<AlertAgenda />} />
         <Route path="configuracion" element={<AccountSettings />} />
 
         {/* Secciones del menú que todavía no están disponibles: cada ítem del

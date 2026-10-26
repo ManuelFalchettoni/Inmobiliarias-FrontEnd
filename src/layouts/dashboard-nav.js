@@ -1,5 +1,6 @@
 import {
   IconArchive,
+  IconBellRinging,
   IconBuildingEstate,
   IconBuildingSkyscraper,
   IconChartBar,
@@ -92,6 +93,12 @@ const sections = [
         label: 'Clientes & Leads',
         icon: IconMessages,
         description: 'Consultas recibidas y seguimiento de cada interesado.',
+      },
+      {
+        path: 'avisos',
+        label: 'Agenda de avisos',
+        icon: IconBellRinging,
+        description: 'Leads ordenados por el tiempo que falta para su próximo aviso.',
       },
       {
         path: 'analitica',

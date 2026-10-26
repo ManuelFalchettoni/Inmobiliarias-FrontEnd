@@ -44,6 +44,7 @@ acepta `localhost:5173` y `localhost:3000`: si Vite arranca en otro puerto, los 
 | `/dashboard/contratos/:id`          | Detalle del contrato y sus partes                                   |
 | `/dashboard/consultas`              | Leads del CRM, filtrables por agente                                |
 | `/dashboard/consultas/:id`          | Lead: etapa, historial, ofertas y recordatorios                     |
+| `/dashboard/avisos`                  | Agenda: leads ordenados por el tiempo que falta para su próximo aviso pendiente |
 | `/dashboard/configuracion`          | Cuenta del usuario logueado: datos, contraseña e inmobiliaria (solo lectura) |
 
 Archivados, Explorador & Mapa y Analítica & Reportes muestran una pantalla
@@ -100,4 +101,7 @@ src/
   ordenan. `/api/contract_parties` y `/api/property_owners` tampoco: partes y dueños se traen
   completos y se filtran en el cliente.
 - La búsqueda de propiedades no recibe `agencyId`: busca en las de todas las inmobiliarias.
+- No hay endpoint con todos los avisos del CRM: la agenda trae todos los leads (de a 100) y hace un
+  `GET .../alerts` por lead, y ordena en el navegador. Con muchos leads conviene sumar un endpoint
+  en el backend.
 - La barra superior (búsqueda, notificaciones y nombre de la agencia) es estática.
