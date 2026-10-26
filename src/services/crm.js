@@ -92,6 +92,24 @@ export const listLeads = (params, options) => get(`${LEADS_ENDPOINT}?${pageQuery
 
 export const findLead = (id, options) => get(`${LEADS_ENDPOINT}/${id}`, options)
 
+/** Tope de `size` que acepta el backend en los listados con orden. */
+const MAX_PAGE_SIZE = 100
+
+/**
+ * Todos los leads (de un agente, si viene `userId`), recorriendo las páginas de
+ * a 100. Devuelve un array común, no un `Page`. Lo usa la agenda de avisos, que
+ * necesita ver todos los leads para ordenarlos por su próximo aviso.
+ */
+export async function listAllLeads({ userId } = {}, options) {
+  const leads = []
+  for (let page = 0; ; page += 1) {
+    const result = await listLeads({ page, size: MAX_PAGE_SIZE, userId }, options)
+    leads.push(...result.content)
+    // `last` lo manda Spring en el Page; el `content.length` cubre una página vacía.
+    if (result.last || result.content.length === 0) return leads
+  }
+}
+
 /** POST -> 201. 404 si la propiedad, la persona o el agente no existen o están de baja. */
 export const createLead = (request, options) => post(LEADS_ENDPOINT, request, options)
 
@@ -132,6 +150,16 @@ export const createAlert = (leadId, request, options) => post(nested(leadId, 'al
 export const updateAlert = (leadId, alertId, request, options) =>
   put(`${nested(leadId, 'alerts')}/${alertId}`, request, options)
 export const deleteAlert = (leadId, alertId, options) => del(`${nested(leadId, 'alerts')}/${alertId}`, options)
+
+/**
+ * Avisos que todavía faltan: sin cumplir (`isRead = false`) y con fecha
+ * posterior a `now`, el más próximo primero. Los vencidos quedan afuera.
+ */
+export function upcomingAlerts(alerts, now) {
+  return (alerts ?? [])
+    .filter((alert) => !alert.isRead && new Date(alert.alertDate).getTime() > now)
+    .sort((a, b) => new Date(a.alertDate) - new Date(b.alertDate))
+}
 
 export const alertToRequest = (alert, changes = {}) => ({
   userId: alert.userId,

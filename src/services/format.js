@@ -43,3 +43,28 @@ export const toLocalDateTime = (value) => (value ? `${value.slice(0, 16)}:00` : 
 
 /** Inversa de `toLocalDateTime`, para precargar el input. */
 export const toDateTimeInput = (value) => (value ? String(value).slice(0, 16) : '')
+
+const MINUTE = 60 * 1000
+const HOUR = 60 * MINUTE
+const DAY = 24 * HOUR
+
+/**
+ * Cuánto falta para una fecha futura, redondeado a la unidad que se lee mejor:
+ * "menos de 1 min", "25 min", "3 h 10 min", "2 días", "5 días 4 h".
+ * `ms` son los milisegundos que faltan (fecha - ahora).
+ */
+export function formatTimeLeft(ms) {
+  if (!Number.isFinite(ms) || ms <= 0) return '—'
+  if (ms < MINUTE) return 'menos de 1 min'
+  if (ms < HOUR) return `${Math.floor(ms / MINUTE)} min`
+  if (ms < DAY) {
+    const hours = Math.floor(ms / HOUR)
+    const minutes = Math.floor((ms % HOUR) / MINUTE)
+    return minutes ? `${hours} h ${minutes} min` : `${hours} h`
+  }
+  const days = Math.floor(ms / DAY)
+  const hours = Math.floor((ms % DAY) / HOUR)
+  const label = `${days} ${days === 1 ? 'día' : 'días'}`
+  // Pasada una semana las horas ya no aportan.
+  return hours && days < 7 ? `${label} ${hours} h` : label
+}
