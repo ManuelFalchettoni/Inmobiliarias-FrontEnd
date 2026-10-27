@@ -16,13 +16,13 @@ import {
   UnstyledButton,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { IconBell, IconHome, IconLogout, IconPlus, IconSearch } from '@tabler/icons-react'
+import { IconBell, IconHome, IconLogout, IconSearch } from '@tabler/icons-react'
 
 import { useQueries } from '@tanstack/react-query'
 
 import { useAuth } from '../context/auth-context.js'
 import { queryKeys } from '../queries/keys.js'
-import { PANEL_ROLES, USER_ROL_COLOR, USER_ROL_LABEL, hasRole } from '../services/users.js'
+import { USER_ROL_COLOR, USER_ROL_LABEL, hasRole } from '../services/users.js'
 import { WORKSPACE_TOTALS, fetchWorkspaceTotal } from '../services/workspace.js'
 import { SETTINGS_PATH, getActiveNavPath, homeFor, sectionsFor } from './dashboard-nav.js'
 
@@ -68,8 +68,6 @@ export default function DashboardLayout() {
   const { user, logout } = useAuth()
   const totals = useWorkspaceTotals(user)
   const sections = sectionsFor(user)
-  // Un USER solo tiene su cuenta: sin acceso a propiedades ni al resto.
-  const inPanel = hasRole(user, PANEL_ROLES)
   const navigate = useNavigate()
 
   const handleLogout = async () => {
@@ -139,16 +137,6 @@ export default function DashboardLayout() {
                 <IconBell size={22} />
               </ActionIcon>
             </Indicator>
-            {inPanel && (
-              <Button
-                component={Link}
-                to="/dashboard/propiedades/nueva"
-                leftSection={<IconPlus size={16} />}
-                visibleFrom="sm"
-              >
-                Crear propiedad
-              </Button>
-            )}
             {/* El usuario que entró: lleva a Configuración. */}
             <UnstyledButton component={Link} to={SETTINGS_PATH} visibleFrom="lg" aria-label="Ir a la configuración de la cuenta">
               <Group gap="xs" wrap="nowrap">
@@ -178,20 +166,31 @@ export default function DashboardLayout() {
                   {section.title}
                 </Text>
 
-                {section.items.map((item) => (
-                  // `component={RouterNavLink}`: el NavLink de Mantine (el estilo)
-                  // se comporta como el link de React Router (cambia de pantalla
-                  // sin recargar). `<item.icon />` dibuja el ícono guardado en el dato.
-                  <NavLink
-                    key={item.to}
-                    component={RouterNavLink}
-                    to={item.to}
-                    label={item.label}
-                    active={item.to === activePath}
-                    leftSection={<item.icon size={18} stroke={1.6} />}
-                    style={{ borderRadius: 'var(--mantine-radius-md)' }}
-                  />
-                ))}
+                <Stack gap={2}>
+                  {section.items.map((item) => {
+                    const active = item.to === activePath
+                    return (
+                      // `component={RouterNavLink}`: el NavLink de Mantine (el estilo)
+                      // se comporta como el link de React Router (cambia de pantalla
+                      // sin recargar). `<item.icon />` dibuja el ícono guardado en el dato.
+                      // `end`: React Router marca `aria-current` por prefijo (en
+                      // /propiedades/nueva marcaría también /propiedades) y Mantine
+                      // pinta ese atributo. Con `end` lo pone solo en la ruta exacta,
+                      // y el ítem activo lo decide `active` (la coincidencia más larga).
+                      <NavLink
+                        key={item.to}
+                        component={RouterNavLink}
+                        to={item.to}
+                        end
+                        label={item.label}
+                        active={active}
+                        leftSection={<item.icon size={18} stroke={active ? 2 : 1.6} />}
+                        style={{ borderRadius: 'var(--mantine-radius-md)' }}
+                        styles={{ label: { fontWeight: active ? 600 : 500 } }}
+                      />
+                    )
+                  })}
+                </Stack>
               </div>
             ))}
           </Stack>

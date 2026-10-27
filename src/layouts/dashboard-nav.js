@@ -7,7 +7,6 @@ import {
   IconFileText,
   IconMap,
   IconMessages,
-  IconPlus,
   IconSettings,
   IconUsers,
   IconUsersGroup,
@@ -42,13 +41,6 @@ const sections = [
         icon: IconBuildingEstate,
         description:
           'Listado paginado de propiedades, con filtro por agencia y por estado de publicación.',
-      },
-      {
-        path: 'propiedades/nueva',
-        label: 'Publicar propiedad',
-        icon: IconPlus,
-        description:
-          'Alta de una propiedad con su tipo, condición, ocupación, superficie y fotos.',
       },
       {
         path: 'agencias',

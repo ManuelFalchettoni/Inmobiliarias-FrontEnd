@@ -30,7 +30,6 @@ import PagePlaceholder from './PagePlaceholder.jsx'
  */
 const IMPLEMENTADAS = new Set([
   'propiedades',
-  'propiedades/nueva',
   'agencias',
   'agencias/nueva',
   'usuarios',
