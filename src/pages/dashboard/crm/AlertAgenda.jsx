@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import {
@@ -23,6 +22,7 @@ import {
 import { IconAlertTriangle, IconBellRinging, IconChevronRight, IconClockHour4 } from '@tabler/icons-react'
 
 import { useLookup } from '../../../hooks/useLookup.js'
+import { useNow } from '../../../hooks/useNow.js'
 import { useUserOptions } from '../../../hooks/useSelectOptions.js'
 import { useUrlFilters } from '../../../hooks/useUrlFilters.js'
 import { leadChildKey, queryKeys } from '../../../queries/keys.js'
@@ -39,8 +39,6 @@ import { findProperty, formatPropertyPlace } from '../../../services/properties.
 import { findUser } from '../../../services/users.js'
 
 const PAGE_SIZE = 20
-/** Cada cuánto se recalcula el "falta": una vez por minuto alcanza. */
-const CLOCK_TICK = 60 * 1000
 
 /** Orden de la agenda. Los leads sin aviso próximo van siempre al final. */
 const SORT_OPTIONS = [
@@ -59,18 +57,6 @@ function urgencyColor(ms) {
   return 'blue'
 }
 
-/**
- * La hora actual, actualizada cada minuto: así el "falta" baja solo y un aviso
- * que se cumple sale de la lista sin recargar la página.
- */
-function useNow() {
-  const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), CLOCK_TICK)
-    return () => clearInterval(id)
-  }, [])
-  return now
-}
 
 /**
  * Agenda de avisos (`/dashboard/avisos`): los leads ordenados por el tiempo que

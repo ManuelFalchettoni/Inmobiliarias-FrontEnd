@@ -28,7 +28,10 @@ export const queryKeys = {
   // editar un usuario también la refresca.
   users: { ...resourceKeys('users'), me: () => ['users', 'me'] },
   people: resourceKeys('people'),
-  leads: resourceKeys('leads'),
+  // `upcomingAlerts`: la campanita (GET /api/crm_alerts/upcoming). Queda debajo
+  // de ['leads'], así lo que invalida los leads (el detalle al tocar una alerta)
+  // también la refresca.
+  leads: { ...resourceKeys('leads'), upcomingAlerts: (params) => ['leads', 'upcoming-alerts', params] },
   contracts: resourceKeys('contracts'),
   // Partes y dueños se traen siempre completos (el backend no los filtra).
   contractParties: { all: ['contract-parties'] },

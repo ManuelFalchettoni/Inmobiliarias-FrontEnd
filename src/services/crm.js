@@ -161,6 +161,19 @@ export function upcomingAlerts(alerts, now) {
     .sort((a, b) => new Date(a.alertDate) - new Date(b.alertDate))
 }
 
+/**
+ * GET /api/crm_alerts/upcoming -> las alertas sin leer de todos los leads de la
+ * inmobiliaria, la más próxima primero, vencidas incluidas. Un array sin paginar.
+ * `days`: solo las que vencen dentro de esos días. `userId`: las de un agente.
+ */
+export function listUpcomingAlerts({ days, userId } = {}, options) {
+  const params = new URLSearchParams()
+  if (days != null) params.set('days', String(days))
+  if (userId != null) params.set('userId', String(userId))
+  const query = params.toString()
+  return get(`/api/crm_alerts/upcoming${query ? `?${query}` : ''}`, options)
+}
+
 export const alertToRequest = (alert, changes = {}) => ({
   userId: alert.userId,
   message: alert.message,

@@ -1,29 +1,17 @@
 import { useEffect } from 'react'
 import { Link, NavLink as RouterNavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import {
-  ActionIcon,
-  AppShell,
-  Avatar,
-  Burger,
-  Button,
-  Group,
-  Indicator,
-  NavLink,
-  Stack,
-  Text,
-  TextInput,
-  ThemeIcon,
-  UnstyledButton,
-} from '@mantine/core'
+import { AppShell, Avatar, Burger, Button, Group, NavLink, Stack, Text, ThemeIcon, UnstyledButton } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { IconBell, IconHome, IconLogout, IconSearch } from '@tabler/icons-react'
+import { IconHome, IconLogout } from '@tabler/icons-react'
 
 import { useQueries } from '@tanstack/react-query'
 
 import { useAuth } from '../context/auth-context.js'
 import { queryKeys } from '../queries/keys.js'
-import { USER_ROL_COLOR, USER_ROL_LABEL, hasRole } from '../services/users.js'
+import { PANEL_ROLES, USER_ROL_COLOR, USER_ROL_LABEL, hasRole } from '../services/users.js'
 import { WORKSPACE_TOTALS, fetchWorkspaceTotal } from '../services/workspace.js'
+import AlertBell from './AlertBell.jsx'
+import HeaderSearch from './HeaderSearch.jsx'
 import { SETTINGS_PATH, getActiveNavPath, homeFor, sectionsFor } from './dashboard-nav.js'
 
 const HEADER_HEIGHT = 72
@@ -68,6 +56,8 @@ export default function DashboardLayout() {
   const { user, logout } = useAuth()
   const totals = useWorkspaceTotals(user)
   const sections = sectionsFor(user)
+  // Un USER solo tiene su cuenta: sin buscador ni avisos.
+  const inPanel = hasRole(user, PANEL_ROLES)
   const navigate = useNavigate()
 
   const handleLogout = async () => {
@@ -119,24 +109,11 @@ export default function DashboardLayout() {
             </UnstyledButton>
           </Group>
 
-          {/* Buscador y campana: por ahora son estáticos. */}
-          <TextInput
-            type="search"
-            aria-label="Buscar en el panel"
-            placeholder="Buscar referencia, dirección o cliente..."
-            leftSection={<IconSearch size={16} />}
-            radius="md"
-            flex={1}
-            maw={420}
-            visibleFrom="md"
-          />
+          {/* Buscador y campana de avisos: un USER recibiría 403, no los ve. */}
+          {inPanel && <HeaderSearch flex={1} maw={420} visibleFrom="md" />}
 
           <Group gap="md" wrap="nowrap">
-            <Indicator size={8} offset={6}>
-              <ActionIcon variant="subtle" color="gray" size="lg" aria-label="Notificaciones">
-                <IconBell size={22} />
-              </ActionIcon>
-            </Indicator>
+            {inPanel && <AlertBell />}
             {/* El usuario que entró: lleva a Configuración. */}
             <UnstyledButton component={Link} to={SETTINGS_PATH} visibleFrom="lg" aria-label="Ir a la configuración de la cuenta">
               <Group gap="xs" wrap="nowrap">

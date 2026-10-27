@@ -84,9 +84,10 @@ src/
 │   └── auth, agencies, users, properties, people, owners, contracts, crm, workspace
 ├── queries/      React Query: cliente (client.js) y claves de caché (keys.js)
 ├── hooks/        useAgencyOptions, useSelectOptions (opciones de Select), useLookup (ids a registros),
-│                 useUrlFilters (página y filtros en la URL)
+│                 useUrlFilters (página y filtros en la URL), useNow (hora que avanza cada minuto)
 ├── components/   Componentes compartidos (ConfirmAction, FilterInput, RoleGate)
-├── layouts/      AuthLayout, DashboardLayout y el menú (dashboard-nav.js)
+├── layouts/      AuthLayout, DashboardLayout, el menú (dashboard-nav.js) y la barra superior:
+│                 HeaderSearch (buscador) y AlertBell (campanita de avisos)
 ├── pages/
 │   ├── auth/         Login, registro y reglas de usuario
 │   └── dashboard/    account/, agency/, user/, property/, people/, contract/, crm/ y DashboardRoutes.jsx
@@ -118,11 +119,15 @@ src/
   la validación lo pide. Algo de otra inmobiliaria responde 404, como si no existiera.
 - **Ids a nombres.** Las respuestas del CRM, contratos y dueños traen solo ids; `useLookup` los
   resuelve con la misma clave que el detalle, así cada registro se pide una sola vez.
+- **Barra superior.** El buscador busca a la vez personas por nombre y propiedades por ciudad
+  (el backend no busca propiedades por dirección) y lleva a la ficha o al listado filtrado. La
+  campanita usa `GET /api/crm_alerts/upcoming`: un agente ve sus avisos; la inmobiliaria y el admin,
+  los de todos. Se refresca cada minuto, se pone roja si hay vencidos y deja marcarlos como
+  cumplidos. Un USER no ve ninguno de los dos.
 
 ## Limitaciones actuales
 
 - `/api/contract_parties` y `/api/property_owners` no filtran ni ordenan: partes y dueños se traen
   completos y se filtran en el cliente.
 - La agenda de avisos trae todos los leads (de a 100), hace un `GET .../alerts` por lead y ordena
-  en el navegador. El backend ya tiene `GET /api/crm_alerts/upcoming`, que todavía no se usa.
-- La barra superior (búsqueda, notificaciones y nombre de la agencia) es estática.
+  en el navegador. `GET /api/crm_alerts/upcoming` hoy lo usa solo la campanita.
