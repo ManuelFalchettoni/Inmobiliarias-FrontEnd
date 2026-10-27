@@ -164,6 +164,12 @@ export function formatPropertyPlace(property) {
   return parts.filter(Boolean).join(', ')
 }
 
+/** "Planta baja" o "Piso 3". Sin `floorNumber` (un terreno, una casa), null. */
+export function formatFloor(floorNumber) {
+  if (floorNumber == null) return null
+  return floorNumber === 0 ? 'Planta baja' : `Piso ${floorNumber}`
+}
+
 /**
  * GET /api/properties -> `Page<PropertyResponse>` de Spring:
  * `{ content, totalElements, totalPages, number, size, first, last }`.

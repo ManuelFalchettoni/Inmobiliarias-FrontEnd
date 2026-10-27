@@ -28,6 +28,7 @@ import {
   IconChevronRight,
   IconCircleCheck,
   IconCurrencyDollar,
+  IconEye,
   IconHome,
   IconMapPin,
   IconPhoto,
@@ -109,9 +110,21 @@ function PageHeader({ propertyId }) {
             {propertyId ? `Propiedad #${propertyId}` : 'Nueva propiedad'}
           </Text>
         </Breadcrumbs>
-        <Title order={1} size="h2" mb={4}>
-          {propertyId ? 'Editar propiedad' : 'Publicar propiedad'}
-        </Title>
+        <Group justify="space-between" align="flex-start" gap="md" mb={4}>
+          <Title order={1} size="h2">
+            {propertyId ? 'Editar propiedad' : 'Publicar propiedad'}
+          </Title>
+          {propertyId && (
+            <Button
+              component={Link}
+              to={`/propiedades/${propertyId}`}
+              variant="light"
+              leftSection={<IconEye size={18} />}
+            >
+              Ver ficha
+            </Button>
+          )}
+        </Group>
         <Text c="dimmed" maw={820}>
           {propertyId
             ? 'Actualice los datos del inmueble y administre sus fotos. Los cambios se guardan al confirmar.'

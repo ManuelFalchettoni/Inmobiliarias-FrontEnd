@@ -4,6 +4,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
   ActionIcon,
   Alert,
+  Anchor,
   Avatar,
   Badge,
   Button,
@@ -21,11 +22,13 @@ import {
   Text,
   ThemeIcon,
   Title,
+  Tooltip,
 } from '@mantine/core'
 import {
   IconAdjustmentsHorizontal,
   IconAlertTriangle,
   IconBuildingEstate,
+  IconEye,
   IconFilterOff,
   IconPencil,
   IconPlus,
@@ -313,9 +316,22 @@ export default function PropertyList() {
                             <IconBuildingEstate size={18} />
                           </Avatar>
                           <div>
-                            <Text size="sm" fw={500}>
-                              {propiedad.address}
-                            </Text>
+                            {/* La dirección abre la ficha, salvo en las dadas de baja: no se pueden traer. */}
+                            {propiedad.active !== false ? (
+                              <Anchor
+                                component={Link}
+                                to={`/propiedades/${propiedad.id}`}
+                                size="sm"
+                                fw={500}
+                                c="var(--mantine-color-text)"
+                              >
+                                {propiedad.address}
+                              </Anchor>
+                            ) : (
+                              <Text size="sm" fw={500}>
+                                {propiedad.address}
+                              </Text>
+                            )}
                             <Text size="xs" c="dimmed">
                               {formatPropertyPlace(propiedad)}
                             </Text>
@@ -351,14 +367,29 @@ export default function PropertyList() {
                       <Table.Td>
                         {/* El PUT solo acepta propiedades activas: las dadas de baja no se editan. */}
                         {propiedad.active !== false && (
-                          <ActionIcon
-                            component={Link}
-                            to={`/dashboard/propiedades/${propiedad.id}/editar`}
-                            variant="subtle"
-                            aria-label={`Editar ${propiedad.address}`}
-                          >
-                            <IconPencil size={18} />
-                          </ActionIcon>
+                          <Group gap={4} wrap="nowrap">
+                            <Tooltip label="Ver ficha" withArrow>
+                              <ActionIcon
+                                component={Link}
+                                to={`/propiedades/${propiedad.id}`}
+                                variant="subtle"
+                                color="gray"
+                                aria-label={`Ver la ficha de ${propiedad.address}`}
+                              >
+                                <IconEye size={18} />
+                              </ActionIcon>
+                            </Tooltip>
+                            <Tooltip label="Editar" withArrow>
+                              <ActionIcon
+                                component={Link}
+                                to={`/dashboard/propiedades/${propiedad.id}/editar`}
+                                variant="subtle"
+                                aria-label={`Editar ${propiedad.address}`}
+                              >
+                                <IconPencil size={18} />
+                              </ActionIcon>
+                            </Tooltip>
+                          </Group>
                         )}
                       </Table.Td>
                     </Table.Tr>

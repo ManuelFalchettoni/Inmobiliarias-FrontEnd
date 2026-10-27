@@ -54,6 +54,7 @@ manda sola.
 | ----------------------------------- | ------------------------------------------------------------------- |
 | `/registro`                         | Registro público (`POST /api/auth/register`)                        |
 | `/login`                            | Login (`POST /api/auth/login`); con sesión vigente, entra directo al panel |
+| `/propiedades/:id`                  | Ficha de la propiedad para mostrarle a un cliente: fotos, datos, precio, mapa y contacto. Fuera del panel y sin edición |
 | `/dashboard/propiedades`            | Listado de propiedades, activas o dadas de baja, con búsqueda por filtros |
 | `/dashboard/propiedades/nueva`      | Alta de propiedad con precios y fotos                               |
 | `/dashboard/propiedades/:id/editar` | Edición de propiedad: datos, precios, dueños y fotos                |

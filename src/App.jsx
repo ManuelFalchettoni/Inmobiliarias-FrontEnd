@@ -11,6 +11,8 @@ import Register from './pages/auth/Register.jsx'
 // código en un archivo aparte (DashboardRoutes-xxxx.js) que se baja a demanda.
 // Quien solo abre el login no descarga tablas, formularios ni fotos.
 const DashboardRoutes = lazy(() => import('./pages/dashboard/DashboardRoutes.jsx'))
+// La ficha para mostrarle a un cliente: fuera del panel, sin menú ni edición.
+const PropertySheet = lazy(() => import('./pages/dashboard/property/PropertySheet.jsx'))
 
 /** Lo que se ve mientras se descarga el panel: un spinner centrado en la pantalla. */
 function RouteFallback() {
@@ -56,6 +58,17 @@ export default function App() {
           <RequireAuth>
             <Suspense fallback={<RouteFallback />}> {/* Circuito de carga */}
               <DashboardRoutes />
+            </Suspense>
+          </RequireAuth>
+        }
+      />
+
+      <Route
+        path="/propiedades/:id"
+        element={
+          <RequireAuth>
+            <Suspense fallback={<RouteFallback />}>
+              <PropertySheet />
             </Suspense>
           </RequireAuth>
         }
