@@ -22,9 +22,9 @@ import { useQueries } from '@tanstack/react-query'
 
 import { useAuth } from '../context/auth-context.js'
 import { queryKeys } from '../queries/keys.js'
-import { USER_ROL_COLOR, USER_ROL_LABEL } from '../services/users.js'
+import { PANEL_ROLES, USER_ROL_COLOR, USER_ROL_LABEL, hasRole } from '../services/users.js'
 import { WORKSPACE_TOTALS, fetchWorkspaceTotal } from '../services/workspace.js'
-import { DASHBOARD_INDEX, dashboardSections, getActiveNavPath } from './dashboard-nav.js'
+import { SETTINGS_PATH, getActiveNavPath, homeFor, sectionsFor } from './dashboard-nav.js'
 
 const HEADER_HEIGHT = 72
 // Formatea números al estilo argentino: 1234 -> "1.234".
@@ -36,17 +36,19 @@ const NUMBER_FORMAT = new Intl.NumberFormat('es-AR')
  * Cada una usa la clave [recurso, 'total']. Como está debajo de la clave del
  * recurso, cuando una pantalla invalida ['properties'] (por ejemplo, al
  * publicar una propiedad), el total del menú se actualiza solo.
- * Si una falla, ese total queda en `null` y se muestra un guion.
+ * Si una falla, ese total queda en `null` y se muestra un guion. Solo se piden
+ * los que el rol puede ver: un USER no ve ninguno.
  */
-function useWorkspaceTotals() {
+function useWorkspaceTotals(user) {
+  const entries = WORKSPACE_TOTALS.filter((entry) => hasRole(user, entry.roles))
   const results = useQueries({
-    queries: WORKSPACE_TOTALS.map((entry) => ({
+    queries: entries.map((entry) => ({
       queryKey: queryKeys[entry.resource].total(),
       queryFn: ({ signal }) => fetchWorkspaceTotal(entry.endpoint, { signal }),
     })),
   })
 
-  return WORKSPACE_TOTALS.map((entry, index) => {
+  return entries.map((entry, index) => {
     const total = results[index].data
     return { ...entry, total: Number.isFinite(total) ? total : null }
   })
@@ -62,12 +64,16 @@ export default function DashboardLayout() {
   const [opened, { toggle, close }] = useDisclosure(false)
   // `pathname` es la dirección actual, por ejemplo "/dashboard/propiedades".
   const { pathname } = useLocation()
-  const totals = useWorkspaceTotals()
+  // RequireAuth (App.jsx) no deja llegar acá sin sesión: `user` siempre está.
   const { user, logout } = useAuth()
+  const totals = useWorkspaceTotals(user)
+  const sections = sectionsFor(user)
+  // Un USER solo tiene su cuenta: sin acceso a propiedades ni al resto.
+  const inPanel = hasRole(user, PANEL_ROLES)
   const navigate = useNavigate()
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     navigate('/login', { replace: true })
   }
 
@@ -98,7 +104,7 @@ export default function DashboardLayout() {
               size="sm"
               aria-label={opened ? 'Cerrar el menú' : 'Abrir el menú'}
             />
-            <UnstyledButton component={Link} to={DASHBOARD_INDEX}>
+            <UnstyledButton component={Link} to={homeFor(user)}>
               <Group gap="sm" wrap="nowrap">
                 <ThemeIcon size={36} radius="md" variant="filled">
                   <IconHome size={20} />
@@ -133,45 +139,30 @@ export default function DashboardLayout() {
                 <IconBell size={22} />
               </ActionIcon>
             </Indicator>
-            <Button
-              component={Link}
-              to="/dashboard/propiedades/nueva"
-              leftSection={<IconPlus size={16} />}
-              visibleFrom="sm"
-            >
-              Crear propiedad
-            </Button>
-            {/* Con sesión, el usuario que entró (lleva a Configuración); sin
-                sesión, los datos estáticos de la agencia de muestra. */}
-            {user ? (
-              <UnstyledButton component={Link} to="/dashboard/configuracion" visibleFrom="lg" aria-label="Ir a la configuración de la cuenta">
-                <Group gap="xs" wrap="nowrap">
-                  <Avatar radius="xl" color={USER_ROL_COLOR[user.rol] ?? 'teal'} name={user.name} />
-                  <div>
-                    <Text size="sm" fw={600} lh={1.2}>
-                      {user.name}
-                    </Text>
-                    <Text size="xs" c="dimmed">
-                      {USER_ROL_LABEL[user.rol] ?? user.rol}
-                    </Text>
-                  </div>
-                </Group>
-              </UnstyledButton>
-            ) : (
-              <Group gap="xs" wrap="nowrap" visibleFrom="lg">
-                <Avatar radius="xl" color="teal">
-                  HR
-                </Avatar>
+            {inPanel && (
+              <Button
+                component={Link}
+                to="/dashboard/propiedades/nueva"
+                leftSection={<IconPlus size={16} />}
+                visibleFrom="sm"
+              >
+                Crear propiedad
+              </Button>
+            )}
+            {/* El usuario que entró: lleva a Configuración. */}
+            <UnstyledButton component={Link} to={SETTINGS_PATH} visibleFrom="lg" aria-label="Ir a la configuración de la cuenta">
+              <Group gap="xs" wrap="nowrap">
+                <Avatar radius="xl" color={USER_ROL_COLOR[user.rol] ?? 'teal'} name={user.name} />
                 <div>
                   <Text size="sm" fw={600} lh={1.2}>
-                    Habitat Real Estate
+                    {user.name}
                   </Text>
                   <Text size="xs" c="dimmed">
-                    Córdoba HQ
+                    {USER_ROL_LABEL[user.rol] ?? user.rol}
                   </Text>
                 </div>
               </Group>
-            )}
+            </UnstyledButton>
           </Group>
         </Group>
       </AppShell.Header>
@@ -181,7 +172,7 @@ export default function DashboardLayout() {
           {/* El menú se dibuja recorriendo los datos de dashboard-nav.js: una
               sección por grupo y un NavLink por ítem. */}
           <Stack gap="lg">
-            {dashboardSections.map((section) => (
+            {sections.map((section) => (
               <div key={section.title}>
                 <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts={0.5} mb="xs">
                   {section.title}
@@ -207,46 +198,36 @@ export default function DashboardLayout() {
         </AppShell.Section>
 
         <AppShell.Section>
-          <Text size="xs" fw={700} tt="uppercase" lts={0.5} mb="xs">
-            Espacio de trabajo
-          </Text>
-          <Stack gap={4} mb="md">
-            {totals.map((stat) => (
-              <Group key={stat.key} justify="space-between" wrap="nowrap">
-                <Text size="sm" c="dimmed">
-                  {stat.label}
-                </Text>
-                <Text size="sm" fw={600} c={stat.total == null ? 'dimmed' : undefined}>
-                  {stat.total == null ? '—' : NUMBER_FORMAT.format(stat.total)}
-                </Text>
-              </Group>
-            ))}
-          </Stack>
-
-          {user ? (
-            <Button
-              variant="subtle"
-              color="gray"
-              fullWidth
-              justify="flex-start"
-              leftSection={<IconLogout size={18} />}
-              onClick={handleLogout}
-            >
-              Cerrar sesión
-            </Button>
-          ) : (
-            <Button
-              component={Link}
-              to="/login"
-              variant="subtle"
-              color="gray"
-              fullWidth
-              justify="flex-start"
-              leftSection={<IconLogout size={18} />}
-            >
-              Salir al portal de acceso
-            </Button>
+          {totals.length > 0 && (
+            <>
+              <Text size="xs" fw={700} tt="uppercase" lts={0.5} mb="xs">
+                Espacio de trabajo
+              </Text>
+              <Stack gap={4} mb="md">
+                {totals.map((stat) => (
+                  <Group key={stat.key} justify="space-between" wrap="nowrap">
+                    <Text size="sm" c="dimmed">
+                      {stat.label}
+                    </Text>
+                    <Text size="sm" fw={600} c={stat.total == null ? 'dimmed' : undefined}>
+                      {stat.total == null ? '—' : NUMBER_FORMAT.format(stat.total)}
+                    </Text>
+                  </Group>
+                ))}
+              </Stack>
+            </>
           )}
+
+          <Button
+            variant="subtle"
+            color="gray"
+            fullWidth
+            justify="flex-start"
+            leftSection={<IconLogout size={18} />}
+            onClick={handleLogout}
+          >
+            Cerrar sesión
+          </Button>
         </AppShell.Section>
       </AppShell.Navbar>
 

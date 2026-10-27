@@ -59,19 +59,24 @@ export function toPeopleFormValues(person) {
 
 /**
  * GET /api/people -> `Page<PeopleResponse>`. Solo acepta `page` y `size`: sin
- * orden ni filtro por inmobiliaria, y sin tope de página (5 por defecto).
+ * orden y sin tope de página (5 por defecto). AGENCY y AGENT ven solo las de su
+ * inmobiliaria; el admin, todas.
  */
 // No usa `pageQuery` (api.js) porque este endpoint no acepta `sort` ni filtros:
 // la dirección se arma a mano. `= {}` permite llamar a listPeople() sin argumentos.
 export const listPeople = ({ page = 0, size = 20 } = {}, options) =>
   get(`${PEOPLE_ENDPOINT}?page=${page}&size=${size}`, options)
 
-/** Filtros de GET /api/people/search, además del `agencyId`. Todos de texto parcial. */
+/**
+ * Filtros de GET /api/people/search, además del `agencyId`. Todos opcionales y
+ * de texto parcial, sin distinguir mayúsculas ni acentos.
+ */
 export const PEOPLE_SEARCH_FILTERS = ['name', 'email', 'phone', 'address', 'dni', 'cuit']
 
 /**
- * GET /api/people/search -> `Page<PeopleResponse>`, ordenado por nombre.
- * `agencyId` es obligatorio (sin él da 400): cada inmobiliaria busca en su cartera.
+ * GET /api/people/search -> `Page<PeopleResponse>`, ordenado por nombre. Cada
+ * inmobiliaria busca en su cartera; `agencyId` lo usa solo el admin, y sin él
+ * busca en todas.
  */
 export const searchPeople = (params, options) =>
   get(`${PEOPLE_ENDPOINT}/search?${pageQuery({ ...params, sort: null })}`, options)

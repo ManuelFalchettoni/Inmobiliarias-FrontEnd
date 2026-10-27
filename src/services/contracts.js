@@ -105,10 +105,12 @@ export const listContracts = ({ page = 0, size = 20 } = {}, options) =>
   get(`${CONTRACTS_ENDPOINT}?page=${page}&size=${size}`, options)
 
 /**
- * Filtros de GET /api/property_contracts/search, además del `agencyId`. Las
- * fechas van como "yyyy-MM-dd": `endFrom`/`endTo` son los que vencen en un período.
+ * Filtros de GET /api/property_contracts/search, además del `agencyId`. Todos
+ * opcionales. Las fechas van como "yyyy-MM-dd": `endFrom`/`endTo` son los que
+ * vencen en un período.
  */
 export const CONTRACT_SEARCH_FILTERS = [
+  'propertyId',
   'type',
   'status',
   'currency',
@@ -122,8 +124,8 @@ export const CONTRACT_SEARCH_FILTERS = [
 
 /**
  * GET /api/property_contracts/search -> `Page<PropertyContractResponse>`, el
- * que empieza más tarde primero. `agencyId` es obligatorio (sin él da 400): el
- * backend busca por la inmobiliaria de la propiedad.
+ * que empieza más tarde primero. Cada inmobiliaria busca en los contratos de sus
+ * propiedades; `agencyId` lo usa solo el admin, y sin él busca en todos.
  */
 export const searchContracts = (params, options) =>
   get(`${CONTRACTS_ENDPOINT}/search?${pageQuery({ ...params, sort: null })}`, options)

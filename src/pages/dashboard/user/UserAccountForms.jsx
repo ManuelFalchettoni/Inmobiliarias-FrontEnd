@@ -4,6 +4,8 @@
  *
  * Son dos formularios separados porque en el backend son dos pedidos distintos:
  * `PUT /api/users/{id}` (datos) y `PATCH /api/users/{id}/password` (contraseña).
+ * Con `self`, la cuenta propia: `/api/users/me` y `/api/users/me/password`, que
+ * puede usar cualquier rol (un USER no puede tocar `/api/users/{id}`).
  */
 import { useEffect, useRef, useState } from 'react'
 import {
@@ -29,6 +31,8 @@ import { formatCuit, normalizePhone } from '../../../services/agencies.js'
 import {
   USER_LIMITS,
   toUserUpdateRequest,
+  updateMe,
+  updateMyPassword,
   updateUser,
   updateUserPassword,
 } from '../../../services/users.js'
@@ -63,7 +67,7 @@ export function SectionCard({ icon: Icon, title, description, children }) {
  * formulario propio, separado del de contraseña: son dos pedidos distintos en
  * el backend (PUT y PATCH) y cada uno se guarda y avisa por su cuenta.
  */
-export function AccountCard({ user, onSaved }) {
+export function AccountCard({ user, onSaved, self = false }) {
   const queryClient = useQueryClient()
   const [status, setStatus] = useState({ state: 'idle' })
   const abortRef = useRef(null)
@@ -97,7 +101,9 @@ export function AccountCard({ user, onSaved }) {
     setStatus({ state: 'saving' })
 
     try {
-      const saved = await updateUser(user.id, toUserUpdateRequest(values), { signal: controller.signal })
+      const request = toUserUpdateRequest(values)
+      const options = { signal: controller.signal }
+      const saved = self ? await updateMe(request, options) : await updateUser(user.id, request, options)
       // Marca como viejo todo lo de usuarios: el listado y los nombres que
       // muestran el CRM y otras pantallas se vuelven a pedir.
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all })
@@ -197,7 +203,7 @@ export function AccountCard({ user, onSaved }) {
 }
 
 /** Cambio de contraseña: `PATCH /password` con la actual y la nueva. */
-export function PasswordCard({ user }) {
+export function PasswordCard({ user, self = false }) {
   const [status, setStatus] = useState({ state: 'idle' })
   const abortRef = useRef(null)
 
@@ -226,7 +232,10 @@ export function PasswordCard({ user }) {
     setStatus({ state: 'saving' })
 
     try {
-      await updateUserPassword(user.id, { currentPassword, password }, { signal: controller.signal })
+      const request = { currentPassword, password }
+      const options = { signal: controller.signal }
+      if (self) await updateMyPassword(request, options)
+      else await updateUserPassword(user.id, request, options)
       // Las contraseñas no quedan escritas en pantalla después de cambiarlas.
       form.reset()
       setStatus({ state: 'saved' })

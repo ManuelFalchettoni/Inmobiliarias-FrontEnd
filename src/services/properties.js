@@ -167,7 +167,7 @@ export function formatPropertyPlace(property) {
 /**
  * GET /api/properties -> `Page<PropertyResponse>` de Spring:
  * `{ content, totalElements, totalPages, number, size, first, last }`.
- * Filtros: `agencyId` y `active`.
+ * Filtros: `active` y `agencyId` (solo lo usa el admin).
  */
 export const listProperties = (params, options) =>
   get(`${PROPERTIES_ENDPOINT}?${pageQuery(params)}`, options)
@@ -191,8 +191,9 @@ export const PROPERTY_SEARCH_FILTERS = [
 ]
 
 /**
- * GET /api/properties/search -> `Page<PropertyResponse>`. Solo trae activas y no
- * filtra por `agencyId` ni `active`. Mismo paginado que el listado.
+ * GET /api/properties/search -> `Page<PropertyResponse>`. Solo trae activas (no
+ * acepta `active`). `agencyId` lo usa solo el admin: AGENCY y AGENT buscan
+ * siempre en la suya. Mismo paginado que el listado.
  */
 export const searchProperties = (params, options) =>
   get(`${PROPERTIES_ENDPOINT}/search?${pageQuery(params)}`, options)

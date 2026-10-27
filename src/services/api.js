@@ -1,11 +1,15 @@
 /**
  * Cliente HTTP del backend (Spring Boot: ManuelFalchettoni/Inmobiliarias-BackEnd).
  *
- * La API es abierta en desarrollo (SecurityConfig: `anyRequest().permitAll()`).
- * El login deja el JWT en una cookie HttpOnly (`token`), así que todos los pedidos
+ * Toda la API pide login, salvo `/api/auth/**` (login, registro y logout). El
+ * login deja el JWT en una cookie HttpOnly (`token`), así que todos los pedidos
  * salen con `credentials: 'include'`: sin eso el navegador no guarda la cookie ni
  * la reenvía al backend, que corre en otro puerto. El CORS del backend habilita
  * http://localhost:5173, http://localhost:5174 y http://localhost:3000.
+ *
+ * - 401: no hay sesión o venció. Se avisa a AuthContext (`setUnauthorizedHandler`),
+ *   que limpia la sesión, y la app manda al login.
+ * - 403: hay sesión, pero el rol no tiene permiso. El error queda en la pantalla.
  *
  * Es el único archivo que hace `fetch`. Las pantallas llaman a un servicio
  * (`properties.js`, `crm.js`...) y el servicio llama a las funciones de acá.
@@ -19,6 +23,20 @@
 // direcciones con `//` (por ejemplo `http://localhost:8080//api/...`).
 const BASE_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:8080').replace(/\/+$/, '')
 const DEFAULT_TIMEOUT = 15000 // 15 segundos
+
+/** Los de `/api/auth` no piden sesión: un 401 ahí es "credenciales incorrectas", no "sesión vencida". */
+const AUTH_PREFIX = '/api/auth/'
+
+const FORBIDDEN_MESSAGE = 'No tenés permiso para ver o hacer esto con tu rol.'
+const UNAUTHORIZED_MESSAGE = 'Tu sesión venció. Iniciá sesión de nuevo.'
+
+// Quién se entera de un 401. Lo registra AuthProvider: api.js no conoce React.
+let unauthorizedHandler = null
+
+/** Registra la función que se llama cuando un pedido con sesión responde 401. */
+export function setUnauthorizedHandler(handler) {
+  unauthorizedHandler = handler
+}
 
 /**
  * Error de API con el detalle del `ApiErrorResponse` del backend:
@@ -47,6 +65,16 @@ export class ApiError extends Error {
   /** No hubo respuesta del servidor (caído, CORS, timeout o red). */
   get isNetworkError() {
     return this.status === 0
+  }
+
+  /** 401: no hay sesión o venció. */
+  get isUnauthorized() {
+    return this.status === 401
+  }
+
+  /** 403: hay sesión, pero el rol no tiene permiso (o es un USER sin inmobiliaria). */
+  get isForbidden() {
+    return this.status === 403
   }
 
   /** 409: un valor único ya está registrado (CUIT, email, teléfono o dirección). */
@@ -175,9 +203,18 @@ export async function request(path, { method = 'GET', body, signal, timeout = DE
     // Un 5xx no trae nada útil para el usuario y a veces trae el texto de una
     // excepción de Java (p. ej. con MinIO caído). El original queda en `detail`.
     const serverError = response.status >= 500
+    // El 401 y el 403 de SecurityConfig llegan sin `message`: se reemplazan por
+    // uno en castellano. En `/api/auth` el 401 es el del login y queda tal cual.
+    const sessionExpired = response.status === 401 && !path.startsWith(AUTH_PREFIX)
     const message = serverError
       ? 'El servidor tuvo un error al procesar la solicitud. Intente nuevamente en unos minutos.'
-      : detail
+      : response.status === 403
+        ? FORBIDDEN_MESSAGE
+        : sessionExpired
+          ? UNAUTHORIZED_MESSAGE
+          : detail
+
+    if (sessionExpired) unauthorizedHandler?.()
 
     throw new ApiError(message, {
       status: response.status,

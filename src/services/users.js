@@ -5,8 +5,8 @@
  * `RegisterRequest`, `UserResponse` y `enums/user/UserRol` del backend. Cambiar algo acá exige el
  * cambio equivalente en Java.
  *
- * Todavía no hay endpoint de login: el backend guarda el hash de BCrypt pero no
- * expone nada para validar credenciales ni emite tokens.
+ * `/api/users/me` es la cuenta del usuario logueado: el backend la saca de la
+ * cookie, no de la URL. Es lo único que puede usar un USER.
  */
 import { del, get, pageQuery, patch, post, put } from './api.js'
 import { formatCuit, normalizePhone, onlyDigits } from './agencies.js'
@@ -46,6 +46,15 @@ export const USER_ROL_COLOR = {
 
 /** Rol que el backend asigna a las cuentas del registro público. */
 export const PUBLIC_SIGNUP_ROL = USER_ROL.USER
+
+/**
+ * Roles que entran al panel. USER (el que se registra solo y no es de ninguna
+ * inmobiliaria) recibe 403 en todo menos en su cuenta.
+ */
+export const PANEL_ROLES = [USER_ROL.ADMIN, USER_ROL.AGENCY, USER_ROL.AGENT]
+
+/** ¿El usuario tiene alguno de esos roles? Sin sesión, no. */
+export const hasRole = (user, roles) => Boolean(user) && roles.includes(user.rol)
 
 /** Refleja las anotaciones `@Size` del `UserRequest`. */
 export const USER_LIMITS = {
@@ -148,3 +157,15 @@ export const updateUserPassword = (id, { currentPassword, password }, options) =
 export const deleteUser = (id, options) => del(`${USERS_ENDPOINT}/${id}`, options)
 
 export const restoreUser = (id, options) => patch(`${USERS_ENDPOINT}/${id}/restore`, undefined, options)
+
+// ----------------------------------------------------------- Cuenta propia
+
+/** GET /api/users/me -> 200 con el `UserResponse` completo (con `agencyId`), o 401 sin sesión. */
+export const findMe = (options) => get(`${USERS_ENDPOINT}/me`, options)
+
+/** PUT /api/users/me: el mismo body y los mismos códigos que `PUT /{id}`. */
+export const updateMe = (request, options) => put(`${USERS_ENDPOINT}/me`, request, options)
+
+/** PATCH /api/users/me/password `{ currentPassword, password }` -> 204. */
+export const updateMyPassword = ({ currentPassword, password }, options) =>
+  patch(`${USERS_ENDPOINT}/me/password`, { currentPassword, password }, options)

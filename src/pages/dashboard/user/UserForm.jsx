@@ -19,10 +19,12 @@ import {
 import { useForm } from '@mantine/form'
 import { IconAlertTriangle, IconAt, IconChevronRight, IconCircleCheck } from '@tabler/icons-react'
 
-import { useAgencyOptions } from '../../../hooks/useAgencyOptions.js'
+import { useAuth } from '../../../context/auth-context.js'
+import { defaultAgencyId, useAgencyOptions } from '../../../hooks/useAgencyOptions.js'
 import { formatCuit, normalizePhone } from '../../../services/agencies.js'
 import {
   USER_LIMITS,
+  USER_ROL,
   USER_ROL_LABEL,
   USER_ROL_OPTIONS,
   createUser,
@@ -50,12 +52,17 @@ const defaultValues = { ...withoutTerms(userDefaultValues), ...panelUserDefaultV
 export default function UserForm() {
   const [status, setStatus] = useState({ state: 'idle' })
   const abortRef = useRef(null)
-  // Opciones del Select de inmobiliaria; `null` porque en un alta no hay valor previo.
-  const agencies = useAgencyOptions(null)
+  const { user: me, isAdmin } = useAuth()
+  // AGENCY y AGENT dan de alta en su inmobiliaria (ver defaultAgencyId).
+  const initialAgencyId = defaultAgencyId(me)
+  const agencies = useAgencyOptions(initialAgencyId)
+  // Un usuario ADMIN solo lo crea otro admin: al resto el backend le da 403.
+  const rolOptions = isAdmin ? USER_ROL_OPTIONS : USER_ROL_OPTIONS.filter((o) => o.value !== USER_ROL.ADMIN)
 
   const form = useForm({
     mode: 'uncontrolled',
-    initialValues: defaultValues,
+    // `form.reset()` vuelve a estos valores: la inmobiliaria propia se conserva.
+    initialValues: { ...defaultValues, agencyId: initialAgencyId },
     validateInputOnBlur: true,
     validate: validation,
   })
@@ -158,7 +165,7 @@ export default function UserForm() {
             <Select
               label="Rol"
               description="Define qué puede hacer la cuenta en la plataforma"
-              data={USER_ROL_OPTIONS}
+              data={rolOptions}
               allowDeselect={false}
               withAsterisk
               key={form.key('rol')}
@@ -168,14 +175,16 @@ export default function UserForm() {
               label="Inmobiliaria"
               placeholder={agencies.state === 'loading' ? 'Cargando inmobiliarias...' : 'Elegir'}
               description={
-                agencies.state === 'error'
-                  ? `No se pudieron cargar: ${agencies.message}`
-                  : 'La agencia a la que pertenece la cuenta'
+                agencies.locked
+                  ? 'La cuenta se crea en tu inmobiliaria'
+                  : agencies.state === 'error'
+                    ? `No se pudieron cargar: ${agencies.message}`
+                    : 'La agencia a la que pertenece la cuenta'
               }
               data={agencies.options}
               searchable
               nothingFoundMessage="Sin coincidencias"
-              disabled={agencies.state === 'loading'}
+              disabled={agencies.locked || agencies.state === 'loading'}
               withAsterisk
               style={{ gridColumn: '1 / -1' }}
               key={form.key('agencyId')}

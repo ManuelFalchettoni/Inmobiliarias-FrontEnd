@@ -13,7 +13,13 @@ import {
   IconUsersGroup,
 } from '@tabler/icons-react'
 
+import { PANEL_ROLES, USER_ROL, hasRole } from '../services/users.js'
+
 export const DASHBOARD_ROOT = '/dashboard'
+export const SETTINGS_PATH = `${DASHBOARD_ROOT}/configuracion`
+
+/** Todos los roles, USER incluido: solo para la cuenta propia. */
+const ALL_ROLES = Object.values(USER_ROL)
 
 /**
  * Secciones e ítems del menú lateral del panel.
@@ -23,6 +29,7 @@ export const DASHBOARD_ROOT = '/dashboard'
  * - `label` e `icon`: lo que se ve en el menú (el ícono es el componente, sin dibujar).
  * - `description` y `action`: los usa la pantalla "Próximamente" de las
  *   secciones que todavía no están hechas.
+ * - `roles`: quién lo ve. Sin `roles`, los del panel (ADMIN, AGENCY y AGENT).
  * Agregar una sección al menú es agregar un objeto acá.
  */
 const sections = [
@@ -49,6 +56,8 @@ const sections = [
         icon: IconBuildingSkyscraper,
         description: 'Agencias registradas en la plataforma y su estado de verificación.',
         action: { to: `${DASHBOARD_ROOT}/agencias/nueva`, label: 'Dar de alta una agencia' },
+        // Listar, crear, dar de baja y restaurar inmobiliarias es solo del admin.
+        roles: [USER_ROL.ADMIN],
       },
       {
         path: 'usuarios',
@@ -116,6 +125,7 @@ const sections = [
         label: 'Configuración',
         icon: IconSettings,
         description: 'Datos de la cuenta y cambio de contraseña.',
+        roles: ALL_ROLES,
       },
     ],
   },
@@ -128,6 +138,7 @@ export const dashboardSections = sections.map((section) => ({
   ...section,
   items: section.items.map((item) => ({
     ...item,
+    roles: item.roles ?? PANEL_ROLES,
     to: `${DASHBOARD_ROOT}/${item.path}`,
   })),
 }))
@@ -138,8 +149,17 @@ export const dashboardSections = sections.map((section) => ({
  */
 export const dashboardNav = dashboardSections.flatMap((section) => section.items)
 
+/** El menú que ve un usuario: sin los ítems de otros roles ni las secciones que quedan vacías. */
+export const sectionsFor = (user) =>
+  dashboardSections
+    .map((section) => ({ ...section, items: section.items.filter((item) => hasRole(user, item.roles)) }))
+    .filter((section) => section.items.length > 0)
+
 /** Ruta a la que entra `/dashboard` sin subruta. */
 export const DASHBOARD_INDEX = dashboardNav[0].to
+
+/** Inicio de cada uno: un USER solo tiene su cuenta. */
+export const homeFor = (user) => (hasRole(user, PANEL_ROLES) ? DASHBOARD_INDEX : SETTINGS_PATH)
 
 /**
  * Devuelve el `to` del ítem que corresponde a la URL actual. Se queda con la

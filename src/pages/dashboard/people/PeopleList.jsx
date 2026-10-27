@@ -20,36 +20,36 @@ import {
 import { IconAlertTriangle, IconFilterOff, IconPencil, IconPlus, IconUsersGroup } from '@tabler/icons-react'
 
 import FilterInput from '../../../components/FilterInput.jsx'
+import { useAuth } from '../../../context/auth-context.js'
 import { useAgencyOptions } from '../../../hooks/useAgencyOptions.js'
 import { useLookup } from '../../../hooks/useLookup.js'
 import { useUrlFilters } from '../../../hooks/useUrlFilters.js'
 import { queryKeys } from '../../../queries/keys.js'
 import { findAgency } from '../../../services/agencies.js'
 import { formatDate } from '../../../services/format.js'
-import { PEOPLE_SEARCH_FILTERS, listPeople, searchPeople } from '../../../services/people.js'
+import { PEOPLE_SEARCH_FILTERS, searchPeople } from '../../../services/people.js'
 
 const PAGE_SIZE = 20
 
 /**
- * Listado de personas. Sin inmobiliaria elegida es el listado general, en el
- * orden en que se cargaron. Con una, pasa a la búsqueda del backend, que exige
- * `agencyId` y ordena por nombre: recién ahí se puede filtrar por texto.
+ * Listado de personas, siempre con la búsqueda del backend: pagina, ordena por
+ * nombre y todos los filtros son opcionales. AGENCY y AGENT ven solo su
+ * cartera; el admin ve todas o elige una inmobiliaria.
  */
 export default function PeopleList() {
+  const { isAdmin } = useAuth()
   const { searchParams, page, pick, setFilter, clearFilters, goToPage } = useUrlFilters()
-  const agencyId = searchParams.get('agencyId') ?? null
+  // El backend ignora el `agencyId` de AGENCY y AGENT: ni se manda.
+  const agencyId = isAdmin ? (searchParams.get('agencyId') ?? null) : null
   const filters = pick(PEOPLE_SEARCH_FILTERS)
   const filtrando = Object.keys(filters).length > 0
 
-  // Los filtros de texto sin inmobiliaria no se mandan: el backend daría 400.
-  const params = agencyId
-    ? { page: page - 1, size: PAGE_SIZE, agencyId, ...filters }
-    : { page: page - 1, size: PAGE_SIZE }
+  const params = { page: page - 1, size: PAGE_SIZE, agencyId, ...filters }
 
   // Mismo patrón que el listado de propiedades (ver PropertyList).
   const query = useQuery({
     queryKey: queryKeys.people.list(params),
-    queryFn: ({ signal }) => (agencyId ? searchPeople : listPeople)(params, { signal }),
+    queryFn: ({ signal }) => searchPeople(params, { signal }),
     placeholderData: keepPreviousData,
   })
 
@@ -64,7 +64,6 @@ export default function PeopleList() {
   const textFilter = (name) => ({
     value: searchParams.get(name) ?? '',
     onChange: (valor) => setFilter(name, valor, { replace: true }),
-    disabled: !agencyId,
   })
 
   return (
@@ -80,9 +79,7 @@ export default function PeopleList() {
             </Title>
             <Text c="dimmed">
               {data
-                ? `${data.totalElements} ${data.totalElements === 1 ? 'persona' : 'personas'}, ${
-                    agencyId ? 'por nombre' : 'en el orden en que se cargaron'
-                  }`
+                ? `${data.totalElements} ${data.totalElements === 1 ? 'persona' : 'personas'}, por nombre`
                 : 'Cargando el listado...'}
             </Text>
           </div>
@@ -96,16 +93,19 @@ export default function PeopleList() {
       {/* Todos los de texto son parciales: "garc" encuentra "García", "3012" un DNI que lo contenga. */}
       <Card withBorder radius="lg" shadow="xs" mb="md">
         <SimpleGrid cols={{ base: 1, xs: 2, md: 4 }}>
-          <Select
-            label="Inmobiliaria"
-            placeholder={agencyOptions.state === 'loading' ? 'Cargando inmobiliarias...' : 'Todas'}
-            data={agencyOptions.options}
-            value={agencyId}
-            onChange={(valor) => setFilter('agencyId', valor)}
-            searchable
-            clearable
-            nothingFoundMessage="Sin coincidencias"
-          />
+          {/* Elegir inmobiliaria es solo del admin: los demás ven siempre la suya. */}
+          {isAdmin && (
+            <Select
+              label="Inmobiliaria"
+              placeholder={agencyOptions.state === 'loading' ? 'Cargando inmobiliarias...' : 'Todas'}
+              data={agencyOptions.options}
+              value={agencyId}
+              onChange={(valor) => setFilter('agencyId', valor)}
+              searchable
+              clearable
+              nothingFoundMessage="Sin coincidencias"
+            />
+          )}
           <FilterInput label="Nombre" {...textFilter('name')} />
           <FilterInput label="DNI" {...textFilter('dni')} />
           <FilterInput label="CUIT" {...textFilter('cuit')} />
@@ -124,11 +124,6 @@ export default function PeopleList() {
             </Button>
           )}
         </SimpleGrid>
-        {!agencyId && (
-          <Text size="xs" c="dimmed" mt="sm">
-            Elegí una inmobiliaria para buscar: cada una busca solo en su cartera.
-          </Text>
-        )}
       </Card>
 
       {query.isPending && (
@@ -152,13 +147,13 @@ export default function PeopleList() {
               <IconUsersGroup size={28} />
             </ThemeIcon>
             <Text fw={600}>
-              {agencyId && filtrando
+              {filtrando
                 ? 'Ninguna persona coincide con los filtros'
                 : agencyId
                   ? 'Esta inmobiliaria no tiene personas cargadas'
                   : 'Todavía no hay personas cargadas'}
             </Text>
-            {agencyId && filtrando ? (
+            {filtrando ? (
               <Button mt="md" variant="light" onClick={() => clearFilters(PEOPLE_SEARCH_FILTERS)}>
                 Limpiar filtros
               </Button>

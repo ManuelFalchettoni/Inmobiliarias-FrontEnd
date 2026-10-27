@@ -37,7 +37,8 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { ApiError } from '../../../services/api.js'
-import { useAgencyOptions } from '../../../hooks/useAgencyOptions.js'
+import { useAuth } from '../../../context/auth-context.js'
+import { defaultAgencyId, useAgencyOptions } from '../../../hooks/useAgencyOptions.js'
 import { queryKeys } from '../../../queries/keys.js'
 import {
   PHOTO_LIMITS,
@@ -159,7 +160,11 @@ function PropertyEditor({ property }) {
   // desmontar y necesita la cola ACTUAL, no la del primer render.
   const queueRef = useRef(queue)
 
-  const initialValues = property ? toPropertyFormValues(property) : propertyDefaultValues
+  const { user } = useAuth()
+  // En un alta, AGENCY y AGENT arrancan con su inmobiliaria (ver defaultAgencyId).
+  const initialValues = property
+    ? toPropertyFormValues(property)
+    : { ...propertyDefaultValues, agencyId: defaultAgencyId(user) }
   const agencies = useAgencyOptions(initialValues.agencyId)
 
   const form = useForm({
@@ -637,8 +642,15 @@ function PropertyEditor({ property }) {
                   nothingFoundMessage="Sin coincidencias"
                   withAsterisk
                   // El backend responde 400 si un PUT cambia agencyId: no se mueve de agencia.
-                  disabled={propertyId != null || agencies.state === 'loading'}
-                  description={propertyId != null ? 'No se puede cambiar una vez publicada.' : undefined}
+                  // AGENCY y AGENT publican siempre en la suya.
+                  disabled={propertyId != null || agencies.locked || agencies.state === 'loading'}
+                  description={
+                    propertyId != null
+                      ? 'No se puede cambiar una vez publicada.'
+                      : agencies.locked
+                        ? 'Se publica en tu inmobiliaria.'
+                        : undefined
+                  }
                   key={form.key('agencyId')}
                   {...form.getInputProps('agencyId')}
                 />

@@ -1,7 +1,8 @@
 import { Suspense, lazy } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { Center, Loader } from '@mantine/core'
 
+import { useAuth } from './context/auth-context.js'
 import Login from './pages/auth/Login.jsx'
 import Register from './pages/auth/Register.jsx'
 
@@ -21,6 +22,22 @@ function RouteFallback() {
 }
 
 /**
+ * Toda la API pide login: sin sesión, el panel manda al login y guarda en
+ * `state.from` adónde quería ir, para volver ahí después de entrar. Mientras
+ * llega el `/me` del arranque se muestra el spinner, no el login.
+ */
+function RequireAuth({ children }) {
+  const { status, user } = useAuth()
+  const location = useLocation()
+
+  if (status === 'checking') return <RouteFallback />
+  if (!user) {
+    return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />
+  }
+  return children
+}
+
+/**
  * Rutas principales. `<Routes>` mira la dirección actual y dibuja la primera
  * `<Route>` cuyo `path` coincide.
  */
@@ -36,9 +53,11 @@ export default function App() {
       <Route
         path="/dashboard/*"
         element={
-          <Suspense fallback={<RouteFallback />}> {/* Circuito de carga */}
-            <DashboardRoutes />
-          </Suspense>
+          <RequireAuth>
+            <Suspense fallback={<RouteFallback />}> {/* Circuito de carga */}
+              <DashboardRoutes />
+            </Suspense>
+          </RequireAuth>
         }
       />
 

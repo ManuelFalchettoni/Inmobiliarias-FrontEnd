@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Alert, Anchor, Button, Checkbox, Group, PasswordInput, Text, TextInput } from '@mantine/core'
 import { useForm } from '@mantine/form'
-import { IconAlertTriangle, IconCircleCheck } from '@tabler/icons-react'
+import { IconAlertTriangle, IconCircleCheck, IconClockExclamation } from '@tabler/icons-react'
 
 import AuthLayout from '../../layouts/AuthLayout.jsx'
 import { useAuth } from '../../context/auth-context.js'
@@ -20,10 +20,10 @@ const AFTER_LOGIN = '/dashboard'
 export default function Login() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { login } = useAuth()
+  const { login, user, expired } = useAuth()
   // Lo deja el registro al terminar: `{ name, email }` de la cuenta recién creada.
   const registered = location.state?.registered
-  // Lo deja una pantalla del panel que pidió iniciar sesión (Configuración).
+  // Lo deja RequireAuth (App.jsx): la pantalla del panel a la que se quería entrar.
   const from = location.state?.from
 
   const [status, setStatus] = useState({ state: 'idle' })
@@ -67,8 +67,17 @@ export default function Login() {
 
   const onSubmit = (event) => form.onSubmit(handleSubmit)(event)
 
+  // Ya hay sesión (la cookie sigue vigente): directo al panel.
+  if (user) return <Navigate to={from ?? AFTER_LOGIN} replace />
+
   return (
     <AuthLayout title="Bienvenido a Inmobiliarias">
+      {expired && status.state !== 'error' && (
+        <Alert color="yellow" icon={<IconClockExclamation />} title="Tu sesión venció" mb="md">
+          Volvé a iniciar sesión para seguir donde estabas.
+        </Alert>
+      )}
+
       {registered && status.state !== 'error' && (
         <Alert color="teal" icon={<IconCircleCheck />} title="Cuenta creada" mb="md">
           {registered.name}, tu cuenta quedó registrada con {registered.email}.

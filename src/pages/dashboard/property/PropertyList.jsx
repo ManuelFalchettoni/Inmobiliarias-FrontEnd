@@ -32,6 +32,8 @@ import {
 } from '@tabler/icons-react'
 
 import FilterInput from '../../../components/FilterInput.jsx'
+import { useAuth } from '../../../context/auth-context.js'
+import { useAgencyOptions } from '../../../hooks/useAgencyOptions.js'
 import { useUrlFilters } from '../../../hooks/useUrlFilters.js'
 import { queryKeys } from '../../../queries/keys.js'
 import {
@@ -67,6 +69,11 @@ export default function PropertyList() {
   const { searchParams, page, pick, setFilter, clearFilters, goToPage } = useUrlFilters()
   const active = searchParams.get('active') ?? 'true'
   const verArchivadas = active === 'false'
+  // Elegir inmobiliaria es solo del admin (sin elegir, ve todas). AGENCY y AGENT
+  // ven siempre la suya: el backend ignora el `agencyId` que manden.
+  const { isAdmin } = useAuth()
+  const agencyId = isAdmin ? (searchParams.get('agencyId') ?? null) : null
+  const agencyOptions = useAgencyOptions(agencyId)
 
   // La búsqueda del backend solo trae publicadas: con "Dadas de baja" los
   // filtros no se muestran ni se mandan (quedan en la URL para cuando se vuelva).
@@ -77,10 +84,11 @@ export default function PropertyList() {
   const [masFiltros, setMasFiltros] = useState(() => EXTRA_FILTERS.some((name) => searchParams.get(name)))
 
   // Spring cuenta desde 0. Con algún filtro se usa /search, sin filtros el
-  // listado de siempre: la clave decide sola a qué endpoint se pide.
+  // listado de siempre: la clave decide sola a qué endpoint se pide. Los dos
+  // aceptan `agencyId` (sin valor no viaja, ver pageQuery).
   const params = filtrando
-    ? { page: page - 1, size: PAGE_SIZE, ...filters }
-    : { page: page - 1, size: PAGE_SIZE, active }
+    ? { page: page - 1, size: PAGE_SIZE, agencyId, ...filters }
+    : { page: page - 1, size: PAGE_SIZE, active, agencyId }
 
   // useQuery pide la página y la guarda en la caché con la clave
   // ['properties', 'list', params]. Cuando cambian la página o el filtro, cambia
@@ -141,14 +149,29 @@ export default function PropertyList() {
       </Group>
 
       <Group mb="md" justify="space-between">
-        <SegmentedControl
-          value={active}
-          onChange={(valor) => setFilter('active', valor)}
-          data={[
-            { value: 'true', label: 'Publicadas' },
-            { value: 'false', label: 'Dadas de baja' },
-          ]}
-        />
+        <Group gap="md">
+          <SegmentedControl
+            value={active}
+            onChange={(valor) => setFilter('active', valor)}
+            data={[
+              { value: 'true', label: 'Publicadas' },
+              { value: 'false', label: 'Dadas de baja' },
+            ]}
+          />
+          {isAdmin && (
+            <Select
+              w={280}
+              aria-label="Inmobiliaria"
+              placeholder={agencyOptions.state === 'loading' ? 'Cargando inmobiliarias...' : 'Todas las inmobiliarias'}
+              data={agencyOptions.options}
+              value={agencyId}
+              onChange={(valor) => setFilter('agencyId', valor)}
+              searchable
+              clearable
+              nothingFoundMessage="Sin coincidencias"
+            />
+          )}
+        </Group>
         {!verArchivadas && (
           <Group gap="xs">
             {filtrando && (

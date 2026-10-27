@@ -34,6 +34,7 @@ import {
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { useAuth } from '../../../context/auth-context.js'
 import { queryKeys } from '../../../queries/keys.js'
 import { ApiError } from '../../../services/api.js'
 import {
@@ -60,6 +61,17 @@ import {
 } from './agency-form.js'
 
 const DRAFT_DEBOUNCE_MS = 800
+
+/**
+ * A dónde vuelve el formulario. El listado de agencias es solo del admin: AGENCY
+ * y AGENT llegan a editar la suya desde Configuración y vuelven ahí.
+ */
+function useBackLink() {
+  const { isAdmin } = useAuth()
+  return isAdmin
+    ? { isAdmin, to: '/dashboard/agencias', label: 'Volver al listado de agencias' }
+    : { isAdmin, to: '/dashboard/configuracion', label: 'Volver a la configuración' }
+}
 
 function SectionCard({ icon: Icon, title, description, children }) {
   return (
@@ -100,6 +112,7 @@ function conflictFieldErrors(message) {
  */
 function AgencyEditor({ agency }) {
   const isEdit = agency != null
+  const back = useBackLink()
   // Acceso a la caché de React Query, para invalidarla después de guardar.
   const queryClient = useQueryClient()
   const [status, setStatus] = useState({ state: 'idle' })
@@ -260,9 +273,11 @@ function AgencyEditor({ agency }) {
             <Anchor component={Link} to="/dashboard/configuracion" size="xs" c="dimmed" tt="uppercase" fw={600}>
               Configuración
             </Anchor>
-            <Anchor component={Link} to="/dashboard/agencias" size="xs" c="dimmed" tt="uppercase" fw={600}>
-              Agencias
-            </Anchor>
+            {back.isAdmin && (
+              <Anchor component={Link} to="/dashboard/agencias" size="xs" c="dimmed" tt="uppercase" fw={600}>
+                Agencias
+              </Anchor>
+            )}
             <Text size="xs" c="var(--mantine-primary-color-filled)" tt="uppercase" fw={600}>
               {isEdit ? `Agencia #${agency.id}` : 'Nueva agencia'}
             </Text>
@@ -314,8 +329,8 @@ function AgencyEditor({ agency }) {
             withCloseButton
             onClose={() => setStatus({ state: 'idle' })}
           >
-            <Anchor component={Link} to="/dashboard/agencias" size="sm" fw={500}>
-              Volver al listado de agencias
+            <Anchor component={Link} to={back.to} size="sm" fw={500}>
+              {back.label}
             </Anchor>
           </Alert>
         )}
@@ -358,8 +373,16 @@ function AgencyEditor({ agency }) {
                   />
                   <Select
                     label="Estado de la agencia"
-                    description={isEdit ? 'Circuito de verificación' : 'Un alta nueva debería quedar pendiente'}
+                    description={
+                      !back.isAdmin
+                        ? 'Lo cambia un administrador al verificar los datos'
+                        : isEdit
+                          ? 'Circuito de verificación'
+                          : 'Un alta nueva debería quedar pendiente'
+                    }
                     data={statusOptions}
+                    // La inmobiliaria no se verifica a sí misma: viaja el estado que ya tiene.
+                    disabled={!back.isAdmin}
                     allowDeselect={false}
                     withAsterisk
                     key={form.key('status')}
@@ -490,8 +513,8 @@ function AgencyEditor({ agency }) {
             {/* Botones distintos en alta (borrador) y en edición. */}
             {isEdit ? (
               <Group gap="sm" ml="auto" wrap="nowrap">
-                <Button component={Link} to="/dashboard/agencias" variant="subtle" color="gray" disabled={isSubmitting}>
-                  Volver al listado
+                <Button component={Link} to={back.to} variant="subtle" color="gray" disabled={isSubmitting}>
+                  {back.label}
                 </Button>
                 <Button type="submit" leftSection={<IconCircleCheck size={18} />} loading={isSubmitting}>
                   Guardar cambios
@@ -527,6 +550,7 @@ function AgencyEditor({ agency }) {
  * Es el mismo patrón Loader + Editor del formulario de propiedades.
  */
 function AgencyLoader({ id }) {
+  const back = useBackLink()
   const query = useQuery({
     queryKey: queryKeys.agencies.detail(id),
     queryFn: ({ signal }) => findAgency(id, { signal }),
@@ -539,7 +563,10 @@ function AgencyLoader({ id }) {
       ? {
           error:
             query.error instanceof ApiError && query.error.status === 404
-              ? `No existe una agencia activa con el identificador #${id}. Si está dada de baja, restáurela desde el listado.`
+              ? back.isAdmin
+                ? `No existe una agencia activa con el identificador #${id}. Si está dada de baja, restáurela desde el listado.`
+                : // Una inmobiliaria ajena responde 404, igual que una que no existe.
+                  `No existe la agencia #${id} o no es la tuya. Solo podés editar tu inmobiliaria.`
               : query.error.message,
         }
       : null
@@ -551,8 +578,8 @@ function AgencyLoader({ id }) {
       {result?.error ? (
         <Alert color="red" icon={<IconAlertTriangle />} title="No se puede editar la agencia">
           {result.error}{' '}
-          <Anchor component={Link} to="/dashboard/agencias" size="sm" fw={500}>
-            Volver al listado
+          <Anchor component={Link} to={back.to} size="sm" fw={500}>
+            {back.label}
           </Anchor>
         </Alert>
       ) : (

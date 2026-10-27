@@ -3,20 +3,26 @@
  * leer el usuario que entró con `useAuth()`.
  *
  * El backend manda el JWT en una cookie HttpOnly que JavaScript no puede leer:
- * lo que se guarda acá es solo el usuario que devolvió el login (`id`, `name`,
- * `email`, `rol`, `agencyId`), para saber de quién es la cuenta sin volver a
- * preguntar. Nunca se guarda la contraseña.
+ * lo que se guarda acá es solo el usuario (`id`, `name`, `email`, `rol`,
+ * `agencyId`), en memoria. Al recargar la página se vuelve a preguntar con
+ * `GET /api/users/me`: si la cookie sigue vigente responde el usuario, y si no,
+ * 401. La cookie es la única fuente de verdad; el front no guarda nada en storage.
  *
- * - Con "Mantener sesión iniciada" se guarda en `localStorage` (sobrevive a
- *   cerrar el navegador, como la cookie de 24 h del backend).
- * - Sin eso, en `sessionStorage` (se borra al cerrar la pestaña).
+ * `status`:
+ * - `checking`: todavía no volvió el `/me` del arranque. Las rutas del panel
+ *   esperan con un spinner en vez de mandar al login.
+ * - `ready`: ya se sabe; `user` es el usuario o `null`.
+ *
+ * `expired` queda en true cuando un pedido con sesión respondió 401 (la cookie
+ * venció o el usuario se dio de baja): el login lo usa para avisar.
  */
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 
 import { AuthContext } from './auth-context.js'
-import { loginUser, toLoginRequest } from '../services/auth.js'
-
-const SESSION_KEY = 'inmobiliarias.session'
+import { setUnauthorizedHandler } from '../services/api.js'
+import { loginUser, logoutUser, toLoginRequest } from '../services/auth.js'
+import { USER_ROL, findMe } from '../services/users.js'
 
 /** Se queda solo con los datos que hacen falta para identificar la cuenta. */
 function toSessionUser(user) {
@@ -29,85 +35,82 @@ function toSessionUser(user) {
   }
 }
 
-// El acceso al storage puede fallar (navegación privada, storage bloqueado):
-// en ese caso la sesión vive solo en memoria mientras la página esté abierta.
-function readSession() {
-  for (const storage of [sessionStorage, localStorage]) {
-    try {
-      const raw = storage.getItem(SESSION_KEY)
-      if (raw) return JSON.parse(raw)
-    } catch {
-      // Se ignora: se prueba con el otro storage.
-    }
-  }
-  return null
-}
-
-function writeSession(user, remember) {
-  clearSession()
-  try {
-    ;(remember ? localStorage : sessionStorage).setItem(SESSION_KEY, JSON.stringify(user))
-  } catch {
-    // Sin storage la sesión queda solo en memoria.
-  }
-}
-
-function clearSession() {
-  for (const storage of [sessionStorage, localStorage]) {
-    try {
-      storage.removeItem(SESSION_KEY)
-    } catch {
-      // Nada que limpiar.
-    }
-  }
-}
-
-/** ¿La sesión actual está en localStorage? Se usa para no cambiarla de lugar al actualizarla. */
-function isRemembered() {
-  try {
-    return localStorage.getItem(SESSION_KEY) != null
-  } catch {
-    return false
-  }
-}
+const SIGNED_OUT = { status: 'ready', user: null, expired: false }
 
 export function AuthProvider({ children }) {
-  // La función dentro de useState se ejecuta una sola vez, al montar.
-  const [user, setUser] = useState(readSession)
+  const queryClient = useQueryClient()
+  const [session, setSession] = useState({ status: 'checking', user: null, expired: false })
 
-  /** Llama al backend y, si sale bien, guarda el usuario. Lanza el ApiError si falla. */
-  const login = useCallback(async (values, options) => {
-    const request = toLoginRequest(values)
-    const response = await loginUser(request, options)
-    const session = toSessionUser(response)
-    writeSession(session, request.remember)
-    setUser(session)
-    return session
+  // ¿Hay una cookie vigente? Se pregunta una vez, al abrir la app.
+  useEffect(() => {
+    const controller = new AbortController()
+    findMe({ signal: controller.signal })
+      .then((user) => setSession({ status: 'ready', user: toSessionUser(user), expired: false }))
+      .catch(() => {
+        // 401 (sin sesión) o backend caído: en los dos casos se entra por el login.
+        if (!controller.signal.aborted) setSession(SIGNED_OUT)
+      })
+    return () => controller.abort()
   }, [])
 
-  /**
-   * Cierra la sesión del lado del front. El backend todavía no tiene un
-   * endpoint de logout, y la cookie HttpOnly no se puede borrar desde
-   * JavaScript: vence sola (al cerrar el navegador o a las 24 h).
-   */
-  const logout = useCallback(() => {
-    clearSession()
-    setUser(null)
-  }, [])
+  // Un 401 en cualquier pedido: la sesión venció. Se borra la caché (eran datos
+  // de esa cuenta) y el usuario; las rutas del panel mandan al login.
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      queryClient.clear()
+      // Solo cuenta como "venció" si había alguien logueado: el 401 del `/me`
+      // del arranque es simplemente "no hay sesión".
+      setSession((current) => (current.user ? { status: 'ready', user: null, expired: true } : current))
+    })
+    return () => setUnauthorizedHandler(null)
+  }, [queryClient])
 
   /**
-   * Refresca los datos guardados después de editar la cuenta (por ejemplo, si
-   * cambió el nombre o el email), en el mismo storage donde estaban.
+   * Llama al backend y, si sale bien, guarda el usuario. Lanza el ApiError si falla.
+   * El login trae `id`, `name`, `email` y `rol`; `/me` suma la inmobiliaria, que
+   * hace falta en las altas. Si `/me` fallara, se sigue con lo del login.
    */
+  const login = useCallback(
+    async (values, options) => {
+      const loggedIn = await loginUser(toLoginRequest(values), options)
+      const user = await findMe(options).catch(() => loggedIn)
+      // Lo que haya quedado en caché de otra cuenta no tiene que verlo esta.
+      queryClient.clear()
+      const current = toSessionUser(user)
+      setSession({ status: 'ready', user: current, expired: false })
+      return current
+    },
+    [queryClient],
+  )
+
+  /** Pide al backend que borre la cookie y limpia el estado, aunque el pedido falle. */
+  const logout = useCallback(async () => {
+    try {
+      await logoutUser()
+    } catch {
+      // Sin respuesta la cookie queda hasta que venza; el front se limpia igual.
+    }
+    queryClient.clear()
+    setSession(SIGNED_OUT)
+  }, [queryClient])
+
+  /** Refresca los datos de la sesión después de editar la cuenta (nombre o email). */
   const refreshUser = useCallback((updated) => {
-    const session = toSessionUser(updated)
-    writeSession(session, isRemembered())
-    setUser(session)
+    setSession((current) => ({ ...current, user: toSessionUser(updated) }))
   }, [])
 
-  // useMemo: el objeto del contexto cambia solo cuando cambia el usuario, así
-  // los componentes que leen la sesión no se redibujan de más.
-  const value = useMemo(() => ({ user, login, logout, refreshUser }), [user, login, logout, refreshUser])
+  // useMemo: el objeto del contexto cambia solo cuando cambia la sesión, así
+  // los componentes que la leen no se redibujan de más.
+  const value = useMemo(
+    () => ({
+      ...session,
+      isAdmin: session.user?.rol === USER_ROL.ADMIN,
+      login,
+      logout,
+      refreshUser,
+    }),
+    [session, login, logout, refreshUser],
+  )
 
   return <AuthContext value={value}>{children}</AuthContext>
 }

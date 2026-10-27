@@ -29,7 +29,8 @@ createRoot(document.getElementById('root')).render(
   // MantineProvider: aplica el tema (color, bordes, tipografía) a todos los componentes.
   // BrowserRouter: permite cambiar de pantalla según la dirección sin recargar la página.
   // QueryClientProvider: comparte la caché de React Query con toda la app.
-  // AuthProvider: el usuario que inició sesión, para el login y Configuración.
+  // AuthProvider: el usuario que inició sesión y su rol. Va dentro de
+  // QueryClientProvider porque al salir o vencer la sesión limpia la caché.
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <MantineProvider theme={theme} defaultColorScheme="light">

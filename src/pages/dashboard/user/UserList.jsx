@@ -29,6 +29,7 @@ import {
   IconUsers,
 } from '@tabler/icons-react'
 
+import { useAuth } from '../../../context/auth-context.js'
 import { useAgencyOptions } from '../../../hooks/useAgencyOptions.js'
 import { useLookup } from '../../../hooks/useLookup.js'
 import { findAgency } from '../../../services/agencies.js'
@@ -98,7 +99,9 @@ export default function UserList() {
   const [searchParams, setSearchParams] = useSearchParams()
   const page = Number(searchParams.get('page') ?? 1)
   const active = searchParams.get('active') ?? 'true'
-  const agencyId = searchParams.get('agencyId') ?? null
+  // Elegir inmobiliaria es solo del admin: AGENCY y AGENT ven siempre su equipo.
+  const { isAdmin } = useAuth()
+  const agencyId = isAdmin ? (searchParams.get('agencyId') ?? null) : null
 
   const queryClient = useQueryClient()
   const params = { page: page - 1, size: PAGE_SIZE, active, agencyId }
@@ -180,17 +183,19 @@ export default function UserList() {
             { value: 'false', label: 'Dados de baja' },
           ]}
         />
-        <Select
-          w={300}
-          aria-label="Inmobiliaria"
-          placeholder={agencies.state === 'loading' ? 'Cargando inmobiliarias...' : 'Todas las inmobiliarias'}
-          data={agencies.options}
-          value={agencyId}
-          onChange={(valor) => setFiltro('agencyId', valor)}
-          searchable
-          clearable
-          nothingFoundMessage="Sin coincidencias"
-        />
+        {isAdmin && (
+          <Select
+            w={300}
+            aria-label="Inmobiliaria"
+            placeholder={agencies.state === 'loading' ? 'Cargando inmobiliarias...' : 'Todas las inmobiliarias'}
+            data={agencies.options}
+            value={agencyId}
+            onChange={(valor) => setFiltro('agencyId', valor)}
+            searchable
+            clearable
+            nothingFoundMessage="Sin coincidencias"
+          />
+        )}
       </Group>
 
       {action.isError && (

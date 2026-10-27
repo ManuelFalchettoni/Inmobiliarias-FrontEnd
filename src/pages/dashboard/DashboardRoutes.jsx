@@ -1,8 +1,11 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 
+import RoleGate from '../../components/RoleGate.jsx'
+import { useAuth } from '../../context/auth-context.js'
 import DashboardLayout from '../../layouts/DashboardLayout.jsx'
+import { PANEL_ROLES, USER_ROL } from '../../services/users.js'
 import AccountSettings from './account/AccountSettings.jsx'
-import { DASHBOARD_INDEX, dashboardNav } from '../../layouts/dashboard-nav.js'
+import { dashboardNav, homeFor } from '../../layouts/dashboard-nav.js'
 import AgencyForm from './agency/AgencyForm.jsx'
 import AgencyList from './agency/AgencyList.jsx'
 import AlertAgenda from './crm/AlertAgenda.jsx'
@@ -43,59 +46,71 @@ const IMPLEMENTADAS = new Set([
  * `lazy`: quien entra al login no descarga el dashboard ni sus dependencias.
  */
 export default function DashboardRoutes() {
+  const { user } = useAuth()
+
   return (
     <Routes>
       {/* Ruta "envoltorio": no tiene path. Todas las de adentro se dibujan dentro
           del DashboardLayout, en el lugar donde el layout pone <Outlet />. */}
       <Route element={<DashboardLayout />}>
-        {/* `index`: qué mostrar en /dashboard a secas. `replace` evita que esa
-            dirección quede en el historial. */}
-        <Route index element={<Navigate to={DASHBOARD_INDEX} replace />} />
+        {/* `index`: qué mostrar en /dashboard a secas (un USER solo tiene su
+            cuenta). `replace` evita que esa dirección quede en el historial. */}
+        <Route index element={<Navigate to={homeFor(user)} replace />} />
 
-        {/* Pantallas conectadas al backend. `:id` es un parámetro: en
-            /propiedades/7/editar vale "7" y la pantalla lo lee con useParams().
-            La misma pantalla sirve para crear (sin id) y para editar (con id). */}
-        <Route path="propiedades" element={<PropertyList />} />
-        <Route path="propiedades/nueva" element={<PropertyForm />} />
-        <Route path="propiedades/:id/editar" element={<PropertyForm />} />
-        <Route path="agencias" element={<AgencyList />} />
-        <Route path="agencias/nueva" element={<AgencyForm />} />
-        <Route path="agencias/:id/editar" element={<AgencyForm />} />
-        <Route path="usuarios" element={<UserList />} />
-        <Route path="usuarios/nuevo" element={<UserForm />} />
-        <Route path="usuarios/:id/editar" element={<UserEdit />} />
-        <Route path="personas" element={<PeopleList />} />
-        <Route path="personas/nueva" element={<PeopleForm />} />
-        <Route path="personas/:id/editar" element={<PeopleForm />} />
-        <Route path="contratos" element={<ContractList />} />
-        <Route path="contratos/nuevo" element={<ContractForm />} />
-        <Route path="contratos/:id" element={<ContractDetail />} />
-        <Route path="contratos/:id/editar" element={<ContractForm />} />
-        <Route path="consultas" element={<LeadList />} />
-        <Route path="consultas/nuevo" element={<LeadForm />} />
-        <Route path="consultas/:id" element={<LeadDetail />} />
-        <Route path="avisos" element={<AlertAgenda />} />
+        {/* La cuenta propia: cualquier rol, USER incluido. */}
         <Route path="configuracion" element={<AccountSettings />} />
 
-        {/* Secciones del menú que todavía no están disponibles: cada ítem del
-            menú sin pantalla propia recibe una "Próximamente", así ningún link
-            del menú lleva a una página rota. */}
-        {dashboardNav
-          .filter((item) => !IMPLEMENTADAS.has(item.path))
-          .map((item) => (
-            <Route
-              key={item.to}
-              path={item.path}
-              element={
-                <PagePlaceholder
-                  icon={item.icon}
-                  title={item.label}
-                  description={item.description}
-                  action={item.action}
-                />
-              }
-            />
-          ))}
+        {/* Todo lo demás es de ADMIN, AGENCY y AGENT: a un USER el backend le
+            responde 403, así que RoleGate muestra "Sin permiso" sin montar nada. */}
+        <Route element={<RoleGate roles={PANEL_ROLES} />}>
+          {/* Pantallas conectadas al backend. `:id` es un parámetro: en
+              /propiedades/7/editar vale "7" y la pantalla lo lee con useParams().
+              La misma pantalla sirve para crear (sin id) y para editar (con id). */}
+          <Route path="propiedades" element={<PropertyList />} />
+          <Route path="propiedades/nueva" element={<PropertyForm />} />
+          <Route path="propiedades/:id/editar" element={<PropertyForm />} />
+          {/* Listar, crear, dar de baja y restaurar inmobiliarias: solo el admin. */}
+          <Route element={<RoleGate roles={[USER_ROL.ADMIN]} />}>
+            <Route path="agencias" element={<AgencyList />} />
+            <Route path="agencias/nueva" element={<AgencyForm />} />
+          </Route>
+          {/* Editar: el admin, cualquiera; los demás, solo la suya (otra da 404). */}
+          <Route path="agencias/:id/editar" element={<AgencyForm />} />
+          <Route path="usuarios" element={<UserList />} />
+          <Route path="usuarios/nuevo" element={<UserForm />} />
+          <Route path="usuarios/:id/editar" element={<UserEdit />} />
+          <Route path="personas" element={<PeopleList />} />
+          <Route path="personas/nueva" element={<PeopleForm />} />
+          <Route path="personas/:id/editar" element={<PeopleForm />} />
+          <Route path="contratos" element={<ContractList />} />
+          <Route path="contratos/nuevo" element={<ContractForm />} />
+          <Route path="contratos/:id" element={<ContractDetail />} />
+          <Route path="contratos/:id/editar" element={<ContractForm />} />
+          <Route path="consultas" element={<LeadList />} />
+          <Route path="consultas/nuevo" element={<LeadForm />} />
+          <Route path="consultas/:id" element={<LeadDetail />} />
+          <Route path="avisos" element={<AlertAgenda />} />
+
+          {/* Secciones del menú que todavía no están disponibles: cada ítem del
+              menú sin pantalla propia recibe una "Próximamente", así ningún link
+              del menú lleva a una página rota. */}
+          {dashboardNav
+            .filter((item) => !IMPLEMENTADAS.has(item.path))
+            .map((item) => (
+              <Route
+                key={item.to}
+                path={item.path}
+                element={
+                  <PagePlaceholder
+                    icon={item.icon}
+                    title={item.label}
+                    description={item.description}
+                    action={item.action}
+                  />
+                }
+              />
+            ))}
+        </Route>
 
         {/* Cualquier otra dirección dentro de /dashboard: página no encontrada. */}
         <Route
@@ -104,7 +119,7 @@ export default function DashboardRoutes() {
             <PagePlaceholder
               title="Página no encontrada"
               description="La sección que buscabas no existe o cambió de dirección."
-              action={{ to: DASHBOARD_INDEX, label: 'Volver a propiedades' }}
+              action={{ to: homeFor(user), label: 'Volver al inicio' }}
             />
           }
         />

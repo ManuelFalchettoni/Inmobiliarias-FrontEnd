@@ -24,7 +24,9 @@ function resourceKeys(name) {
 export const queryKeys = {
   properties: resourceKeys('properties'),
   agencies: resourceKeys('agencies'),
-  users: resourceKeys('users'),
+  // `me`: la cuenta propia (GET /api/users/me). Queda debajo de ['users'], así
+  // editar un usuario también la refresca.
+  users: { ...resourceKeys('users'), me: () => ['users', 'me'] },
   people: resourceKeys('people'),
   leads: resourceKeys('leads'),
   contracts: resourceKeys('contracts'),

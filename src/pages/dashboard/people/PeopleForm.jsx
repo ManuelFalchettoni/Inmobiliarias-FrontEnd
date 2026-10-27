@@ -21,7 +21,8 @@ import { IconAlertTriangle, IconAt, IconChevronRight, IconCircleCheck } from '@t
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { useAgencyOptions } from '../../../hooks/useAgencyOptions.js'
+import { useAuth } from '../../../context/auth-context.js'
+import { defaultAgencyId, useAgencyOptions } from '../../../hooks/useAgencyOptions.js'
 import { queryKeys } from '../../../queries/keys.js'
 import { ApiError } from '../../../services/api.js'
 import { formatCuit, normalizePhone } from '../../../services/agencies.js'
@@ -73,7 +74,11 @@ function PeopleEditor({ person, returnTo }) {
   const abortRef = useRef(null)
   const isEdit = person != null
 
-  const initialValues = isEdit ? toPeopleFormValues(person) : peopleDefaultValues
+  const { user } = useAuth()
+  // En un alta, AGENCY y AGENT arrancan con su inmobiliaria (ver defaultAgencyId).
+  const initialValues = isEdit
+    ? toPeopleFormValues(person)
+    : { ...peopleDefaultValues, agencyId: defaultAgencyId(user) }
   const agencies = useAgencyOptions(initialValues.agencyId)
 
   const form = useForm({
@@ -174,14 +179,16 @@ function PeopleEditor({ person, returnTo }) {
               description={
                 isEdit
                   ? 'Una persona no cambia de inmobiliaria.'
-                  : agencies.state === 'error'
-                    ? `No se pudieron cargar: ${agencies.message}`
-                    : undefined
+                  : agencies.locked
+                    ? 'Se carga en tu inmobiliaria.'
+                    : agencies.state === 'error'
+                      ? `No se pudieron cargar: ${agencies.message}`
+                      : undefined
               }
               data={agencies.options}
               searchable
               nothingFoundMessage="Sin coincidencias"
-              disabled={isEdit || agencies.state === 'loading'}
+              disabled={isEdit || agencies.locked || agencies.state === 'loading'}
               withAsterisk
               style={{ gridColumn: '1 / -1' }}
               key={form.key('agencyId')}

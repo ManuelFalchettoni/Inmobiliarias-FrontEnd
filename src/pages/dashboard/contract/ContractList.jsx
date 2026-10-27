@@ -21,8 +21,10 @@ import {
 import { IconAlertTriangle, IconChevronRight, IconFileText, IconFilterOff, IconPlus } from '@tabler/icons-react'
 
 import FilterInput from '../../../components/FilterInput.jsx'
+import { useAuth } from '../../../context/auth-context.js'
 import { useAgencyOptions } from '../../../hooks/useAgencyOptions.js'
 import { useLookup } from '../../../hooks/useLookup.js'
+import { usePropertyOptions } from '../../../hooks/useSelectOptions.js'
 import { useUrlFilters } from '../../../hooks/useUrlFilters.js'
 import { queryKeys } from '../../../queries/keys.js'
 import {
@@ -37,7 +39,6 @@ import {
   groupPartiesByContract,
   isContractOverdue,
   listAllParties,
-  listContracts,
   searchContracts,
 } from '../../../services/contracts.js'
 import { findPerson } from '../../../services/people.js'
@@ -54,44 +55,43 @@ const PAGE_SIZE = 20
  * Listado de contratos. Muestra las partes de cada uno, pero el backend no deja
  * pedirlas por contrato: se traen todas y se agrupan en el navegador.
  *
- * Como en personas, filtrar exige elegir una inmobiliaria: la búsqueda del
- * backend pide `agencyId` (el de la propiedad) y ordena por inicio, más nuevo primero.
+ * Como en personas, siempre se usa la búsqueda del backend: todos los filtros
+ * son opcionales y ordena por inicio, más nuevo primero. AGENCY y AGENT ven los
+ * contratos de sus propiedades; el admin ve todos o elige una inmobiliaria.
  */
 export default function ContractList() {
   const navigate = useNavigate()
+  const { isAdmin } = useAuth()
   const { searchParams, page, pick, setFilter, clearFilters, goToPage } = useUrlFilters()
-  const agencyId = searchParams.get('agencyId') ?? null
+  // El backend ignora el `agencyId` de AGENCY y AGENT: ni se manda.
+  const agencyId = isAdmin ? (searchParams.get('agencyId') ?? null) : null
   const filters = pick(CONTRACT_SEARCH_FILTERS)
   const filtrando = Object.keys(filters).length > 0
 
-  // Los filtros sin inmobiliaria no se mandan: el backend daría 400.
-  const params = agencyId
-    ? { page: page - 1, size: PAGE_SIZE, agencyId, ...filters }
-    : { page: page - 1, size: PAGE_SIZE }
+  const params = { page: page - 1, size: PAGE_SIZE, agencyId, ...filters }
 
   // Dos consultas: la página de contratos y TODAS las partes. Las partes tienen
   // una sola clave (las comparte el detalle de cada contrato) y `select` las
   // agrupa: { [contractId]: partes[] }, para buscar las de cada fila por su id.
   const contractsQuery = useQuery({
     queryKey: queryKeys.contracts.list(params),
-    queryFn: ({ signal }) => (agencyId ? searchContracts : listContracts)(params, { signal }),
+    queryFn: ({ signal }) => searchContracts(params, { signal }),
     placeholderData: keepPreviousData,
   })
   const agencyOptions = useAgencyOptions(agencyId)
+  const propertyOptions = usePropertyOptions(searchParams.get('propertyId'))
 
   const filterValue = (name) => searchParams.get(name) ?? ''
   const selectFilter = (name) => ({
     value: filterValue(name) || null,
     onChange: (valor) => setFilter(name, valor),
     clearable: true,
-    disabled: !agencyId,
   })
   // El input nativo de fecha entrega "yyyy-MM-dd", el formato que pide el backend.
   const dateFilter = (name) => ({
     type: 'date',
     value: filterValue(name),
     onChange: (event) => setFilter(name, event.currentTarget.value, { replace: true }),
-    disabled: !agencyId,
   })
   const amountFilter = (name) => ({
     value: filterValue(name),
@@ -99,7 +99,6 @@ export default function ContractList() {
     min: 0,
     decimalScale: 2,
     allowNegative: false,
-    disabled: !agencyId,
   })
   const partiesQuery = useQuery({
     queryKey: queryKeys.contractParties.all,
@@ -152,15 +151,26 @@ export default function ContractList() {
       {/* Los rangos son inclusivos; con "Vence" desde/hasta salen los que terminan en un período. */}
       <Card withBorder radius="lg" shadow="xs" mb="md">
         <SimpleGrid cols={{ base: 1, xs: 2, md: 4 }}>
+          {/* Elegir inmobiliaria es solo del admin: los demás ven siempre la suya. */}
+          {isAdmin && (
+            <Select
+              label="Inmobiliaria"
+              placeholder={agencyOptions.state === 'loading' ? 'Cargando inmobiliarias...' : 'Todas'}
+              data={agencyOptions.options}
+              value={agencyId}
+              onChange={(valor) => setFilter('agencyId', valor)}
+              searchable
+              clearable
+              nothingFoundMessage="Sin coincidencias"
+            />
+          )}
           <Select
-            label="Inmobiliaria"
-            placeholder={agencyOptions.state === 'loading' ? 'Cargando inmobiliarias...' : 'Todas'}
-            data={agencyOptions.options}
-            value={agencyId}
-            onChange={(valor) => setFilter('agencyId', valor)}
+            label="Propiedad"
+            placeholder={propertyOptions.state === 'loading' ? 'Cargando propiedades...' : 'Todas'}
+            data={propertyOptions.options}
             searchable
-            clearable
             nothingFoundMessage="Sin coincidencias"
+            {...selectFilter('propertyId')}
           />
           <Select label="Estado" placeholder="Todos" data={CONTRACT_STATUS_OPTIONS} {...selectFilter('status')} />
           <Select label="Tipo" placeholder="Todos" data={CONTRACT_TYPE_OPTIONS} {...selectFilter('type')} />
@@ -183,11 +193,6 @@ export default function ContractList() {
             </Button>
           )}
         </SimpleGrid>
-        {!agencyId && (
-          <Text size="xs" c="dimmed" mt="sm">
-            Elegí una inmobiliaria para filtrar: cada una busca solo en sus contratos.
-          </Text>
-        )}
       </Card>
 
       {contractsQuery.isPending && (
@@ -211,13 +216,13 @@ export default function ContractList() {
               <IconFileText size={28} />
             </ThemeIcon>
             <Text fw={600}>
-              {agencyId && filtrando
+              {filtrando
                 ? 'Ningún contrato coincide con los filtros'
                 : agencyId
                   ? 'Esta inmobiliaria no tiene contratos'
                   : 'Todavía no hay contratos'}
             </Text>
-            {agencyId && filtrando ? (
+            {filtrando ? (
               <Button mt="md" variant="light" onClick={() => clearFilters(CONTRACT_SEARCH_FILTERS)}>
                 Limpiar filtros
               </Button>

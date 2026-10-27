@@ -22,30 +22,54 @@ npm run dev
 | `npm run lint`    | ESLint                                |
 
 La URL del backend se configura con `VITE_API_URL` (ver `.env.example`). El CORS del backend solo
-acepta `localhost:5173` y `localhost:3000`: si Vite arranca en otro puerto, los pedidos fallan.
+acepta `localhost:5173`, `localhost:5174` y `localhost:3000`: si Vite arranca en otro puerto, los
+pedidos fallan.
+
+## Sesión y roles
+
+Toda la API pide login, salvo `/api/auth/**`. El login deja el JWT en una cookie HttpOnly (`token`)
+que el front no lee ni guarda: `api.js` llama siempre con `credentials: 'include'` y el navegador la
+manda sola.
+
+- **Quién está logueado.** `AuthContext` guarda el usuario (`id`, `name`, `email`, `rol`,
+  `agencyId`) solo en memoria. Al abrir o recargar la app pregunta `GET /api/users/me`: con 200
+  sigue la sesión, con 401 se entra por el login. Mientras tanto, el panel muestra un spinner.
+- **Login.** `POST /api/auth/login` trae `id`, `name`, `email` y `rol`; enseguida se pide `/me`
+  para sumar el `agencyId`. Después vuelve a la pantalla a la que se quería entrar.
+- **Logout.** `POST /api/auth/logout` borra la cookie; después se limpian el usuario y la caché.
+- **401.** Cualquier pedido con sesión que responde 401 limpia la sesión y la caché, y manda al
+  login con el aviso "Tu sesión venció".
+- **403.** El error dice "No tenés permiso..." y queda en la pantalla. Las rutas de otro rol ni se
+  montan: `RoleGate` muestra "Sin permiso".
+
+| Rol | Ve |
+| --- | --- |
+| `ADMIN` | Todo. Es el único con Agencias (listar, crear, dar de baja, restaurar) y con el selector de inmobiliaria en los listados. |
+| `AGENCY`, `AGENT` | Solo lo de su inmobiliaria. Las altas cargan su `agencyId` con el Select bloqueado. Pueden editar los datos de su inmobiliaria desde Configuración, salvo el estado de verificación. |
+| `USER` | Solo Configuración (el que se registra solo, hasta que una inmobiliaria lo sume). |
 
 ## Pantallas
 
 | Ruta                                | Pantalla                                                            |
 | ----------------------------------- | ------------------------------------------------------------------- |
 | `/registro`                         | Registro público (`POST /api/auth/register`)                        |
-| `/login`                            | Login (`POST /api/auth/login`): guarda el usuario en la sesión      |
+| `/login`                            | Login (`POST /api/auth/login`); con sesión vigente, entra directo al panel |
 | `/dashboard/propiedades`            | Listado de propiedades, activas o dadas de baja, con búsqueda por filtros |
 | `/dashboard/propiedades/nueva`      | Alta de propiedad con precios y fotos                               |
 | `/dashboard/propiedades/:id/editar` | Edición de propiedad: datos, precios, dueños y fotos                |
-| `/dashboard/agencias`               | Listado de agencias: estado de verificación, baja y restauración    |
-| `/dashboard/agencias/nueva`         | Alta de agencia, con borrador local                                 |
-| `/dashboard/agencias/:id/editar`    | Edición de agencia                                                  |
-| `/dashboard/usuarios`               | Listado de usuarios, filtrable por agencia                          |
+| `/dashboard/agencias`               | Listado de agencias: estado de verificación, baja y restauración (solo admin) |
+| `/dashboard/agencias/nueva`         | Alta de agencia, con borrador local (solo admin)                    |
+| `/dashboard/agencias/:id/editar`    | Edición de agencia (los demás roles, solo la suya)                  |
+| `/dashboard/usuarios`               | Listado de usuarios, filtrable por agencia (el admin)               |
 | `/dashboard/usuarios/nuevo`         | Alta de usuario con rol, agencia, CUIT y matrícula                  |
 | `/dashboard/usuarios/:id/editar`    | Edición de usuario y cambio de contraseña                           |
-| `/dashboard/personas`               | Personas (clientes y propietarios), con búsqueda por inmobiliaria    |
-| `/dashboard/contratos`              | Contratos de venta y alquiler, filtrables por estado, fechas y monto |
+| `/dashboard/personas`               | Personas (clientes y propietarios), con búsqueda por nombre, DNI, CUIT y contacto |
+| `/dashboard/contratos`              | Contratos de venta y alquiler, filtrables por propiedad, estado, fechas y monto |
 | `/dashboard/contratos/:id`          | Detalle del contrato y sus partes                                   |
 | `/dashboard/consultas`              | Leads del CRM, filtrables por agente                                |
 | `/dashboard/consultas/:id`          | Lead: etapa, historial, ofertas y recordatorios                     |
 | `/dashboard/avisos`                  | Agenda: leads ordenados por el tiempo que falta para su próximo aviso pendiente |
-| `/dashboard/configuracion`          | Cuenta del usuario logueado: datos, contraseña e inmobiliaria (solo lectura) |
+| `/dashboard/configuracion`          | Cuenta propia (`/api/users/me`): datos, contraseña e inmobiliaria. La única pantalla de un USER |
 
 Archivados, Explorador & Mapa y Analítica & Reportes muestran una pantalla
 "Próximamente".
@@ -61,7 +85,7 @@ src/
 ├── queries/      React Query: cliente (client.js) y claves de caché (keys.js)
 ├── hooks/        useAgencyOptions, useSelectOptions (opciones de Select), useLookup (ids a registros),
 │                 useUrlFilters (página y filtros en la URL)
-├── components/   Componentes compartidos (ConfirmAction, FilterInput)
+├── components/   Componentes compartidos (ConfirmAction, FilterInput, RoleGate)
 ├── layouts/      AuthLayout, DashboardLayout y el menú (dashboard-nav.js)
 ├── pages/
 │   ├── auth/         Login, registro y reglas de usuario
@@ -84,24 +108,21 @@ src/
   del menú. Las acciones de las filas usan `useMutation`.
 - **Listados.** Página y filtros en la URL (`?page=2&active=false`). La página se muestra desde 1 y se
   pide desde 0. Mientras llega una página se muestra la anterior (`keepPreviousData`).
-- **Búsqueda.** Propiedades, personas y contratos pasan a `GET .../search` en cuanto hay un filtro
-  (personas y contratos, cuando se elige inmobiliaria: allí `agencyId` es obligatorio). Los campos de
-  texto (`FilterInput`) escriben en la URL 400 ms después de la última tecla, así no se pide una vez
-  por letra. La búsqueda de propiedades solo trae publicadas: con "Dadas de baja" no se filtra.
+- **Búsqueda.** Personas y contratos usan siempre `GET .../search` (todos los filtros son
+  opcionales); propiedades pasa a `/search` en cuanto hay un filtro. El texto no distingue
+  mayúsculas ni acentos. Los campos de texto (`FilterInput`) escriben en la URL 400 ms después de la
+  última tecla, así no se pide una vez por letra. La búsqueda de propiedades solo trae publicadas:
+  con "Dadas de baja" no se filtra.
+- **`agencyId`.** Solo lo manda el admin, en listados y búsquedas (sin él ve todas). Para AGENCY y
+  AGENT el backend usa el de la sesión, así que el front ni lo manda; en las altas va el suyo porque
+  la validación lo pide. Algo de otra inmobiliaria responde 404, como si no existiera.
 - **Ids a nombres.** Las respuestas del CRM, contratos y dueños traen solo ids; `useLookup` los
   resuelve con la misma clave que el detalle, así cada registro se pide una sola vez.
 
 ## Limitaciones actuales
 
-- El login guarda el usuario (`id`, `name`, `email`, `rol`, `agencyId`) en `sessionStorage`, o en
-  `localStorage` con "Mantener sesión iniciada"; el JWT queda en la cookie HttpOnly del backend
-  (por eso `api.js` llama con `credentials: 'include'`). El panel no exige sesión: solo Configuración
-  la usa. No hay endpoint de logout, así que "Cerrar sesión" limpia el front y la cookie vence sola.
-- Los listados de `/api/people` y `/api/property_contracts` sin inmobiliaria elegida no filtran ni
-  ordenan. `/api/contract_parties` y `/api/property_owners` tampoco: partes y dueños se traen
+- `/api/contract_parties` y `/api/property_owners` no filtran ni ordenan: partes y dueños se traen
   completos y se filtran en el cliente.
-- La búsqueda de propiedades no recibe `agencyId`: busca en las de todas las inmobiliarias.
-- No hay endpoint con todos los avisos del CRM: la agenda trae todos los leads (de a 100) y hace un
-  `GET .../alerts` por lead, y ordena en el navegador. Con muchos leads conviene sumar un endpoint
-  en el backend.
+- La agenda de avisos trae todos los leads (de a 100), hace un `GET .../alerts` por lead y ordena
+  en el navegador. El backend ya tiene `GET /api/crm_alerts/upcoming`, que todavía no se usa.
 - La barra superior (búsqueda, notificaciones y nombre de la agencia) es estática.

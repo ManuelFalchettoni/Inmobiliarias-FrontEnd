@@ -24,5 +24,11 @@ export function toLoginRequest(values) {
   }
 }
 
-/** POST /api/auth/login -> 200 con el `UserResponse` del usuario que entró. */
+/** POST /api/auth/login -> 200 con `{ id, name, email, rol }` del usuario que entró. */
 export const loginUser = (request, options) => post(LOGIN_ENDPOINT, request, options)
+
+/**
+ * POST /api/auth/logout, sin body -> 204, haya sesión o no. La cookie es
+ * HttpOnly: JavaScript no la puede borrar, la pisa el backend.
+ */
+export const logoutUser = (options) => post('/api/auth/logout', undefined, options)

@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   Alert,
@@ -15,29 +16,25 @@ import {
   Skeleton,
   Stack,
   Text,
-  ThemeIcon,
   Title,
 } from '@mantine/core'
 import {
   IconAlertTriangle,
   IconBuildingSkyscraper,
   IconChevronRight,
-  IconLock,
-  IconLogin,
+  IconInfoCircle,
   IconLogout,
+  IconPencil,
 } from '@tabler/icons-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { useAuth } from '../../../context/auth-context.js'
 import { useLookup } from '../../../hooks/useLookup.js'
 import { queryKeys } from '../../../queries/keys.js'
-import { ApiError } from '../../../services/api.js'
 import { AGENCY_STATUS_COLOR, AGENCY_STATUS_SHORT_LABEL, findAgency, formatCuit } from '../../../services/agencies.js'
 import { formatDate } from '../../../services/format.js'
-import { USER_ROL_COLOR, USER_ROL_LABEL, findUser } from '../../../services/users.js'
+import { USER_ROL, USER_ROL_COLOR, USER_ROL_LABEL, findMe } from '../../../services/users.js'
 import { AccountCard, PasswordCard, SectionCard } from '../user/UserAccountForms.jsx'
-
-const SETTINGS_PATH = '/dashboard/configuracion'
 
 /** "Juan Pérez" -> "JP"; "Manuel" -> "MA". */
 function initials(name) {
@@ -65,32 +62,6 @@ function PageHeader() {
         <Text c="dimmed">Tus datos personales y tu contraseña.</Text>
       </Container>
     </Box>
-  )
-}
-
-/** Sin sesión no hay cuenta que mostrar: se pide entrar y se vuelve acá. */
-function LoginRequired() {
-  return (
-    <Card withBorder radius="lg" padding="xl" shadow="xs">
-      <Stack align="center" gap="xs" py="xl">
-        <ThemeIcon variant="light" size={56} radius="xl">
-          <IconLock size={28} />
-        </ThemeIcon>
-        <Text fw={600}>Iniciá sesión para ver tu cuenta</Text>
-        <Text size="sm" c="dimmed" ta="center" maw={420}>
-          La configuración muestra los datos del usuario con el que entraste.
-        </Text>
-        <Button
-          component={Link}
-          to="/login"
-          state={{ from: SETTINGS_PATH }}
-          mt="md"
-          leftSection={<IconLogin size={18} />}
-        >
-          Iniciar sesión
-        </Button>
-      </Stack>
-    </Card>
   )
 }
 
@@ -155,41 +126,53 @@ function Field({ label, children }) {
 }
 
 /**
- * Inmobiliaria del usuario, solo para consulta: el backend no deja cambiar la
- * inmobiliaria de un usuario, y los datos de la agencia se editan desde Agencias.
+ * Inmobiliaria del usuario. El backend no deja cambiar la inmobiliaria de una
+ * cuenta, pero sí editar los datos de la propia: el link lleva al formulario.
  */
 function AgencyCard({ agencyId, agency }) {
   return (
     <SectionCard
       icon={IconBuildingSkyscraper}
       title="Inmobiliaria"
-      description="Solo lectura. La inmobiliaria de una cuenta no se puede cambiar."
+      description="La inmobiliaria de una cuenta no se puede cambiar."
     >
       {!agency ? (
         <Text size="sm" c="dimmed">
           Inmobiliaria #{agencyId}: no se pudieron cargar sus datos (puede estar dada de baja).
         </Text>
       ) : (
-        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
-          <Field label="Nombre público">{agency.publicName}</Field>
-          <Field label="Razón social">{agency.companyName}</Field>
-          <Field label="CUIT">{agency.cuit ? formatCuit(agency.cuit) : null}</Field>
-          <Field label="Estado">
-            <Badge component="span" variant="light" size="sm" color={AGENCY_STATUS_COLOR[agency.status]}>
-              {AGENCY_STATUS_SHORT_LABEL[agency.status] ?? agency.status}
-            </Badge>
-          </Field>
-          <Field label="Email">{agency.email}</Field>
-          <Field label="Teléfono">{agency.phoneNumber}</Field>
-          <Field label="Dirección">{agency.address}</Field>
-          <Field label="Web">
-            {agency.webURL ? (
-              <Anchor href={agency.webURL} target="_blank" rel="noreferrer" size="sm">
-                {agency.webURL}
-              </Anchor>
-            ) : null}
-          </Field>
-        </SimpleGrid>
+        <>
+          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
+            <Field label="Nombre público">{agency.publicName}</Field>
+            <Field label="Razón social">{agency.companyName}</Field>
+            <Field label="CUIT">{agency.cuit ? formatCuit(agency.cuit) : null}</Field>
+            <Field label="Estado">
+              <Badge component="span" variant="light" size="sm" color={AGENCY_STATUS_COLOR[agency.status]}>
+                {AGENCY_STATUS_SHORT_LABEL[agency.status] ?? agency.status}
+              </Badge>
+            </Field>
+            <Field label="Email">{agency.email}</Field>
+            <Field label="Teléfono">{agency.phoneNumber}</Field>
+            <Field label="Dirección">{agency.address}</Field>
+            <Field label="Web">
+              {agency.webURL ? (
+                <Anchor href={agency.webURL} target="_blank" rel="noreferrer" size="sm">
+                  {agency.webURL}
+                </Anchor>
+              ) : null}
+            </Field>
+          </SimpleGrid>
+          <Group justify="flex-end" mt="lg">
+            <Button
+              component={Link}
+              to={`/dashboard/agencias/${agency.id}/editar`}
+              variant="light"
+              leftSection={<IconPencil size={16} />}
+            >
+              Editar datos de la inmobiliaria
+            </Button>
+          </Group>
+        </>
       )}
     </SectionCard>
   )
@@ -215,74 +198,65 @@ function SessionCard({ onLogout }) {
 }
 
 /**
- * `/dashboard/configuracion`: la cuenta del usuario que inició sesión.
+ * `/dashboard/configuracion`: la cuenta del usuario que inició sesión. Es la
+ * única pantalla que puede usar un USER.
  *
- * El id sale de la sesión (AuthContext, cargada en el login). Los datos se
- * piden frescos con `GET /api/users/{id}` y se editan con los mismos
- * formularios que la edición de usuarios: `PUT` para los datos y
- * `PATCH /password` para la contraseña.
+ * Los datos se piden frescos con `GET /api/users/me` (el backend saca la cuenta
+ * de la cookie) y se editan con los mismos formularios que la edición de
+ * usuarios, en modo `self`: `PUT /me` para los datos y `PATCH /me/password`.
  */
 export default function AccountSettings() {
-  const { user: session, logout, refreshUser } = useAuth()
+  const { logout, refreshUser } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const userId = session?.id ?? null
 
   const query = useQuery({
-    queryKey: queryKeys.users.detail(userId),
-    queryFn: ({ signal }) => findUser(userId, { signal }),
-    enabled: userId != null,
+    queryKey: queryKeys.users.me(),
+    queryFn: ({ signal }) => findMe({ signal }),
   })
 
   const user = query.data
   const agency = useLookup('agencies', [user?.agencyId], findAgency)[user?.agencyId]
 
-  const handleLogout = () => {
-    logout()
-    // Lo que se pidió con esta cuenta no tiene que verlo la siguiente.
-    queryClient.removeQueries({ queryKey: queryKeys.users.detail(userId) })
+  // Si el rol o la inmobiliaria cambiaron desde el login (un USER al que una
+  // inmobiliaria acaba de sumar), la sesión se pone al día con lo que dice `/me`.
+  useEffect(() => {
+    if (user) refreshUser(user)
+  }, [user, refreshUser])
+
+  const handleLogout = async () => {
+    await logout()
     navigate('/login', { replace: true })
   }
 
-  // Al guardar: se actualiza la caché del detalle y la sesión (nombre y email
+  // Al guardar: se actualiza la caché de la cuenta y la sesión (nombre y email
   // del encabezado), sin volver a pedir el usuario.
   const handleSaved = (saved) => {
-    queryClient.setQueryData(queryKeys.users.detail(userId), saved)
+    queryClient.setQueryData(queryKeys.users.me(), saved)
     refreshUser(saved)
   }
-
-  const notFound = query.isError && query.error instanceof ApiError && query.error.status === 404
 
   return (
     <>
       <PageHeader />
       <Container size="md" py="xl">
-        {!session && <LoginRequired />}
-
-        {session && !user && query.isPending && (
+        {!user && query.isPending && (
           <Stack gap="xl">
             <Skeleton height={150} radius="lg" />
             <Skeleton height={320} radius="lg" />
           </Stack>
         )}
 
-        {session && !user && query.isError && (
-          <Alert
-            color="red"
-            icon={<IconAlertTriangle />}
-            title={notFound ? 'Tu cuenta ya no está activa' : 'No se pudo cargar tu cuenta'}
-          >
+        {/* Un 401 no llega acá: AuthContext limpia la sesión y la app manda al login. */}
+        {!user && query.isError && (
+          <Alert color="red" icon={<IconAlertTriangle />} title="No se pudo cargar tu cuenta">
             <Text size="sm" mb="sm">
-              {notFound
-                ? 'El usuario con el que entraste fue dado de baja. Cerrá la sesión y entrá con otra cuenta.'
-                : query.error.message}
+              {query.error.message}
             </Text>
             <Group gap="sm">
-              {!notFound && (
-                <Button size="xs" variant="light" onClick={() => query.refetch()}>
-                  Reintentar
-                </Button>
-              )}
+              <Button size="xs" variant="light" onClick={() => query.refetch()}>
+                Reintentar
+              </Button>
               <Button size="xs" variant="subtle" color="red" onClick={handleLogout}>
                 Cerrar sesión
               </Button>
@@ -292,10 +266,18 @@ export default function AccountSettings() {
 
         {user && (
           <Stack gap="xl">
+            {/* El que se registra solo entra como USER: hasta que una inmobiliaria
+                lo sume (join-agency) solo puede ver y editar su cuenta. */}
+            {user.rol === USER_ROL.USER && (
+              <Alert color="blue" icon={<IconInfoCircle />} title="Tu cuenta todavía no es de ninguna inmobiliaria">
+                Para usar el panel, pedile a tu inmobiliaria que te sume con tu email ({user.email}). Cuando
+                lo haga, el menú se actualiza al volver a esta pantalla, sin registrarte de nuevo.
+              </Alert>
+            )}
             <ProfileCard user={user} agency={agency} />
             {/* `key`: si cambia la cuenta, el formulario arranca de cero con sus datos. */}
-            <AccountCard key={user.id} user={user} onSaved={handleSaved} />
-            <PasswordCard user={user} />
+            <AccountCard key={user.id} user={user} onSaved={handleSaved} self />
+            <PasswordCard user={user} self />
             {user.agencyId != null && <AgencyCard agencyId={user.agencyId} agency={agency} />}
             <SessionCard onLogout={handleLogout} />
           </Stack>
