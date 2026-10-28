@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 
+import { NotFound } from '../../components/NotFound.jsx'
 import RoleGate from '../../components/RoleGate.jsx'
 import { useAuth } from '../../context/auth-context.js'
 import DashboardLayout from '../../layouts/DashboardLayout.jsx'
@@ -115,16 +116,7 @@ export default function DashboardRoutes() {
         </Route>
 
         {/* Cualquier otra dirección dentro de /dashboard: página no encontrada. */}
-        <Route
-          path="*"
-          element={
-            <PagePlaceholder
-              title="Página no encontrada"
-              description="La sección que buscabas no existe o cambió de dirección."
-              action={{ to: homeFor(user), label: 'Volver al inicio' }}
-            />
-          }
-        />
+        <Route path="*" element={<NotFound showPath />} />
       </Route>
     </Routes>
   )
