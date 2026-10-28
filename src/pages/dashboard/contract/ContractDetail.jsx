@@ -56,7 +56,7 @@ const SAVED_MESSAGE = {
 
 function SectionCard({ icon: Icon, title, children }) {
   return (
-    <Card withBorder radius="lg" padding="lg" shadow="xs">
+    <Card withBorder radius="lg" padding="lg">
       <Group gap="sm" mb="md" wrap="nowrap">
         <ThemeIcon variant="light" size={34} radius="md">
           <Icon size={18} />

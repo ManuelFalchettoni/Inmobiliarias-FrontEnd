@@ -228,7 +228,7 @@ export default function AgencyList() {
       )}
 
       {data?.content.length === 0 && (
-        <Card withBorder radius="lg" padding="xl" shadow="xs">
+        <Card variant="empty" radius="lg" padding="xl">
           <Stack align="center" gap="xs" py="xl">
             <ThemeIcon variant="light" color="gray" size={56} radius="xl">
               <IconBuildingSkyscraper size={28} />
@@ -246,10 +246,9 @@ export default function AgencyList() {
       {data?.content.length > 0 && (
         <>
           <Card
-            withBorder
+            variant="table"
             radius="lg"
             padding={0}
-            shadow="xs"
             style={{ opacity: cargando ? 0.55 : 1, transition: 'opacity 150ms' }}
           >
             <Table.ScrollContainer minWidth={860}>

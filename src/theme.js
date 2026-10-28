@@ -45,7 +45,11 @@ export const theme = createTheme({
   primaryColor: 'pine',
   // La "tinta" de la ficha: el color del texto en vez del negro puro.
   black: '#17262a',
-  defaultRadius: 'md', // bordes redondeados medianos en inputs, botones y tarjetas
+  // Bordes casi rectos, como la ficha: 4px en inputs y botones (`md`, el de
+  // siempre) y 6px en las superficies (`lg`). `xl` queda en el valor de Mantine
+  // porque es el que hace redondos los avatares y las barras de progreso.
+  radius: { xs: '2px', sm: '3px', md: '4px', lg: '6px' },
+  defaultRadius: 'md',
   fontFamily: ARCHIVO,
   headings: { fontFamily: ARCHIVO, fontWeight: '700' },
 })

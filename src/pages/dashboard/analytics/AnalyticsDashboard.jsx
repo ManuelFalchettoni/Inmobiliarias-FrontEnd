@@ -65,7 +65,7 @@ const percent = (part, total) => (total ? Math.round((part / total) * 100) : 0)
 /** Tarjeta con un número grande y una línea de contexto debajo. */
 function StatTile({ icon: Icon, label, value, detail, detailColor = 'dimmed' }) {
   return (
-    <Card withBorder radius="lg" padding="lg" shadow="xs">
+    <Card withBorder radius="lg" padding="lg">
       <Group justify="space-between" align="flex-start" wrap="nowrap">
         <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
           {label}
@@ -86,7 +86,7 @@ function StatTile({ icon: Icon, label, value, detail, detailColor = 'dimmed' }) 
 
 function ChartCard({ title, caption, children }) {
   return (
-    <Card withBorder radius="lg" padding="lg" shadow="xs" h="100%">
+    <Card withBorder radius="lg" padding="lg" h="100%">
       <Title order={2} size="h5">
         {title}
       </Title>
@@ -613,7 +613,7 @@ export default function AnalyticsDashboard() {
             </Grid.Col>
           </Grid>
 
-          <Card withBorder radius="lg" padding="lg" shadow="xs">
+          <Card withBorder radius="lg" padding="lg">
             <Title order={2} size="h5">
               Rendimiento por agente
             </Title>

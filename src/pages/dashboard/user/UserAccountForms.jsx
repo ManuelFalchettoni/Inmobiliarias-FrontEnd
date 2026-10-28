@@ -43,7 +43,7 @@ const WRONG_CURRENT_PASSWORD = 'current password does not match'
 
 export function SectionCard({ icon: Icon, title, description, children }) {
   return (
-    <Card withBorder radius="lg" padding="xl" shadow="xs">
+    <Card withBorder radius="lg" padding="xl">
       <Group gap="sm" mb="lg" wrap="nowrap" align="flex-start">
         <ThemeIcon variant="light" size={40} radius="md">
           <Icon size={22} />

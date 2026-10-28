@@ -68,7 +68,7 @@ function PageHeader() {
 /** Resumen de la cuenta: quién es, su rol y desde cuándo. Solo lectura. */
 function ProfileCard({ user, agency }) {
   return (
-    <Card withBorder radius="lg" padding="xl" shadow="xs">
+    <Card withBorder radius="lg" padding="xl">
       <Group gap="lg" wrap="nowrap" align="center">
         <Avatar size={64} radius="xl" color={USER_ROL_COLOR[user.rol] ?? 'gray'}>
           {initials(user.name)}
@@ -181,7 +181,7 @@ function AgencyCard({ agencyId, agency }) {
 /** Cierre de sesión. */
 function SessionCard({ onLogout }) {
   return (
-    <Card withBorder radius="lg" padding="xl" shadow="xs">
+    <Card withBorder radius="lg" padding="xl">
       <Group justify="space-between" gap="md">
         <div>
           <Text fw={600}>Sesión</Text>

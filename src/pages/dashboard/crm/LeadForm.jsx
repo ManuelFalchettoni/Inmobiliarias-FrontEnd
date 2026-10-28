@@ -153,7 +153,7 @@ export default function LeadForm() {
           </Alert>
         )}
 
-        <Card withBorder radius="lg" padding="xl" shadow="xs">
+        <Card withBorder radius="lg" padding="xl">
           <Stack>
             <Select
               label="Propiedad"

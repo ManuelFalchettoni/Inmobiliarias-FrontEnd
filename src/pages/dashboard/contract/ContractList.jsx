@@ -149,51 +149,49 @@ export default function ContractList() {
       </Group>
 
       {/* Los rangos son inclusivos; con "Vence" desde/hasta salen los que terminan en un período. */}
-      <Card withBorder radius="lg" shadow="xs" mb="md">
-        <SimpleGrid cols={{ base: 1, xs: 2, md: 4 }}>
-          {/* Elegir inmobiliaria es solo del admin: los demás ven siempre la suya. */}
-          {isAdmin && (
-            <Select
-              label="Inmobiliaria"
-              placeholder={agencyOptions.state === 'loading' ? 'Cargando inmobiliarias...' : 'Todas'}
-              data={agencyOptions.options}
-              value={agencyId}
-              onChange={(valor) => setFilter('agencyId', valor)}
-              searchable
-              clearable
-              nothingFoundMessage="Sin coincidencias"
-            />
-          )}
+      <SimpleGrid cols={{ base: 1, xs: 2, md: 4 }} mb="lg">
+        {/* Elegir inmobiliaria es solo del admin: los demás ven siempre la suya. */}
+        {isAdmin && (
           <Select
-            label="Propiedad"
-            placeholder={propertyOptions.state === 'loading' ? 'Cargando propiedades...' : 'Todas'}
-            data={propertyOptions.options}
+            label="Inmobiliaria"
+            placeholder={agencyOptions.state === 'loading' ? 'Cargando inmobiliarias...' : 'Todas'}
+            data={agencyOptions.options}
+            value={agencyId}
+            onChange={(valor) => setFilter('agencyId', valor)}
             searchable
+            clearable
             nothingFoundMessage="Sin coincidencias"
-            {...selectFilter('propertyId')}
           />
-          <Select label="Estado" placeholder="Todos" data={CONTRACT_STATUS_OPTIONS} {...selectFilter('status')} />
-          <Select label="Tipo" placeholder="Todos" data={CONTRACT_TYPE_OPTIONS} {...selectFilter('type')} />
-          <Select label="Moneda" placeholder="Todas" data={CURRENCY_OPTIONS} {...selectFilter('currency')} />
-          <TextInput label="Empieza desde" {...dateFilter('startFrom')} />
-          <TextInput label="Empieza hasta" {...dateFilter('startTo')} />
-          <TextInput label="Vence desde" {...dateFilter('endFrom')} />
-          <TextInput label="Vence hasta" {...dateFilter('endTo')} />
-          <FilterInput number label="Monto desde" {...amountFilter('minAmount')} />
-          <FilterInput number label="Monto hasta" {...amountFilter('maxAmount')} />
-          {filtrando && (
-            <Button
-              variant="subtle"
-              color="gray"
-              leftSection={<IconFilterOff size={16} />}
-              style={{ alignSelf: 'end' }}
-              onClick={() => clearFilters(CONTRACT_SEARCH_FILTERS)}
-            >
-              Limpiar filtros
-            </Button>
-          )}
-        </SimpleGrid>
-      </Card>
+        )}
+        <Select
+          label="Propiedad"
+          placeholder={propertyOptions.state === 'loading' ? 'Cargando propiedades...' : 'Todas'}
+          data={propertyOptions.options}
+          searchable
+          nothingFoundMessage="Sin coincidencias"
+          {...selectFilter('propertyId')}
+        />
+        <Select label="Estado" placeholder="Todos" data={CONTRACT_STATUS_OPTIONS} {...selectFilter('status')} />
+        <Select label="Tipo" placeholder="Todos" data={CONTRACT_TYPE_OPTIONS} {...selectFilter('type')} />
+        <Select label="Moneda" placeholder="Todas" data={CURRENCY_OPTIONS} {...selectFilter('currency')} />
+        <TextInput label="Empieza desde" {...dateFilter('startFrom')} />
+        <TextInput label="Empieza hasta" {...dateFilter('startTo')} />
+        <TextInput label="Vence desde" {...dateFilter('endFrom')} />
+        <TextInput label="Vence hasta" {...dateFilter('endTo')} />
+        <FilterInput number label="Monto desde" {...amountFilter('minAmount')} />
+        <FilterInput number label="Monto hasta" {...amountFilter('maxAmount')} />
+        {filtrando && (
+          <Button
+            variant="subtle"
+            color="gray"
+            leftSection={<IconFilterOff size={16} />}
+            style={{ alignSelf: 'end' }}
+            onClick={() => clearFilters(CONTRACT_SEARCH_FILTERS)}
+          >
+            Limpiar filtros
+          </Button>
+        )}
+      </SimpleGrid>
 
       {contractsQuery.isPending && (
         <Stack gap="xs">
@@ -210,7 +208,7 @@ export default function ContractList() {
       )}
 
       {data?.content.length === 0 && (
-        <Card withBorder radius="lg" padding="xl" shadow="xs">
+        <Card variant="empty" radius="lg" padding="xl">
           <Stack align="center" gap="xs" py="xl">
             <ThemeIcon variant="light" color="gray" size={56} radius="xl">
               <IconFileText size={28} />
@@ -238,10 +236,9 @@ export default function ContractList() {
       {contracts.length > 0 && (
         <>
           <Card
-            withBorder
+            variant="table"
             radius="lg"
             padding={0}
-            shadow="xs"
             style={{ opacity: cargando ? 0.55 : 1, transition: 'opacity 150ms' }}
           >
             <Table.ScrollContainer minWidth={960}>

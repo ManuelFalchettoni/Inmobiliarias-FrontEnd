@@ -210,7 +210,7 @@ export default function AlertAgenda() {
       )}
 
       {leadsQuery.isSuccess && !loadingAlerts && sorted.length === 0 && (
-        <Card withBorder radius="lg" padding="xl" shadow="xs">
+        <Card variant="empty" radius="lg" padding="xl">
           <Stack align="center" gap="xs" py="xl">
             <ThemeIcon variant="light" color="gray" size={56} radius="xl">
               <IconBellRinging size={28} />
@@ -235,7 +235,7 @@ export default function AlertAgenda() {
       {/* La tabla espera a tener todos los avisos: sin ellos el orden saltaría. */}
       {!loadingAlerts && visible.length > 0 && (
         <>
-          <Card withBorder radius="lg" padding={0} shadow="xs">
+          <Card variant="table" radius="lg" padding={0}>
             <Table.ScrollContainer minWidth={960}>
               <Table verticalSpacing="sm" horizontalSpacing="md" highlightOnHover>
                 <Table.Thead>

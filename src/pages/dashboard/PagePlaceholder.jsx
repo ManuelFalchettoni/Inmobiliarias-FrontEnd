@@ -25,7 +25,7 @@ export default function PagePlaceholder({ icon: Icon = IconTool, title, descript
         </Box>
       </Group>
 
-      <Card withBorder radius="lg" padding="xl" shadow="xs">
+      <Card variant="empty" radius="lg" padding="xl">
         <Stack align="center" gap="xs" py="xl">
           <ThemeIcon variant="light" color="gray" size={56} radius="xl">
             <IconTool size={28} />

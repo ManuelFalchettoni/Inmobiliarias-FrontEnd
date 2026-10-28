@@ -61,7 +61,7 @@ const LIST_PATH = '/dashboard/consultas'
 
 function SectionCard({ icon: Icon, title, children, extra }) {
   return (
-    <Card withBorder radius="lg" padding="lg" shadow="xs">
+    <Card withBorder radius="lg" padding="lg">
       <Group justify="space-between" mb="md" wrap="nowrap">
         <Group gap="sm" wrap="nowrap">
           <ThemeIcon variant="light" size={34} radius="md">
@@ -261,7 +261,7 @@ export default function LeadDetail() {
           </Alert>
         )}
 
-        <Card withBorder radius="lg" padding="lg" shadow="xs" mb="xl">
+        <Card withBorder radius="lg" padding="lg" mb="xl">
           <Text size="sm" fw={600} mb="xs">
             Etapa
           </Text>

@@ -23,6 +23,53 @@ body {
   min-height: 100vh;
 }
 
+/*
+ * Superficies. Mantine les pone a sus componentes clases fijas
+ * (`mantine-Card-root`, `mantine-Table-th`...) para poder darles estilo desde
+ * acá. El selector de esquema repite el de Mantine para ganarle.
+ *
+ * Las tarjetas son el papel "levantado" de la ficha, con borde y sin sombra.
+ */
+[data-mantine-color-scheme='light'] :is(.mantine-Card-root, .mantine-Paper-root) {
+  --paper-border-color: var(--app-line-strong);
+}
+
+[data-mantine-color-scheme='light'] .mantine-Card-root {
+  background-color: var(--app-raised);
+}
+
+/* `<Card variant="table">`: la tabla de un listado, con el borde de tinta del rótulo. */
+.mantine-Card-root[data-variant='table'] {
+  border: 1.5px solid var(--app-ink);
+  background-color: var(--mantine-color-white);
+}
+
+/* `<Card variant="empty">`: listado vacío. Un hueco por llenar, no una tarjeta. */
+.mantine-Card-root[data-variant='empty'] {
+  border: 1.5px dashed var(--app-line-strong);
+  background-color: transparent;
+}
+
+/* Encabezado de las tablas: como las etiquetas de las celdas del rótulo. */
+[data-mantine-color-scheme='light'] .mantine-Table-table {
+  --table-border-color: var(--app-line);
+  --table-hover-color: var(--app-raised);
+}
+
+.mantine-Table-thead {
+  background-color: var(--app-raised);
+}
+
+.mantine-Table-thead > .mantine-Table-tr {
+  border-bottom: 1.5px solid var(--app-ink);
+}
+
+.mantine-Table-th {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--app-muted);
+}
+
 /* Títulos con Archivo angosto, como la dirección de la ficha. */
 :where(h1, h2, h3, h4, h5, h6) {
   font-stretch: 80%;

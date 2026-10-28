@@ -75,7 +75,7 @@ function useBackLink() {
 
 function SectionCard({ icon: Icon, title, description, children }) {
   return (
-    <Card withBorder radius="lg" padding="xl" shadow="xs">
+    <Card withBorder radius="lg" padding="xl">
       <Group gap="sm" mb="lg" wrap="nowrap" align="flex-start">
         <ThemeIcon variant="light" size={40} radius="md">
           <Icon size={22} />
@@ -476,7 +476,7 @@ function AgencyEditor({ agency }) {
 
               {/* Las condiciones se aceptan una sola vez, en el alta. */}
               {!isEdit && (
-                <Card withBorder radius="lg" padding="lg" shadow="xs">
+                <Card withBorder radius="lg" padding="lg">
                   <Checkbox
                     label="Acepto las condiciones del servicio y el tratamiento de los datos de la agencia"
                     key={form.key('acceptTerms')}

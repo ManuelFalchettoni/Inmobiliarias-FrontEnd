@@ -17,7 +17,7 @@ export function Forbidden() {
 
   return (
     <Container size="sm" py="xl">
-      <Card withBorder radius="lg" padding="xl" shadow="xs">
+      <Card variant="empty" radius="lg" padding="xl">
         <Stack align="center" gap="xs" py="xl">
           <ThemeIcon variant="light" color="gray" size={56} radius="xl">
             <IconLock size={28} />

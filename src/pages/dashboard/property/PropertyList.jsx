@@ -7,6 +7,7 @@ import {
   Anchor,
   Avatar,
   Badge,
+  Box,
   Button,
   Card,
   Collapse,
@@ -200,7 +201,7 @@ export default function PropertyList() {
 
       {/* Los de texto son parciales y sin acentos: "cord" encuentra "Córdoba". */}
       {!verArchivadas && (
-        <Card withBorder radius="lg" shadow="xs" mb="md">
+        <Box mb="lg">
           <SimpleGrid cols={{ base: 1, xs: 2, md: 4 }}>
             <FilterInput label="Ciudad" placeholder="Cualquiera" {...textFilter('city')} />
             <Select label="Tipo" placeholder="Todos" data={PROPERTY_TYPE_OPTIONS} {...selectFilter('type')} />
@@ -229,7 +230,7 @@ export default function PropertyList() {
               <FilterInput number label="Año hasta" {...intFilter('maxYear')} />
             </SimpleGrid>
           </Collapse>
-        </Card>
+        </Box>
       )}
 
       {primeraCarga && (
@@ -247,7 +248,7 @@ export default function PropertyList() {
       )}
 
       {data?.content.length === 0 && (
-        <Card withBorder radius="lg" padding="xl" shadow="xs">
+        <Card variant="empty" radius="lg" padding="xl">
           <Stack align="center" gap="xs" py="xl">
             <ThemeIcon variant="light" color="gray" size={56} radius="xl">
               <IconBuildingEstate size={28} />
@@ -277,10 +278,9 @@ export default function PropertyList() {
         <>
           {/* Mientras llega la página nueva, la anterior se ve más transparente. */}
           <Card
-            withBorder
+            variant="table"
             radius="lg"
             padding={0}
-            shadow="xs"
             style={{ opacity: cargando ? 0.55 : 1, transition: 'opacity 150ms' }}
           >
             {/* En pantallas angostas la tabla se desplaza de costado en vez de apretarse. */}

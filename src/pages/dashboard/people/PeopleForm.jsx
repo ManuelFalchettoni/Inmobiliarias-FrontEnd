@@ -171,7 +171,7 @@ function PeopleEditor({ person, returnTo }) {
           </Alert>
         )}
 
-        <Card withBorder radius="lg" padding="xl" shadow="xs">
+        <Card withBorder radius="lg" padding="xl">
           <SimpleGrid cols={{ base: 1, sm: 2 }}>
             <Select
               label="Inmobiliaria"
