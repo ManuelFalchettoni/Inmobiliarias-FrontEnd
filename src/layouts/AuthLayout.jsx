@@ -1,5 +1,7 @@
 import { Title } from '@mantine/core'
 import { IconMapPinFilled } from '@tabler/icons-react'
+
+import Wordmark from '../components/Wordmark.jsx'
 // CSS Modules: las clases del .module.css llegan como un objeto
 // (`classes.wrapper`), con nombres únicos generados por Vite, así no chocan con
 // clases de otros archivos.
@@ -16,6 +18,9 @@ export default function AuthLayout({ title, children }) {
     <div className={classes.wrapper}>
       <main className={classes.side}>
         <div className={classes.form}>
+          <div className={classes.brand}>
+            <Wordmark size={36} />
+          </div>
           <Title order={1} className={classes.title}>
             {title}
           </Title>

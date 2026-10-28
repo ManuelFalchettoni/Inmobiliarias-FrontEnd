@@ -28,6 +28,10 @@
   max-width: 400px;
 }
 
+.brand {
+  margin-bottom: 56px;
+}
+
 .title {
   margin-bottom: 28px;
   font-size: 40px;
