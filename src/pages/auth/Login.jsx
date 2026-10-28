@@ -74,7 +74,7 @@ export default function Login() {
   if (user) return <Navigate to={from ?? AFTER_LOGIN} replace />
 
   return (
-    <AuthLayout title="Bienvenido a Inmobiliarias">
+    <AuthLayout title="Iniciá sesión">
       {expired && status.state !== 'error' && (
         <Alert color="yellow" icon={<IconClockExclamation />} title="Tu sesión venció" mb="md">
           Volvé a iniciar sesión para seguir donde estabas.
@@ -161,7 +161,7 @@ export default function Login() {
         </Group>
       </Modal>
 
-      <Text ta="center" mt="md">
+      <Text mt="lg">
         ¿No tenés una cuenta?{' '}
         <Anchor component={Link} to="/registro" fw={500}>
           Registrate

@@ -167,7 +167,7 @@ export default function Register() {
         </Button>
       </form>
 
-      <Text ta="center" mt="md">
+      <Text mt="lg">
         ¿Ya tenés una cuenta?{' '}
         <Anchor component={Link} to="/login" fw={500}>
           Iniciá sesión
