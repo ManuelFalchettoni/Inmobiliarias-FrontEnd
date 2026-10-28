@@ -125,11 +125,11 @@ export function AccountCard({ user, onSaved, self = false }) {
   return (
     <SectionCard icon={IconUser} title="Datos de la cuenta" description="Se guardan todos juntos.">
       {status.state === 'saved' && (
-        <Alert color="teal" icon={<IconCircleCheck />} title="Cambios guardados" mb="md" withCloseButton onClose={() => setStatus({ state: 'idle' })} />
+        <Alert color="success" icon={<IconCircleCheck />} title="Cambios guardados" mb="md" withCloseButton onClose={() => setStatus({ state: 'idle' })} />
       )}
       {status.state === 'error' && (
         <Alert
-          color="red"
+          color="danger"
           icon={<IconAlertTriangle />}
           title="No se pudieron guardar los cambios"
           mb="md"
@@ -262,11 +262,11 @@ export function PasswordCard({ user, self = false }) {
       description="Sin la contraseña actual no se cambia nada."
     >
       {status.state === 'saved' && (
-        <Alert color="teal" icon={<IconCircleCheck />} title="Contraseña actualizada" mb="md" withCloseButton onClose={() => setStatus({ state: 'idle' })} />
+        <Alert color="success" icon={<IconCircleCheck />} title="Contraseña actualizada" mb="md" withCloseButton onClose={() => setStatus({ state: 'idle' })} />
       )}
       {status.state === 'error' && (
         <Alert
-          color="red"
+          color="danger"
           icon={<IconAlertTriangle />}
           title="No se pudo cambiar la contraseña"
           mb="md"

@@ -82,14 +82,14 @@ export default function Login() {
       )}
 
       {registered && status.state !== 'error' && (
-        <Alert color="teal" icon={<IconCircleCheck />} title="Cuenta creada" mb="md">
+        <Alert color="success" icon={<IconCircleCheck />} title="Cuenta creada" mb="md">
           {registered.name}, tu cuenta quedó registrada con {registered.email}.
         </Alert>
       )}
 
       {status.state === 'error' && (
         <Alert
-          color="red"
+          color="danger"
           icon={<IconAlertTriangle />}
           title="No se pudo iniciar sesión"
           mb="md"

@@ -107,7 +107,7 @@ function AgencyActions({ agency, onAction, disabled }) {
           ))}
           <Menu.Divider />
           <Menu.Item
-            color="red"
+            color="danger"
             leftSection={<IconArchive size={16} />}
             onClick={() => onAction(agency, () => deleteAgency(agency.id))}
           >
@@ -196,7 +196,7 @@ export default function AgencyList() {
 
       {action.isError && (
         <Alert
-          color="red"
+          color="danger"
           icon={<IconAlertTriangle />}
           title="No se pudo completar la acción"
           mb="md"
@@ -217,7 +217,7 @@ export default function AgencyList() {
       )}
 
       {error && (
-        <Alert color="red" icon={<IconAlertTriangle />} title="No se pudo cargar el listado">
+        <Alert color="danger" icon={<IconAlertTriangle />} title="No se pudo cargar el listado">
           {error}
         </Alert>
       )}

@@ -297,7 +297,7 @@ function AgencyEditor({ agency }) {
       <Container size="xl" py="xl">
         {status.state === 'created' && (
           <Alert
-            color="teal"
+            color="success"
             icon={<IconCircleCheck />}
             title="Agencia creada"
             mb="lg"
@@ -322,7 +322,7 @@ function AgencyEditor({ agency }) {
 
         {status.state === 'saved' && (
           <Alert
-            color="teal"
+            color="success"
             icon={<IconCircleCheck />}
             title="Cambios guardados"
             mb="lg"
@@ -337,7 +337,7 @@ function AgencyEditor({ agency }) {
 
         {status.state === 'error' && (
           <Alert
-            color="red"
+            color="danger"
             icon={<IconAlertTriangle />}
             title={isEdit ? 'No se pudieron guardar los cambios' : 'No se pudo crear la agencia'}
             mb="lg"
@@ -576,7 +576,7 @@ function AgencyLoader({ id }) {
   return (
     <Container size="xl" py="xl">
       {result?.error ? (
-        <Alert color="red" icon={<IconAlertTriangle />} title="No se puede editar la agencia">
+        <Alert color="danger" icon={<IconAlertTriangle />} title="No se puede editar la agencia">
           {result.error}{' '}
           <Anchor component={Link} to={back.to} size="sm" fw={500}>
             {back.label}

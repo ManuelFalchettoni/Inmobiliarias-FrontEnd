@@ -35,7 +35,7 @@ export const CRM_STAGE_COLOR = {
   VISIT_SCHEDULED: 'violet',
   VISITED: 'grape',
   NEGOTIATING: 'orange',
-  CLOSED: 'teal',
+  CLOSED: 'success',
   DISCARDED: 'gray',
 }
 
@@ -65,7 +65,7 @@ export const OFFER_STATUS_OPTIONS = [
 
 export const OFFER_STATUS_LABEL = toLabelMap(OFFER_STATUS_OPTIONS)
 
-export const OFFER_STATUS_COLOR = { PENDING: 'yellow', ACCEPTED: 'teal', REJECTED: 'red' }
+export const OFFER_STATUS_COLOR = { PENDING: 'yellow', ACCEPTED: 'success', REJECTED: 'danger' }
 
 /** `@Positive` y `@Digits(integer = 13, fraction = 2)` del `OfferRequest`. */
 export const OFFER_LIMITS = { amount: { min: 0.01, max: 9999999999999.99, decimals: 2 } }

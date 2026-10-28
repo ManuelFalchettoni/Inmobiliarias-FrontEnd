@@ -142,7 +142,7 @@ export default function LeadForm() {
       <Container size="md" py="xl">
         {status.state === 'error' && (
           <Alert
-            color="red"
+            color="danger"
             icon={<IconAlertTriangle />}
             title="No se pudo crear el lead"
             mb="lg"

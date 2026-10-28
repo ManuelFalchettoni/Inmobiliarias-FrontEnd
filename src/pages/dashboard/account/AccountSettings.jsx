@@ -189,7 +189,7 @@ function SessionCard({ onLogout }) {
             Cerrá la sesión si estás usando una computadora compartida.
           </Text>
         </div>
-        <Button variant="light" color="red" leftSection={<IconLogout size={18} />} onClick={onLogout}>
+        <Button variant="light" color="danger" leftSection={<IconLogout size={18} />} onClick={onLogout}>
           Cerrar sesión
         </Button>
       </Group>
@@ -249,7 +249,7 @@ export default function AccountSettings() {
 
         {/* Un 401 no llega acá: AuthContext limpia la sesión y la app manda al login. */}
         {!user && query.isError && (
-          <Alert color="red" icon={<IconAlertTriangle />} title="No se pudo cargar tu cuenta">
+          <Alert color="danger" icon={<IconAlertTriangle />} title="No se pudo cargar tu cuenta">
             <Text size="sm" mb="sm">
               {query.error.message}
             </Text>
@@ -257,7 +257,7 @@ export default function AccountSettings() {
               <Button size="xs" variant="light" onClick={() => query.refetch()}>
                 Reintentar
               </Button>
-              <Button size="xs" variant="subtle" color="red" onClick={handleLogout}>
+              <Button size="xs" variant="subtle" color="danger" onClick={handleLogout}>
                 Cerrar sesión
               </Button>
             </Group>

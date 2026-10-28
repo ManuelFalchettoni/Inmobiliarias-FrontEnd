@@ -132,7 +132,7 @@ export default function ContractDetail() {
     return (
       <Container size="xl" py="xl">
         {data?.error ? (
-          <Alert color="red" icon={<IconAlertTriangle />} title="No se pudo abrir el contrato">
+          <Alert color="danger" icon={<IconAlertTriangle />} title="No se pudo abrir el contrato">
             {data.error}{' '}
             <Anchor component={Link} to={LIST_PATH} size="sm" fw={500}>
               Volver al listado
@@ -202,7 +202,7 @@ export default function ContractDetail() {
               {canCancel && (
                 <ConfirmAction label="¿Cancelar el contrato?" disabled={action.state === 'saving'} onConfirm={cancel}>
                   {(props) => (
-                    <Button variant="light" color="red" leftSection={<IconBan size={16} />} {...props}>
+                    <Button variant="light" color="danger" leftSection={<IconBan size={16} />} {...props}>
                       Cancelar contrato
                     </Button>
                   )}
@@ -216,7 +216,7 @@ export default function ContractDetail() {
       <Container size="xl" py="xl">
         {savedMessage && (
           <Alert
-            color="teal"
+            color="success"
             icon={<IconCircleCheck />}
             title={savedMessage.title}
             mb="lg"
@@ -237,7 +237,7 @@ export default function ContractDetail() {
         )}
         {action.state === 'error' && (
           <Alert
-            color="red"
+            color="danger"
             icon={<IconAlertTriangle />}
             title="No se pudo cancelar el contrato"
             mb="lg"

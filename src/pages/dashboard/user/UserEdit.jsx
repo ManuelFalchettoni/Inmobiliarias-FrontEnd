@@ -81,7 +81,7 @@ export default function UserEdit() {
         {!result && <Skeleton height={420} radius="lg" />}
 
         {result?.error && (
-          <Alert color="red" icon={<IconAlertTriangle />} title="No se puede editar el usuario">
+          <Alert color="danger" icon={<IconAlertTriangle />} title="No se puede editar el usuario">
             {result.error}{' '}
             <Anchor component={Link} to={LIST_PATH} size="sm" fw={500}>
               Volver al listado

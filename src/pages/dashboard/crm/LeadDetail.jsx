@@ -150,7 +150,7 @@ export default function LeadDetail() {
     return (
       <Container size="xl" py="xl">
         {data?.error ? (
-          <Alert color="red" icon={<IconAlertTriangle />} title="No se pudo abrir el lead">
+          <Alert color="danger" icon={<IconAlertTriangle />} title="No se pudo abrir el lead">
             {data.error}{' '}
             <Anchor component={Link} to={LIST_PATH} size="sm" fw={500}>
               Volver al listado
@@ -233,7 +233,7 @@ export default function LeadDetail() {
       <Container size="xl" py="xl">
         {created && (
           <Alert
-            color="teal"
+            color="success"
             icon={<IconCircleCheck />}
             title="Lead creado"
             mb="lg"
@@ -245,7 +245,7 @@ export default function LeadDetail() {
         )}
         {action.state === 'error' && (
           <Alert
-            color="red"
+            color="danger"
             icon={<IconAlertTriangle />}
             title="No se pudo actualizar el lead"
             mb="lg"

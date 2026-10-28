@@ -260,7 +260,7 @@ export default function PropertyList() {
       )}
 
       {error && (
-        <Alert color="red" icon={<IconAlertTriangle />} title="No se pudo cargar el listado">
+        <Alert color="danger" icon={<IconAlertTriangle />} title="No se pudo cargar el listado">
           {error}
         </Alert>
       )}

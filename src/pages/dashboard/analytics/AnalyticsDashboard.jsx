@@ -467,7 +467,7 @@ function AgentTable({ agents }) {
               </Table.Td>
               <Table.Td ta="right">
                 {agent.expiredAlerts > 0 ? (
-                  <Badge color="red" variant="light" leftSection={<IconAlertTriangle size={12} />}>
+                  <Badge color="danger" variant="light" leftSection={<IconAlertTriangle size={12} />}>
                     {formatCount(agent.expiredAlerts)}
                   </Badge>
                 ) : (
@@ -529,7 +529,7 @@ export default function AnalyticsDashboard() {
       </Group>
 
       {query.isError && (
-        <Alert color="red" icon={<IconAlertTriangle />} title="No se pudo cargar la analítica">
+        <Alert color="danger" icon={<IconAlertTriangle />} title="No se pudo cargar la analítica">
           {query.error.status === 403
             ? 'Tu usuario no tiene una inmobiliaria asignada: no hay datos para mostrar.'
             : query.error.message}
@@ -571,7 +571,7 @@ export default function AnalyticsDashboard() {
                   ? `${formatCount(data.crm.expiredAlerts)} ${data.crm.expiredAlerts === 1 ? 'vencido' : 'vencidos'}`
                   : 'Ninguno vencido'
               }
-              detailColor={data.crm.expiredAlerts > 0 ? 'red' : 'dimmed'}
+              detailColor={data.crm.expiredAlerts > 0 ? 'danger' : 'dimmed'}
             />
             <StatTile
               icon={IconFileText}

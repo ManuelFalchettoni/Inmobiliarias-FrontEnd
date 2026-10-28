@@ -79,7 +79,7 @@ function UserActions({ user, onAction, disabled }) {
         </Menu.Target>
         <Menu.Dropdown>
           <Menu.Item
-            color="red"
+            color="danger"
             leftSection={<IconArchive size={16} />}
             onClick={() => onAction(user, () => deleteUser(user.id))}
           >
@@ -195,7 +195,7 @@ export default function UserList() {
 
       {action.isError && (
         <Alert
-          color="red"
+          color="danger"
           icon={<IconAlertTriangle />}
           title="No se pudo completar la acción"
           mb="md"
@@ -215,7 +215,7 @@ export default function UserList() {
       )}
 
       {error && (
-        <Alert color="red" icon={<IconAlertTriangle />} title="No se pudo cargar el listado">
+        <Alert color="danger" icon={<IconAlertTriangle />} title="No se pudo cargar el listado">
           {error}
         </Alert>
       )}

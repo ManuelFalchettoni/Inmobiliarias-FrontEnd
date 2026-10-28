@@ -388,7 +388,7 @@ function PropertyEditor({ property }) {
         {/* Un aviso distinto según cómo terminó el guardado. `condición && <X/>`
             dibuja X solo si la condición se cumple. */}
         {status.state === 'created' && (
-          <Alert color="teal" icon={<IconCircleCheck />} title="Propiedad publicada" mb="lg" withCloseButton onClose={dismiss}>
+          <Alert color="success" icon={<IconCircleCheck />} title="Propiedad publicada" mb="lg" withCloseButton onClose={dismiss}>
             La propiedad #{propertyId} se creó con {photos.length}{' '}
             {photos.length === 1 ? 'foto' : 'fotos'}.{' '}
             <Anchor component={Link} to={LIST_PATH} size="sm" fw={500}>
@@ -397,10 +397,10 @@ function PropertyEditor({ property }) {
           </Alert>
         )}
         {status.state === 'saved' && (
-          <Alert color="teal" icon={<IconCircleCheck />} title="Cambios guardados" mb="lg" withCloseButton onClose={dismiss} />
+          <Alert color="success" icon={<IconCircleCheck />} title="Cambios guardados" mb="lg" withCloseButton onClose={dismiss} />
         )}
         {status.state === 'photos-saved' && (
-          <Alert color="teal" icon={<IconCircleCheck />} title="Fotos subidas" mb="lg" withCloseButton onClose={dismiss} />
+          <Alert color="success" icon={<IconCircleCheck />} title="Fotos subidas" mb="lg" withCloseButton onClose={dismiss} />
         )}
         {status.state === 'partial' && (
           <Alert
@@ -427,7 +427,7 @@ function PropertyEditor({ property }) {
           </Alert>
         )}
         {status.state === 'error' && (
-          <Alert color="red" icon={<IconAlertTriangle />} title={status.title} mb="lg" withCloseButton onClose={dismiss}>
+          <Alert color="danger" icon={<IconAlertTriangle />} title={status.title} mb="lg" withCloseButton onClose={dismiss}>
             {status.message}
           </Alert>
         )}
@@ -668,7 +668,7 @@ function PropertyEditor({ property }) {
                   {...form.getInputProps('agencyId')}
                 />
                 {agencies.state === 'error' && (
-                  <Text size="sm" c="red" mt="xs">
+                  <Text size="sm" c="danger" mt="xs">
                     No se pudieron cargar las agencias: {agencies.message}
                   </Text>
                 )}
@@ -778,7 +778,7 @@ function PropertyLoader({ id }) {
       <>
         <PageHeader propertyId={id} />
         <Container size="xl" py="xl">
-          <Alert color="red" icon={<IconAlertTriangle />} title="No se puede editar la propiedad">
+          <Alert color="danger" icon={<IconAlertTriangle />} title="No se puede editar la propiedad">
             {result.error ?? 'La propiedad está dada de baja. Restáurela desde Archivados para editarla.'}{' '}
             <Anchor component={Link} to={LIST_PATH} size="sm" fw={500}>
               Volver al listado

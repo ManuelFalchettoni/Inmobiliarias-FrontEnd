@@ -125,7 +125,7 @@ export default function UserForm() {
       <Container size="md" py="xl">
         {status.state === 'created' && (
           <Alert
-            color="teal"
+            color="success"
             icon={<IconCircleCheck />}
             title="Usuario creado"
             mb="lg"
@@ -140,7 +140,7 @@ export default function UserForm() {
 
         {status.state === 'error' && (
           <Alert
-            color="red"
+            color="danger"
             icon={<IconAlertTriangle />}
             title="No se pudo crear el usuario"
             mb="lg"

@@ -68,7 +68,7 @@ export default function AlertBell() {
           label={count > 99 ? '99+' : count}
           size={18}
           offset={6}
-          color={overdue > 0 ? 'red' : 'teal'}
+          color={overdue > 0 ? 'danger' : 'success'}
           disabled={count === 0}
         >
           <ActionIcon
@@ -87,7 +87,7 @@ export default function AlertBell() {
         <Group justify="space-between" px="md" py="sm">
           <Text fw={600}>Avisos pendientes</Text>
           {overdue > 0 && (
-            <Badge color="red" variant="light">
+            <Badge color="danger" variant="light">
               {overdue} {overdue === 1 ? 'vencido' : 'vencidos'}
             </Badge>
           )}
@@ -100,7 +100,7 @@ export default function AlertBell() {
           </Text>
         )}
         {query.isError && (
-          <Text size="sm" c="red" p="md">
+          <Text size="sm" c="danger" p="md">
             No se pudieron cargar los avisos: {query.error.message}
           </Text>
         )}
@@ -126,7 +126,7 @@ export default function AlertBell() {
                       <Text size="sm" lineClamp={2}>
                         {alert.message}
                       </Text>
-                      <Text size="xs" c={alert.expired ? 'red' : 'dimmed'}>
+                      <Text size="xs" c={alert.expired ? 'danger' : 'dimmed'}>
                         {formatDateTime(alert.alertDate)} ·{' '}
                         {/* Entre dos refrescos puede pasar la hora sin que el backend lo marque todavía. */}
                         {alert.expired ? 'vencido' : left > 0 ? `en ${formatTimeLeft(left)}` : 'vence ahora'}
@@ -135,7 +135,7 @@ export default function AlertBell() {
                     <Tooltip label="Marcar como cumplido" withArrow>
                       <ActionIcon
                         variant="subtle"
-                        color="teal"
+                        color="success"
                         aria-label={`Marcar como cumplido: ${alert.message}`}
                         loading={markRead.isPending && markRead.variables?.id === alert.id}
                         onClick={() => markRead.mutate(alert)}
@@ -151,7 +151,7 @@ export default function AlertBell() {
         )}
 
         {markRead.isError && (
-          <Text size="xs" c="red" px="md" pb="xs">
+          <Text size="xs" c="danger" px="md" pb="xs">
             No se pudo marcar: {markRead.error.message}
           </Text>
         )}

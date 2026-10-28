@@ -52,7 +52,7 @@ const HOUR = 60 * 60 * 1000
 
 /** Color del "falta" según la urgencia. */
 function urgencyColor(ms) {
-  if (ms < HOUR) return 'red'
+  if (ms < HOUR) return 'danger'
   if (ms < 24 * HOUR) return 'orange'
   if (ms < 3 * 24 * HOUR) return 'yellow'
   return 'blue'
@@ -200,7 +200,7 @@ export default function AlertAgenda() {
       )}
 
       {leadsQuery.isError && (
-        <Alert color="red" icon={<IconAlertTriangle />} title="No se pudo cargar la agenda">
+        <Alert color="danger" icon={<IconAlertTriangle />} title="No se pudo cargar la agenda">
           {leadsQuery.error.message}
         </Alert>
       )}

@@ -70,7 +70,7 @@ function NewAlertForm({ lead, agents, onSaved }) {
           />
         </Group>
         <Group justify="space-between" align="center">
-          <Text size="sm" c="red">
+          <Text size="sm" c="danger">
             {status.state === 'error' ? status.message : ''}
           </Text>
           <Button type="submit" size="compact-md" loading={status.state === 'saving'}>
@@ -109,7 +109,7 @@ export default function LeadAlerts({ lead, alerts, agents, onChanged }) {
       <NewAlertForm lead={lead} agents={agents} onSaved={onChanged} />
 
       {error && (
-        <Text size="sm" c="red">
+        <Text size="sm" c="danger">
           {error}
         </Text>
       )}
@@ -134,7 +134,7 @@ export default function LeadAlerts({ lead, alerts, agents, onChanged }) {
             bg={done ? 'gray.0' : undefined}
             style={{
               opacity: busyId === alert.id ? 0.6 : 1,
-              borderColor: overdue ? 'var(--mantine-color-red-4)' : undefined,
+              borderColor: overdue ? 'var(--mantine-color-danger-4)' : undefined,
             }}
           >
             <Group justify="space-between" align="flex-start" wrap="nowrap" gap="xs">
@@ -142,7 +142,7 @@ export default function LeadAlerts({ lead, alerts, agents, onChanged }) {
               <Tooltip label={done ? 'Cumplida' : 'Completar'} withArrow>
                 <ActionIcon
                   variant={done ? 'filled' : 'light'}
-                  color="teal"
+                  color="success"
                   radius="xl"
                   disabled={done || busyId != null}
                   aria-label={done ? 'Recordatorio cumplido' : 'Completar recordatorio'}
@@ -161,11 +161,11 @@ export default function LeadAlerts({ lead, alerts, agents, onChanged }) {
                   {alert.message}
                 </Text>
                 <Group gap={6} mt={4}>
-                  <Text size="xs" c={overdue ? 'red' : 'dimmed'} fw={overdue ? 600 : undefined}>
+                  <Text size="xs" c={overdue ? 'danger' : 'dimmed'} fw={overdue ? 600 : undefined}>
                     {formatDateTime(alert.alertDate)}
                   </Text>
                   {overdue && (
-                    <Badge size="xs" color="red" variant="light">
+                    <Badge size="xs" color="danger" variant="light">
                       Vencida
                     </Badge>
                   )}

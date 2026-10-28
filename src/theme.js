@@ -36,12 +36,45 @@ const brass = [
   '#5c4017',
 ]
 
+/*
+ * Colores con significado: se usan por nombre (`color="success"`), nunca por
+ * tono, así se cambian acá y no en cada pantalla.
+ * - success: algo salió bien o está vigente. Un verde hoja, más amarillo que
+ *   el pino para no confundirse con el color principal.
+ * - danger: errores, vencidos y acciones que borran. Un rojo ladrillo.
+ */
+const success = [
+  '#eef6e9',
+  '#dcecd2',
+  '#b9d9a5',
+  '#94c575',
+  '#74b34d',
+  '#5fa636',
+  '#3f7f24',
+  '#35701e',
+  '#2a5a18',
+  '#1f4311',
+]
+
+const danger = [
+  '#fbecea',
+  '#f4d3cf',
+  '#e8a79f',
+  '#dc7a6e',
+  '#d15647',
+  '#c94130',
+  '#b23a2b',
+  '#952f23',
+  '#78251b',
+  '#5b1b13',
+]
+
 // Archivo tiene un eje de ancho: el cuerpo va en ancho normal y los títulos
 // angostos (ver index.css), así toda la app usa una sola familia.
 const ARCHIVO = "'Archivo Variable', system-ui, sans-serif"
 
 export const theme = createTheme({
-  colors: { pine, brass },
+  colors: { pine, brass, success, danger },
   primaryColor: 'pine',
   // La "tinta" de la ficha: el color del texto en vez del negro puro.
   black: '#17262a',

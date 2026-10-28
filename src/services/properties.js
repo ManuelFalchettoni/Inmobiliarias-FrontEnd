@@ -48,7 +48,7 @@ export const PROPERTY_OCCUPANCY_LABEL = toLabelMap(PROPERTY_OCCUPANCY_OPTIONS)
 
 /** Color del Badge de condición en el listado. */
 export const PROPERTY_CONDITION_COLOR = {
-  BRAND_NEW: 'teal',
+  BRAND_NEW: 'success',
   GOOD: 'blue',
   NEEDS_REPAIR: 'orange',
   UNDER_CONSTRUCTION: 'gray',

@@ -144,7 +144,7 @@ function PeopleEditor({ person, returnTo }) {
       <Container size="md" py="xl">
         {status.state === 'saved' && (
           <Alert
-            color="teal"
+            color="success"
             icon={<IconCircleCheck />}
             title={status.created ? 'Persona creada' : 'Cambios guardados'}
             mb="lg"
@@ -160,7 +160,7 @@ function PeopleEditor({ person, returnTo }) {
 
         {status.state === 'error' && (
           <Alert
-            color="red"
+            color="danger"
             icon={<IconAlertTriangle />}
             title={isEdit ? 'No se pudieron guardar los cambios' : 'No se pudo crear la persona'}
             mb="lg"
@@ -297,7 +297,7 @@ function PeopleLoader({ id }) {
         <PageHeader personId={id} />
         <Container size="md" py="xl">
           {result?.error ? (
-            <Alert color="red" icon={<IconAlertTriangle />} title="No se puede editar la persona">
+            <Alert color="danger" icon={<IconAlertTriangle />} title="No se puede editar la persona">
               {result.error}{' '}
               <Anchor component={Link} to={LIST_PATH} size="sm" fw={500}>
                 Volver al listado

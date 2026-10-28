@@ -24,7 +24,7 @@ const EVENT_ICON = {
   STAGE_CHANGE: IconArrowsExchange,
 }
 
-const EVENT_COLOR = { NOTE: 'gray', CALL: 'blue', VISIT: 'grape', OFFER: 'orange', STAGE_CHANGE: 'teal' }
+const EVENT_COLOR = { NOTE: 'gray', CALL: 'blue', VISIT: 'grape', OFFER: 'orange', STAGE_CHANGE: 'pine' }
 
 /**
  * Alta de un evento manual: nota, llamada o visita.
@@ -106,7 +106,7 @@ function NewEventForm({ lead, agents, onCreated }) {
           </Button>
         </Group>
         {status.state === 'error' && (
-          <Text size="sm" c="red">
+          <Text size="sm" c="danger">
             {status.message}
           </Text>
         )}

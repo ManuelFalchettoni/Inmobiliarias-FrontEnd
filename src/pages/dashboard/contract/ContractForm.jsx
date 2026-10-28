@@ -147,7 +147,7 @@ function ContractEditor({ contract }) {
       <Container size="md" py="xl">
         {status.state === 'error' && (
           <Alert
-            color="red"
+            color="danger"
             icon={<IconAlertTriangle />}
             title={isEdit ? 'No se pudieron guardar los cambios' : 'No se pudo crear el contrato'}
             mb="lg"
@@ -293,7 +293,7 @@ function ContractLoader({ id }) {
       <PageHeader contractId={id} />
       <Container size="md" py="xl">
         {result?.error ? (
-          <Alert color="red" icon={<IconAlertTriangle />} title="No se puede editar el contrato">
+          <Alert color="danger" icon={<IconAlertTriangle />} title="No se puede editar el contrato">
             {result.error}{' '}
             <Anchor component={Link} to={LIST_PATH} size="sm" fw={500}>
               Volver al listado

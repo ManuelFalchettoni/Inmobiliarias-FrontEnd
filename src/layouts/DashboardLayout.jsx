@@ -106,7 +106,7 @@ export default function DashboardLayout() {
             {/* El usuario que entró: lleva a Configuración. */}
             <UnstyledButton component={Link} to={SETTINGS_PATH} visibleFrom="lg" aria-label="Ir a la configuración de la cuenta">
               <Group gap="xs" wrap="nowrap">
-                <Avatar radius="xl" color={USER_ROL_COLOR[user.rol] ?? 'teal'} name={user.name} />
+                <Avatar radius="xl" color={USER_ROL_COLOR[user.rol] ?? 'pine'} name={user.name} />
                 <div>
                   <Text size="sm" fw={600} lh={1.2}>
                     {user.name}

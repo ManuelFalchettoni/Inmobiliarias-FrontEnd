@@ -14,6 +14,15 @@
   line-height: 1.5;
 }
 
+/*
+ * Mantine pinta los campos con error y algunos avisos con estas dos variables
+ * (rojo y teal de fábrica): se apuntan a los colores del tema (ver theme.js).
+ */
+:root[data-mantine-color-scheme='light'] {
+  --mantine-color-error: var(--mantine-color-danger-6);
+  --mantine-color-success: var(--mantine-color-success-7);
+}
+
 * {
   box-sizing: border-box;
 }

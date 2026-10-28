@@ -297,7 +297,7 @@ export default function PropertySheet() {
         )}
 
         {query.isError && (
-          <Alert color="red" icon={<IconAlertTriangle />} title="No se puede mostrar la propiedad">
+          <Alert color="danger" icon={<IconAlertTriangle />} title="No se puede mostrar la propiedad">
             {notFound
               ? `La propiedad #${id} no existe, está dada de baja o es de otra inmobiliaria.`
               : query.error.message}{' '}
