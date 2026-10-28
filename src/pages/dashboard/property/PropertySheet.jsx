@@ -1,47 +1,12 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import {
-  Alert,
-  Anchor,
-  AspectRatio,
-  Avatar,
-  Badge,
-  Box,
-  Button,
-  Card,
-  Center,
-  Container,
-  Divider,
-  Grid,
-  Group,
-  Image,
-  ScrollArea,
-  SimpleGrid,
-  Skeleton,
-  Stack,
-  Text,
-  ThemeIcon,
-  Title,
-  UnstyledButton,
-} from '@mantine/core'
+import { Alert, Anchor, Box, Button, Container, Image, ScrollArea, Skeleton, Stack, UnstyledButton } from '@mantine/core'
 import { Carousel } from '@mantine/carousel'
 import '@mantine/carousel/styles.css'
-import {
-  IconAlertTriangle,
-  IconArrowLeft,
-  IconBuildingEstate,
-  IconCalendar,
-  IconDoor,
-  IconExternalLink,
-  IconHomeCheck,
-  IconKey,
-  IconMail,
-  IconMapPin,
-  IconPhone,
-  IconRuler2,
-  IconStairs,
-  IconWorld,
-} from '@tabler/icons-react'
+// Archivo con eje de ancho: la versión angosta es la de la dirección y las
+// cifras. Se importa acá y no en main.jsx para que solo la descargue la ficha.
+import '@fontsource-variable/archivo/wdth.css'
+import { IconAlertTriangle, IconArrowLeft, IconMail, IconMapPin, IconPhone, IconWorld } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
 
 import { queryKeys } from '../../../queries/keys.js'
@@ -49,7 +14,6 @@ import { findAgency } from '../../../services/agencies.js'
 import { ApiError } from '../../../services/api.js'
 import {
   OPERATION_TYPE_LABEL,
-  PROPERTY_CONDITION_COLOR,
   PROPERTY_CONDITION_LABEL,
   PROPERTY_OCCUPANCY_LABEL,
   PROPERTY_TYPE_LABEL,
@@ -60,35 +24,8 @@ import {
   sortPhotos,
   sortPrices,
 } from '../../../services/properties.js'
-
-const GALLERY_HEIGHT = 460
-
-/** Degradé del encabezado, con el color de la marca (teal) hacia un azul profundo. */
-const HERO_BACKGROUND =
-  'linear-gradient(135deg, var(--mantine-color-teal-8) 0%, var(--mantine-color-teal-6) 45%, var(--mantine-color-cyan-8) 100%)'
-
-/** Círculo translúcido de adorno en el encabezado. */
-function Bubble({ size, top, left, right, opacity = 0.08 }) {
-  return (
-    <Box
-      pos="absolute"
-      top={top}
-      left={left}
-      right={right}
-      w={size}
-      h={size}
-      style={{ borderRadius: '50%', background: `rgba(255, 255, 255, ${opacity})`, pointerEvents: 'none' }}
-    />
-  )
-}
-
-/** "Juan Pérez" -> "JP"; "Zaguan" -> "ZA". */
-function initials(name) {
-  const words = String(name ?? '').trim().split(/\s+/).filter(Boolean)
-  if (words.length === 0) return '?'
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase()
-  return (words[0][0] + words[words.length - 1][0]).toUpperCase()
-}
+import PropertyMap from './PropertyMap.jsx'
+import classes from './PropertySheet.module.css'
 
 /**
  * Galería: la foto grande en un carrusel y las miniaturas abajo. Elegir una
@@ -98,352 +35,229 @@ function Gallery({ photos, property }) {
   const [embla, setEmbla] = useState(null)
   const [active, setActive] = useState(0)
 
-  // Sin fotos: un panel con el degradé de la marca y el tipo de propiedad, en
-  // lugar de un recuadro gris vacío.
   if (photos.length === 0) {
     return (
-      <Center
-        h={GALLERY_HEIGHT * 0.7}
-        style={{
-          borderRadius: 'var(--mantine-radius-lg)',
-          background:
-            'linear-gradient(135deg, var(--mantine-color-teal-0) 0%, var(--mantine-color-cyan-1) 100%)',
-        }}
-      >
-        <Stack align="center" gap="sm">
-          <ThemeIcon size={88} radius={44} variant="white" color="teal" style={{ boxShadow: 'var(--mantine-shadow-md)' }}>
-            <IconBuildingEstate size={46} stroke={1.4} />
-          </ThemeIcon>
-          <Text fw={600} c="teal.9">
-            {PROPERTY_TYPE_LABEL[property.type] ?? 'Propiedad'} en {property.city}
-          </Text>
-        </Stack>
-      </Center>
+      <div className={classes.gallery}>
+        <div className={classes.noPhotos}>{PROPERTY_TYPE_LABEL[property.type] ?? 'Propiedad'} sin fotos</div>
+      </div>
     )
   }
 
   return (
-    <Stack gap="sm">
+    <div className={classes.gallery}>
       <Box pos="relative">
         <Carousel
-          height={GALLERY_HEIGHT}
-          withIndicators={photos.length > 1}
+          height="var(--gallery-height)"
+          withIndicators={false}
           withControls={photos.length > 1}
           controlSize={40}
           emblaOptions={{ loop: true }}
           getEmblaApi={setEmbla}
           onSlideChange={setActive}
-          style={{ borderRadius: 'var(--mantine-radius-lg)', overflow: 'hidden' }}
+          className={classes.slides}
         >
           {photos.map((photo, index) => (
             <Carousel.Slide key={photo.id}>
-              <Image src={photo.url} alt={`${property.address}, foto ${index + 1}`} h={GALLERY_HEIGHT} fit="cover" />
+              <Image src={photo.url} alt={`${property.address}, foto ${index + 1}`} h="100%" fit="cover" />
             </Carousel.Slide>
           ))}
         </Carousel>
-        <Badge pos="absolute" top={16} right={16} size="lg" variant="filled" color="dark" style={{ opacity: 0.8 }}>
-          {active + 1} / {photos.length}
-        </Badge>
+        {photos.length > 1 && (
+          <span className={classes.counter}>
+            {active + 1} de {photos.length}
+          </span>
+        )}
       </Box>
 
       {photos.length > 1 && (
         <ScrollArea type="auto" offsetScrollbars>
-          <Group gap="xs" wrap="nowrap">
+          <div className={classes.thumbs}>
             {photos.map((photo, index) => (
               <UnstyledButton
                 key={photo.id}
+                className={classes.thumb}
+                data-active={index === active || undefined}
                 onClick={() => embla?.scrollTo(index)}
                 aria-label={`Ver la foto ${index + 1}`}
-                style={{
-                  borderRadius: 'var(--mantine-radius-md)',
-                  overflow: 'hidden',
-                  flex: '0 0 96px',
-                  outline: index === active ? '2px solid var(--mantine-primary-color-filled)' : 'none',
-                  outlineOffset: 2,
-                  opacity: index === active ? 1 : 0.6,
-                  transition: 'opacity 150ms',
-                }}
+                aria-current={index === active || undefined}
               >
-                <Image src={photo.url} alt="" h={64} w={96} fit="cover" />
+                <Image src={photo.url} alt="" h="100%" w="100%" fit="cover" />
               </UnstyledButton>
             ))}
-          </Group>
+          </div>
         </ScrollArea>
       )}
-    </Stack>
+    </div>
   )
 }
 
-/** Un dato en un mosaico de color: ícono, etiqueta y valor. */
-function Feature({ icon: Icon, label, value, color }) {
-  return (
-    <Box
-      p="md"
-      style={{
-        borderRadius: 'var(--mantine-radius-md)',
-        background: `var(--mantine-color-${color}-0)`,
-        border: `1px solid var(--mantine-color-${color}-1)`,
-      }}
-    >
-      <ThemeIcon variant="filled" color={color} size={38} radius="md" mb="sm">
-        <Icon size={20} stroke={1.8} />
-      </ThemeIcon>
-      <Text size="xs" c="dimmed" tt="uppercase" fw={700} lts={0.4}>
-        {label}
-      </Text>
-      <Text fw={700} size="lg" lh={1.3}>
-        {value}
-      </Text>
-    </Box>
-  )
+/** "Casa en venta", "Departamento en venta y alquiler"; sin precios, solo el tipo. */
+function describeKind(property, prices) {
+  const type = PROPERTY_TYPE_LABEL[property.type] ?? property.type
+  const operations = prices.map((price) => (OPERATION_TYPE_LABEL[price.operationType] ?? '').toLowerCase())
+  return operations.length > 0 ? `${type} en ${operations.join(' y ')}` : type
 }
 
-/** Título de sección con una barrita de color a la izquierda. */
-function SectionTitle({ children }) {
-  return (
-    <Group gap="sm" mb="lg">
-      <Box w={4} h={22} bg="teal.6" style={{ borderRadius: 2 }} />
-      <Title order={2} size="h3">
-        {children}
-      </Title>
-    </Group>
-  )
-}
+/**
+ * Ficha técnica con forma de rótulo de plano: cada dato en su celda y, al pie,
+ * la referencia para que el cliente la cite al consultar.
+ */
+function Rotulo({ property }) {
+  const floor = formatFloor(property.floorNumber)
 
-/** Mapa de OpenStreetMap embebido, con un pin en las coordenadas de la propiedad. */
-function LocationMap({ latitude, longitude }) {
-  const delta = 0.004
-  const bbox = [longitude - delta, latitude - delta, longitude + delta, latitude + delta].join(',')
-  const embed = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${latitude},${longitude}`
-  const link = `https://www.openstreetmap.org/?mlat=${latitude}&mlon=${longitude}#map=17/${latitude}/${longitude}`
+  // Los datos que no vienen (año, piso) no se muestran: mejor nada que un guion.
+  const cells = [
+    { label: 'Superficie', value: property.size, unit: 'm²' },
+    property.rooms > 0 && { label: 'Ambientes', value: property.rooms },
+    property.year && { label: 'Año de construcción', value: property.year },
+    floor && property.type !== 'LAND' && { label: 'Ubicación en el edificio', value: floor, text: true },
+    { label: 'Estado', value: PROPERTY_CONDITION_LABEL[property.condition] ?? property.condition, text: true },
+    { label: 'Ocupación', value: PROPERTY_OCCUPANCY_LABEL[property.occupancy] ?? property.occupancy, text: true },
+  ].filter(Boolean)
 
   return (
-    <>
-      <AspectRatio ratio={16 / 7} style={{ borderRadius: 'var(--mantine-radius-md)', overflow: 'hidden' }}>
-        <iframe title="Ubicación de la propiedad" src={embed} style={{ border: 0 }} loading="lazy" />
-      </AspectRatio>
-      <Button
-        component="a"
-        href={link}
-        target="_blank"
-        rel="noreferrer"
-        variant="light"
-        size="xs"
-        mt="sm"
-        rightSection={<IconExternalLink size={14} />}
-      >
-        Abrir en el mapa
-      </Button>
-    </>
+    <div className={classes.rotulo}>
+      <dl className={classes.rotuloGrid} style={{ margin: 0 }}>
+        {cells.map((cell) => (
+          <div key={cell.label} className={classes.cell}>
+            <dt className={classes.cellLabel}>{cell.label}</dt>
+            <dd className={classes.cellValue} data-text={cell.text || undefined} style={{ margin: 0 }}>
+              {cell.value}
+              {cell.unit && <span className={classes.cellUnit}>{cell.unit}</span>}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <div className={classes.rotuloFoot}>
+        <span>
+          Referencia <span className={classes.rotuloRef}>#{property.id}</span>
+        </span>
+      </div>
+    </div>
   )
 }
 
 /**
- * Precios de venta y alquiler, en grande. En la venta suma el valor por m²,
- * que sale del precio y la superficie. Sin precio: "Consultar".
+ * Precios en grande y, debajo, la inmobiliaria con botones para llamar o
+ * escribir. En la venta suma el valor por m². Sin precio: "Consultar".
  */
-function PriceCard({ prices, size }) {
-  const sorted = sortPrices(prices)
+function PriceBox({ prices, size, agency }) {
   return (
-    <Card radius="lg" padding={0} shadow="md" style={{ overflow: 'hidden' }}>
-      <Box h={6} style={{ background: HERO_BACKGROUND }} />
-      <Box p="xl">
-        {sorted.length === 0 ? (
-          <>
-            <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
-              Precio
-            </Text>
-            <Text fz={30} fw={800}>
-              Consultar
-            </Text>
-          </>
-        ) : (
-          <Stack gap="lg">
-            {sorted.map((price, index) => (
-              <div key={price.id}>
-                {index > 0 && <Divider mb="lg" variant="dashed" />}
-                <Badge variant="light" mb={6}>
-                  {OPERATION_TYPE_LABEL[price.operationType] ?? price.operationType}
-                </Badge>
-                <Text fz={32} fw={800} lh={1.15} c="teal.8">
-                  {formatPrice(price)}
-                </Text>
-                {price.operationType === 'SALE' && size > 0 && (
-                  <Text size="sm" c="dimmed" mt={2}>
-                    {formatPrice({ currency: price.currency, amount: Math.round(price.amount / size) })} por m²
-                  </Text>
-                )}
-              </div>
-            ))}
-          </Stack>
+    <div className={classes.priceBox}>
+      <div className={classes.prices}>
+        {prices.length === 0 && (
+          <div>
+            <span className={classes.priceOperation}>Precio</span>
+            <span className={classes.priceAmount}>Consultar</span>
+          </div>
         )}
-      </Box>
-    </Card>
-  )
-}
+        {prices.map((price) => {
+          // formatPrice da "USD 95.000": la moneda va aparte, más chica.
+          const [currency, amount] = formatPrice(price).split(' ')
+          return (
+            <div key={price.id}>
+              <span className={classes.priceOperation}>
+                {OPERATION_TYPE_LABEL[price.operationType] ?? price.operationType}
+              </span>
+              <span className={classes.priceAmount}>
+                <span className={classes.priceCurrency}>{currency}</span>
+                {amount}
+              </span>
+              {price.operationType === 'SALE' && size > 0 && (
+                <span className={classes.priceNote}>
+                  {formatPrice({ currency: price.currency, amount: Math.round(price.amount / size) })} por m²
+                </span>
+              )}
+              {price.operationType === 'RENT' && <span className={classes.priceNote}>por mes</span>}
+            </div>
+          )
+        })}
+      </div>
 
-/** La inmobiliaria que la publica, con botones para llamar o escribir. */
-function AgencyCard({ agency }) {
-  return (
-    <Card radius="lg" padding="xl" shadow="md">
-      <Group gap="md" wrap="nowrap" mb="lg">
-        <Avatar size={52} radius="xl" color="teal" variant="filled">
-          {initials(agency.publicName)}
-        </Avatar>
-        <div style={{ minWidth: 0 }}>
-          <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
-            Publica
-          </Text>
-          <Text fw={700} size="lg" truncate>
-            {agency.publicName}
-          </Text>
-        </div>
-      </Group>
-      <Stack gap="xs">
-        {agency.phoneNumber && (
-          <Button component="a" href={`tel:${agency.phoneNumber}`} leftSection={<IconPhone size={18} />} fullWidth>
-            {agency.phoneNumber}
-          </Button>
-        )}
-        {agency.email && (
-          <Button
-            component="a"
-            href={`mailto:${agency.email}`}
-            variant="light"
-            leftSection={<IconMail size={18} />}
-            fullWidth
-          >
-            Escribir por email
-          </Button>
-        )}
-        {agency.webURL && (
-          <Anchor href={agency.webURL} target="_blank" rel="noreferrer" size="sm" ta="center" mt={4}>
-            <Group gap={6} justify="center" wrap="nowrap">
+      {agency && (
+        <div className={classes.agency}>
+          <span className={classes.priceOperation}>Publica</span>
+          <p className={classes.agencyName}>{agency.publicName}</p>
+          <Stack gap="xs">
+            {agency.phoneNumber && (
+              <Button
+                component="a"
+                href={`tel:${agency.phoneNumber}`}
+                variant="white"
+                color="dark"
+                leftSection={<IconPhone size={18} />}
+                fullWidth
+              >
+                Llamar al {agency.phoneNumber}
+              </Button>
+            )}
+            {agency.email && (
+              <Button
+                component="a"
+                href={`mailto:${agency.email}`}
+                variant="outline"
+                color="gray.3"
+                leftSection={<IconMail size={18} />}
+                fullWidth
+              >
+                Escribir por email
+              </Button>
+            )}
+          </Stack>
+          {agency.webURL && (
+            <a href={agency.webURL} target="_blank" rel="noreferrer" className={classes.agencyWeb}>
               <IconWorld size={16} />
               {agency.webURL.replace(/^https?:\/\//, '')}
-            </Group>
-          </Anchor>
-        )}
-      </Stack>
-    </Card>
+            </a>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 
-/** Encabezado con degradé: tipo, estado, dirección y lugar. */
-function Hero({ property, onBack }) {
-  const place = formatPropertyPlace(property)
-  return (
-    <Box pos="relative" pb={90} style={{ background: HERO_BACKGROUND, overflow: 'hidden' }}>
-      <Bubble size={320} top={-120} right={-80} />
-      <Bubble size={180} top={60} right={260} opacity={0.05} />
-      <Bubble size={240} top={120} left={-100} opacity={0.06} />
-
-      <Container size="lg" pt="lg" pos="relative">
-        <Button
-          variant="white"
-          color="dark"
-          size="xs"
-          radius="xl"
-          leftSection={<IconArrowLeft size={16} />}
-          onClick={onBack}
-          style={{ background: 'rgba(255, 255, 255, 0.15)', color: 'white' }}
-        >
-          Volver
-        </Button>
-
-        <Group gap="xs" mt="xl" mb="sm">
-          <Badge size="lg" variant="white" color="teal">
-            {PROPERTY_TYPE_LABEL[property.type] ?? property.type}
-          </Badge>
-          <Badge size="lg" variant="filled" color={PROPERTY_CONDITION_COLOR[property.condition]}>
-            {PROPERTY_CONDITION_LABEL[property.condition] ?? property.condition}
-          </Badge>
-        </Group>
-        <Title order={1} c="white" fz={{ base: 30, sm: 42 }} lh={1.1}>
-          {property.address}
-        </Title>
-        {place && (
-          <Group gap={6} mt="sm" wrap="nowrap" c="white" style={{ opacity: 0.9 }}>
-            <IconMapPin size={20} />
-            <Text size="lg">{place}</Text>
-          </Group>
-        )}
-      </Container>
-    </Box>
-  )
-}
-
-function Sheet({ property, onBack }) {
+function Sheet({ property }) {
   const agency = useQuery({
     queryKey: queryKeys.agencies.detail(property.agencyId),
     queryFn: ({ signal }) => findAgency(property.agencyId, { signal }),
   }).data
 
   const photos = sortPhotos(property.photos)
-  const floor = formatFloor(property.floorNumber)
-  const hasMap = property.latitude != null && property.longitude != null
-
-  // Los datos que no vienen (año, piso) no se muestran: mejor nada que un guion.
-  const features = [
-    { icon: IconRuler2, label: 'Superficie', value: `${property.size} m²`, color: 'teal' },
-    property.rooms > 0 && { icon: IconDoor, label: 'Ambientes', value: property.rooms, color: 'blue' },
-    property.year && { icon: IconCalendar, label: 'Año', value: property.year, color: 'grape' },
-    floor && property.type !== 'LAND' && { icon: IconStairs, label: 'Ubicación', value: floor, color: 'orange' },
-    {
-      icon: IconHomeCheck,
-      label: 'Estado',
-      value: PROPERTY_CONDITION_LABEL[property.condition] ?? property.condition,
-      color: 'cyan',
-    },
-    {
-      icon: IconKey,
-      label: 'Ocupación',
-      value: PROPERTY_OCCUPANCY_LABEL[property.occupancy] ?? property.occupancy,
-      color: 'indigo',
-    },
-  ].filter(Boolean)
+  const prices = sortPrices(property.prices ?? [])
+  const place = formatPropertyPlace(property)
 
   return (
     <>
-      <Hero property={property} onBack={onBack} />
+      <Gallery photos={photos} property={property} />
 
-      {/* El margen negativo monta las fotos sobre el degradé del encabezado. */}
-      <Container size="lg" mt={-70} pos="relative" pb={60}>
-        <Card radius="lg" padding="sm" shadow="lg" mb="xl">
-          <Gallery photos={photos} property={property} />
-        </Card>
+      <div className={classes.layout}>
+        <header className={classes.head}>
+          <p className={classes.kind}>{describeKind(property, prices)}</p>
+          <h1 className={classes.address}>{property.address}</h1>
+          {place && (
+            <p className={classes.place}>
+              <IconMapPin size={20} stroke={1.6} />
+              {place}
+            </p>
+          )}
+        </header>
 
-        <Grid gutter="xl">
-          <Grid.Col span={{ base: 12, md: 8 }}>
-            <Stack gap="xl">
-              <Card radius="lg" padding="xl" shadow="sm">
-                <SectionTitle>Características</SectionTitle>
-                <SimpleGrid cols={{ base: 2, sm: 3 }} spacing="md">
-                  {features.map((feature) => (
-                    <Feature key={feature.label} {...feature} />
-                  ))}
-                </SimpleGrid>
-              </Card>
+        <aside className={classes.aside}>
+          <PriceBox prices={prices} size={property.size} agency={agency} />
+        </aside>
 
-              {hasMap && (
-                <Card radius="lg" padding="xl" shadow="sm">
-                  <SectionTitle>Ubicación</SectionTitle>
-                  <LocationMap latitude={property.latitude} longitude={property.longitude} />
-                </Card>
-              )}
-            </Stack>
-          </Grid.Col>
+        <div className={classes.body}>
+          <section>
+            <h2 className={classes.sectionTitle}>Ficha técnica</h2>
+            <Rotulo property={property} />
+          </section>
 
-          <Grid.Col span={{ base: 12, md: 4 }}>
-            <Box pos={{ md: 'sticky' }} top={24}>
-              <Stack gap="lg">
-                <PriceCard prices={property.prices ?? []} size={property.size} />
-                {agency && <AgencyCard agency={agency} />}
-              </Stack>
-            </Box>
-          </Grid.Col>
-        </Grid>
-      </Container>
+          <section>
+            <h2 className={classes.sectionTitle}>Ubicación</h2>
+            <PropertyMap latitude={property.latitude} longitude={property.longitude} place={place} />
+          </section>
+        </div>
+      </div>
     </>
   )
 }
@@ -467,35 +281,35 @@ export default function PropertySheet() {
   const notFound = query.error instanceof ApiError && query.error.status === 404
 
   return (
-    <Box bg="gray.0" mih="100vh">
-      {query.data && <Sheet property={query.data} onBack={goBack} />}
-
-      {!query.data && (
-        <Container size="lg" py="lg">
-          <Button variant="subtle" color="gray" leftSection={<IconArrowLeft size={18} />} onClick={goBack} mb="lg">
+    <div className={classes.page}>
+      <Container size="lg">
+        <div className={classes.topBar}>
+          <Button variant="subtle" color="dark" leftSection={<IconArrowLeft size={18} />} onClick={goBack}>
             Volver
           </Button>
+        </div>
 
-          {query.isPending && (
-            <Stack gap="xl">
-              <Skeleton height={GALLERY_HEIGHT} radius="lg" />
-              <Skeleton height={40} width="60%" />
-              <Skeleton height={140} radius="lg" />
-            </Stack>
-          )}
+        {query.data && <Sheet property={query.data} />}
 
-          {query.isError && (
-            <Alert color="red" icon={<IconAlertTriangle />} title="No se puede mostrar la propiedad">
-              {notFound
-                ? `La propiedad #${id} no existe, está dada de baja o es de otra inmobiliaria.`
-                : query.error.message}{' '}
-              <Anchor component={Link} to="/dashboard/propiedades" size="sm" fw={500}>
-                Ir al listado
-              </Anchor>
-            </Alert>
-          )}
-        </Container>
-      )}
-    </Box>
+        {query.isPending && (
+          <Stack gap="xl">
+            <Skeleton height={480} radius={6} />
+            <Skeleton height={64} width="60%" />
+            <Skeleton height={180} radius={6} />
+          </Stack>
+        )}
+
+        {query.isError && (
+          <Alert color="red" icon={<IconAlertTriangle />} title="No se puede mostrar la propiedad">
+            {notFound
+              ? `La propiedad #${id} no existe, está dada de baja o es de otra inmobiliaria.`
+              : query.error.message}{' '}
+            <Anchor component={Link} to="/dashboard/propiedades" size="sm" fw={500}>
+              Ir al listado
+            </Anchor>
+          </Alert>
+        )}
+      </Container>
+    </div>
   )
 }

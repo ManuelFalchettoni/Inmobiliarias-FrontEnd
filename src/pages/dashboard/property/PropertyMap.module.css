@@ -1,0 +1,108 @@
+/*
+ * Lienzo del mapa. Toma los colores de la ficha (variables --sheet-*) y, si se
+ * usa en otra pantalla, cae en los valores de respaldo.
+ */
+.frame {
+  position: relative;
+  aspect-ratio: 16 / 7;
+  border: 1.5px solid var(--sheet-ink, #17262a);
+  border-radius: 6px;
+  overflow: hidden;
+  background-color: var(--sheet-raised, #f8faf9);
+
+  @media (max-width: $mantine-breakpoint-sm) {
+    aspect-ratio: 4 / 3;
+  }
+}
+
+/* Papel cuadriculado de agrimensura: una trama fina cada 16 px y una más marcada cada 80 px. */
+.grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--sheet-line-strong, #b3c0bc) 1px, transparent 1px),
+    linear-gradient(90deg, var(--sheet-line-strong, #b3c0bc) 1px, transparent 1px),
+    linear-gradient(var(--sheet-line, #dde4e1) 1px, transparent 1px),
+    linear-gradient(90deg, var(--sheet-line, #dde4e1) 1px, transparent 1px);
+  background-size: 80px 80px, 80px 80px, 16px 16px, 16px 16px;
+  background-position: center;
+}
+
+/* Cruz de referencia que pasa por el punto, como en un plano de mensura. */
+.crosshair::before,
+.crosshair::after {
+  content: '';
+  position: absolute;
+  background: var(--sheet-pine, #0f5c55);
+  opacity: 0.35;
+}
+
+.crosshair::before {
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+}
+
+.crosshair::after {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+}
+
+.pin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -100%);
+  color: var(--sheet-brass, #b07d33);
+  filter: drop-shadow(0 2px 2px rgba(23, 38, 42, 0.25));
+}
+
+/* Círculo en la base del pin: marca el punto exacto sobre la cruz. */
+.pinDot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--sheet-brass, #b07d33);
+  box-shadow: 0 0 0 4px rgba(176, 125, 51, 0.22);
+}
+
+.coords {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: var(--sheet-ink, #17262a);
+  color: var(--sheet-paper, #eef1ef);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.open {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+}
+
+.empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 4px;
+  padding: 24px;
+  text-align: center;
+  color: var(--sheet-muted, #5b6b69);
+}
+
+.emptyPlace {
+  font-weight: 600;
+  color: var(--sheet-ink, #17262a);
+}
