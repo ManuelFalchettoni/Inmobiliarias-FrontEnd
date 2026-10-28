@@ -14,8 +14,10 @@ import {
 import { formatDate } from '../../../services/format.js'
 import { CURRENCY_OPTIONS, formatPrice } from '../../../services/properties.js'
 import ConfirmAction from '../../../components/ConfirmAction.jsx'
+import { useAuth } from '../../../context/auth-context.js'
 
 function NewOfferForm({ lead, onSaved }) {
+  const { user } = useAuth()
   const [currency, setCurrency] = useState('USD')
   const [amount, setAmount] = useState('')
   const [status, setStatus] = useState({ state: 'idle' })
@@ -33,7 +35,7 @@ function NewOfferForm({ lead, onSaved }) {
     setStatus({ state: 'saving' })
     try {
       // Flujo completo: crea la oferta, deja el evento y adelanta la etapa (crm.js).
-      const result = await registerOffer(lead, { amount: value, currency, status: 'PENDING' })
+      const result = await registerOffer(lead, { amount: value, currency, status: 'PENDING' }, user.id)
       setAmount('')
       setStatus({ state: 'idle' })
       onSaved(result.lead)
@@ -83,9 +85,10 @@ function NewOfferForm({ lead, onSaved }) {
 
 /**
  * Ofertas del lead, las más nuevas primero. Cargar una la deja pendiente y
- * pasa el lead a negociación; aceptarla lo da por ganado.
+ * pasa el lead a negociación; aceptarla lo da por cerrado.
  */
 export default function LeadOffers({ lead, offers, onChanged }) {
+  const { user } = useAuth()
   // Id de la oferta en proceso (para atenuarla y bloquear los botones).
   const [busyId, setBusyId] = useState(null)
   const [error, setError] = useState(null)
@@ -145,7 +148,7 @@ export default function LeadOffers({ lead, offers, onChanged }) {
                   color="teal"
                   leftSection={<IconCheck size={14} />}
                   disabled={busyId != null}
-                  onClick={() => run(offer, async () => (await acceptOffer(lead, offer)).lead)}
+                  onClick={() => run(offer, async () => (await acceptOffer(lead, offer, user.id)).lead)}
                 >
                   Aceptar
                 </Button>

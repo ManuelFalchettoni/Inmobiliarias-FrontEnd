@@ -30,11 +30,13 @@ import {
   IconUser,
 } from '@tabler/icons-react'
 
+import { useAuth } from '../../../context/auth-context.js'
 import { useLookup } from '../../../hooks/useLookup.js'
 import { useUserOptions } from '../../../hooks/useSelectOptions.js'
 import { leadChildKey, queryKeys } from '../../../queries/keys.js'
 import { ApiError } from '../../../services/api.js'
 import {
+  ALERT_STATUS,
   CRM_STAGE_COLOR,
   CRM_STAGE_LABEL,
   CRM_STAGE_OPTIONS,
@@ -131,6 +133,7 @@ function useLeadData(id) {
 export default function LeadDetail() {
   const { id } = useParams()
   const location = useLocation()
+  const { user } = useAuth()
   const { data, reload } = useLeadData(id)
   const [created, setCreated] = useState(Boolean(location.state?.created))
   const [action, setAction] = useState({ state: 'idle' })
@@ -178,7 +181,7 @@ export default function LeadDetail() {
   // El selector de etapas: PUT del lead + evento en el historial (ver crm.js).
   const changeStage = (stage) => {
     if (stage === lead.stage) return
-    runLeadAction(() => changeLeadStage(lead, stage))
+    runLeadAction(() => changeLeadStage(lead, stage, user.id))
   }
 
   // Reasignar el agente: actualiza el lead y deja una nota con el cambio.
@@ -188,7 +191,7 @@ export default function LeadDetail() {
     runLeadAction(async () => {
       await updateLead(lead.id, leadToRequest(lead, { userId: Number(value) }))
       await createHistoryEvent(lead.id, {
-        userId: Number(value),
+        userId: user.id,
         type: 'NOTE',
         comments: `Lead reasignado de ${agent?.name ?? `#${lead.userId}`} a ${label.split(' · ')[0]}`,
       })
@@ -196,7 +199,7 @@ export default function LeadDetail() {
   }
 
   const busy = action.state === 'saving'
-  const pendingAlerts = data.alerts.filter((alert) => !alert.isRead).length
+  const pendingAlerts = data.alerts.filter((alert) => alert.status === ALERT_STATUS.PENDING).length
 
   return (
     <>
@@ -263,11 +266,11 @@ export default function LeadDetail() {
             Etapa
           </Text>
           <ScrollArea type="auto" offsetScrollbars>
-            {/* Las 6 etapas como botones contiguos; el seleccionado es la etapa actual.
+            {/* Las 7 etapas como botones contiguos; el seleccionado es la etapa actual.
                 ScrollArea permite deslizarlos de costado en pantallas chicas. */}
             <SegmentedControl
               fullWidth
-              miw={560}
+              miw={760}
               value={lead.stage}
               onChange={changeStage}
               disabled={busy}
@@ -277,7 +280,7 @@ export default function LeadDetail() {
           </ScrollArea>
           <Text size="xs" c="dimmed" mt="xs">
             Cada cambio queda en el historial. Cargar una oferta pasa el lead a negociación y
-            aceptarla lo da por ganado.
+            aceptarla lo da por cerrado.
           </Text>
         </Card>
 
@@ -286,7 +289,7 @@ export default function LeadDetail() {
             <SectionCard icon={IconHistory} title="Historial">
               {/* Cada sección recibe `reload`: después de un cambio se vuelve a
                   pedir todo, así se ven juntos la oferta, la etapa y el evento nuevos. */}
-              <LeadTimeline lead={lead} history={data.history} onChanged={reload} />
+              <LeadTimeline lead={lead} history={data.history} agents={agents} onChanged={reload} />
             </SectionCard>
           </Grid.Col>
 

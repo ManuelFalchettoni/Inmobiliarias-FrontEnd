@@ -21,7 +21,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../context/auth-context.js'
 import { useNow } from '../hooks/useNow.js'
 import { queryKeys } from '../queries/keys.js'
-import { alertToRequest, listUpcomingAlerts, updateAlert } from '../services/crm.js'
+import { completeAlert, listUpcomingAlerts } from '../services/crm.js'
 import { formatDateTime, formatTimeLeft } from '../services/format.js'
 import { USER_ROL } from '../services/users.js'
 
@@ -49,17 +49,17 @@ export default function AlertBell() {
     refetchInterval: REFRESH_MS,
   })
 
-  // Marcar como cumplido: el mismo PUT que usa el detalle del lead. Al terminar
-  // se invalida todo lo de leads: la campanita, la agenda y el detalle.
+  // Marcar como cumplido: el mismo PATCH .../complete que usa el detalle del
+  // lead. Al terminar se invalida todo lo de leads: la campanita, la agenda y el detalle.
   const markRead = useMutation({
-    mutationFn: (alert) =>
-      updateAlert(alert.crmPropertyId, alert.id, alertToRequest(alert, { isRead: true })),
+    mutationFn: (alert) => completeAlert(alert.crmPropertyId, alert.id),
     onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.leads.all }),
   })
 
   const alerts = query.data ?? []
   const count = alerts.length
-  const overdue = alerts.filter((alert) => new Date(alert.alertDate).getTime() <= now).length
+  // `expired` lo calcula el backend; la campanita se refresca cada minuto.
+  const overdue = alerts.filter((alert) => alert.expired).length
 
   return (
     <Popover opened={opened} onChange={(next) => (next ? null : close())} width={380} position="bottom-end" shadow="md" radius="md">
@@ -126,8 +126,10 @@ export default function AlertBell() {
                       <Text size="sm" lineClamp={2}>
                         {alert.message}
                       </Text>
-                      <Text size="xs" c={left <= 0 ? 'red' : 'dimmed'}>
-                        {formatDateTime(alert.alertDate)} · {left <= 0 ? 'vencido' : `en ${formatTimeLeft(left)}`}
+                      <Text size="xs" c={alert.expired ? 'red' : 'dimmed'}>
+                        {formatDateTime(alert.alertDate)} ·{' '}
+                        {/* Entre dos refrescos puede pasar la hora sin que el backend lo marque todavía. */}
+                        {alert.expired ? 'vencido' : left > 0 ? `en ${formatTimeLeft(left)}` : 'vence ahora'}
                       </Text>
                     </UnstyledButton>
                     <Tooltip label="Marcar como cumplido" withArrow>

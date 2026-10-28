@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { ActionIcon, Badge, Button, Checkbox, Group, Paper, Select, Stack, Text, TextInput, Textarea } from '@mantine/core'
-import { IconTrash } from '@tabler/icons-react'
+import { ActionIcon, Badge, Button, Group, Paper, Select, Stack, Text, TextInput, Textarea, Tooltip } from '@mantine/core'
+import { IconCircleCheck, IconTrash } from '@tabler/icons-react'
 
 import { useLookup } from '../../../hooks/useLookup.js'
-import { alertToRequest, createAlert, deleteAlert, updateAlert } from '../../../services/crm.js'
+import { ALERT_STATUS, completeAlert, createAlert, deleteAlert } from '../../../services/crm.js'
 import { formatDateTime, toLocalDateTime } from '../../../services/format.js'
 import { findUser } from '../../../services/users.js'
 import ConfirmAction from '../../../components/ConfirmAction.jsx'
@@ -29,9 +29,8 @@ function NewAlertForm({ lead, agents, onSaved }) {
         userId: Number(userId),
         message: message.trim(),
         // El backend espera "yyyy-MM-ddTHH:mm:ss": se le agregan los segundos.
+        // Sin estado: el backend la crea siempre en `PENDING`.
         alertDate: toLocalDateTime(alertDate),
-        // Un recordatorio nuevo siempre arranca sin cumplir.
-        isRead: false,
       })
       setMessage('')
       setAlertDate('')
@@ -84,15 +83,13 @@ function NewAlertForm({ lead, agents, onSaved }) {
 }
 
 /**
- * Recordatorios del lead, la fecha más próxima primero. Una alerta vencida y
- * sin leer se marca en rojo.
+ * Recordatorios del lead, la fecha más próxima primero. Una alerta vencida
+ * (`expired`, lo calcula el backend) se marca en rojo; una cumplida, tachada.
  */
 export default function LeadAlerts({ lead, alerts, agents, onChanged }) {
   const [busyId, setBusyId] = useState(null)
   const [error, setError] = useState(null)
   const users = useLookup('users', alerts.map((alert) => alert.userId), findUser)
-  // Una sola lectura del reloj por render: alcanza para marcar las vencidas.
-  const [now] = useState(() => Date.now())
 
   const run = async (alert, action) => {
     setBusyId(alert.id)
@@ -124,9 +121,9 @@ export default function LeadAlerts({ lead, alerts, agents, onChanged }) {
       )}
 
       {alerts.map((alert) => {
-        // Vencida: sin cumplir y con la fecha ya pasada. getTime() da los
-        // milisegundos desde 1970, así se comparan dos fechas como números.
-        const overdue = !alert.isRead && new Date(alert.alertDate).getTime() < now
+        const done = alert.status === ALERT_STATUS.DONE
+        // Vencida: pendiente y con la fecha ya pasada. Lo decide el backend.
+        const overdue = alert.expired
 
         return (
           <Paper
@@ -134,27 +131,33 @@ export default function LeadAlerts({ lead, alerts, agents, onChanged }) {
             withBorder
             radius="md"
             p="sm"
-            bg={alert.isRead ? 'gray.0' : undefined}
+            bg={done ? 'gray.0' : undefined}
             style={{
               opacity: busyId === alert.id ? 0.6 : 1,
               borderColor: overdue ? 'var(--mantine-color-red-4)' : undefined,
             }}
           >
             <Group justify="space-between" align="flex-start" wrap="nowrap" gap="xs">
-              <Checkbox
-                checked={alert.isRead}
-                disabled={busyId != null}
-                aria-label={alert.isRead ? 'Marcar como pendiente' : 'Marcar como cumplida'}
-                // Tildar o destildar: PUT de la alerta con solo `isRead` cambiado.
-                // `{ isRead }` es la forma corta de `{ isRead: isRead }`.
-                onChange={(event) => {
-                  const isRead = event.currentTarget.checked
-                  run(alert, () => updateAlert(lead.id, alert.id, alertToRequest(alert, { isRead })))
-                }}
-                mt={2}
-              />
+              {/* Completar es de una sola vía: una alerta `DONE` no vuelve a `PENDING`. */}
+              <Tooltip label={done ? 'Cumplida' : 'Completar'} withArrow>
+                <ActionIcon
+                  variant={done ? 'filled' : 'light'}
+                  color="teal"
+                  radius="xl"
+                  disabled={done || busyId != null}
+                  aria-label={done ? 'Recordatorio cumplido' : 'Completar recordatorio'}
+                  onClick={() => run(alert, () => completeAlert(lead.id, alert.id))}
+                >
+                  <IconCircleCheck size={18} />
+                </ActionIcon>
+              </Tooltip>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <Text size="sm" td={alert.isRead ? 'line-through' : undefined} style={{ whiteSpace: 'pre-wrap' }}>
+                <Text
+                  size="sm"
+                  td={done ? 'line-through' : undefined}
+                  c={done ? 'dimmed' : undefined}
+                  style={{ whiteSpace: 'pre-wrap' }}
+                >
                   {alert.message}
                 </Text>
                 <Group gap={6} mt={4}>

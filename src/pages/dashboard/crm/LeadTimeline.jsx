@@ -8,10 +8,11 @@ import {
   IconPhone,
 } from '@tabler/icons-react'
 
+import { useAuth } from '../../../context/auth-context.js'
 import { useLookup } from '../../../hooks/useLookup.js'
 import { CRM_EVENT_LABEL, MANUAL_EVENT_OPTIONS, createHistoryEvent } from '../../../services/crm.js'
 import { formatDateTime } from '../../../services/format.js'
-import { findUser } from '../../../services/users.js'
+import { USER_ROL, findUser } from '../../../services/users.js'
 
 // Ícono y color de cada tipo de evento. Guardar componentes en un objeto
 // permite elegir cuál dibujar según un dato: `const Icon = EVENT_ICON[type]`.
@@ -25,20 +26,39 @@ const EVENT_ICON = {
 
 const EVENT_COLOR = { NOTE: 'gray', CALL: 'blue', VISIT: 'grape', OFFER: 'orange', STAGE_CHANGE: 'teal' }
 
-/** Alta de un evento manual: nota, llamada o visita. */
-function NewEventForm({ lead, onCreated }) {
+/**
+ * Alta de un evento manual: nota, llamada o visita.
+ *
+ * A nombre de quién queda depende del rol: un agente solo puede firmar como sí
+ * mismo (el Select va bloqueado); la inmobiliaria y el admin eligen entre los
+ * usuarios. En los dos casos arranca elegido el usuario logueado.
+ */
+function NewEventForm({ lead, agents, onCreated }) {
+  const { user } = useAuth()
+  const canChooseUser = user.rol !== USER_ROL.AGENT
   const [type, setType] = useState('CALL')
+  const [userId, setUserId] = useState(String(user.id))
   const [comments, setComments] = useState('')
   const [status, setStatus] = useState({ state: 'idle' })
+
+  // El logueado tiene que estar siempre entre las opciones, aunque el listado
+  // no lo traiga (un agente no ve a los demás, o quedó fuera del tope de 100).
+  const ownOption = { value: String(user.id), label: `${user.name} (vos)` }
+  const userOptions = canChooseUser
+    ? [ownOption, ...agents.options.filter((option) => option.value !== ownOption.value)]
+    : [ownOption]
 
   const submit = async (event) => {
     // Evita que el <form> recargue la página al enviarse.
     event.preventDefault()
     setStatus({ state: 'saving' })
     try {
-      // Sin login todavía, el evento lo firma el agente asignado al lead.
-      await createHistoryEvent(lead.id, { userId: lead.userId, type, comments: comments.trim() || null })
+      // Un agente firma siempre como sí mismo, aunque el estado diga otra cosa.
+      const author = canChooseUser ? Number(userId) : user.id
+      await createHistoryEvent(lead.id, { userId: author, type, comments: comments.trim() || null })
       setComments('')
+      // El próximo evento vuelve a arrancar a nombre del logueado.
+      setUserId(String(user.id))
       setStatus({ state: 'idle' })
       onCreated()
     } catch (error) {
@@ -58,6 +78,19 @@ function NewEventForm({ lead, onCreated }) {
             allowDeselect={false}
             w={150}
           />
+          <Select
+            label="A nombre de"
+            data={userOptions}
+            value={canChooseUser ? userId : ownOption.value}
+            onChange={(value) => value && setUserId(value)}
+            disabled={!canChooseUser}
+            searchable
+            allowDeselect={false}
+            nothingFoundMessage="Sin coincidencias"
+            style={{ flex: 1 }}
+          />
+        </Group>
+        <Group align="flex-end" gap="sm" wrap="nowrap">
           <Textarea
             label="Comentario"
             placeholder="Quiere visitar el sábado"
@@ -83,12 +116,12 @@ function NewEventForm({ lead, onCreated }) {
 }
 
 /** Línea de tiempo del lead, lo más nuevo arriba. Los eventos no se editan. */
-export default function LeadTimeline({ lead, history, onChanged }) {
+export default function LeadTimeline({ lead, history, agents, onChanged }) {
   const users = useLookup('users', history.map((event) => event.userId), findUser)
 
   return (
     <Stack gap="lg">
-      <NewEventForm lead={lead} onCreated={onChanged} />
+      <NewEventForm lead={lead} agents={agents} onCreated={onChanged} />
 
       {history.length === 0 ? (
         <Text size="sm" c="dimmed">

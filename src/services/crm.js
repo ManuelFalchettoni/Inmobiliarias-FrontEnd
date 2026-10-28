@@ -4,9 +4,9 @@
  * alertas cuelgan del lead en la URL.
  *
  * Replica los `Crm*Request` / `Crm*Response`, `OfferRequest` / `OfferResponse`
- * y los enums `CrmStage`, `CrmEventType` y `OfferStatus` del backend.
+ * y los enums `CrmStage`, `CrmEventType`, `CrmAlertStatus` y `OfferStatus` del backend.
  */
-import { del, get, pageQuery, post, put } from './api.js'
+import { del, get, pageQuery, patch, post, put } from './api.js'
 import { formatPrice } from './properties.js'
 
 export const LEADS_ENDPOINT = '/api/crm_properties'
@@ -20,10 +20,11 @@ const toLabelMap = (options) => Object.fromEntries(options.map((o) => [o.value, 
 export const CRM_STAGE_OPTIONS = [
   { value: 'NEW', label: 'Nuevo' },
   { value: 'CONTACTED', label: 'Contactado' },
-  { value: 'VISIT', label: 'Visita' },
-  { value: 'NEGOTIATION', label: 'Negociación' },
-  { value: 'WON', label: 'Ganado' },
-  { value: 'LOST', label: 'Perdido' },
+  { value: 'VISIT_SCHEDULED', label: 'Visita agendada' },
+  { value: 'VISITED', label: 'Visitado' },
+  { value: 'NEGOTIATING', label: 'En negociación' },
+  { value: 'CLOSED', label: 'Cerrado' },
+  { value: 'DISCARDED', label: 'Descartado' },
 ]
 
 export const CRM_STAGE_LABEL = toLabelMap(CRM_STAGE_OPTIONS)
@@ -31,14 +32,15 @@ export const CRM_STAGE_LABEL = toLabelMap(CRM_STAGE_OPTIONS)
 export const CRM_STAGE_COLOR = {
   NEW: 'blue',
   CONTACTED: 'cyan',
-  VISIT: 'grape',
-  NEGOTIATION: 'orange',
-  WON: 'teal',
-  LOST: 'gray',
+  VISIT_SCHEDULED: 'violet',
+  VISITED: 'grape',
+  NEGOTIATING: 'orange',
+  CLOSED: 'teal',
+  DISCARDED: 'gray',
 }
 
 /** Etapas en las que el lead ya no avanza. */
-export const CLOSED_STAGES = ['WON', 'LOST']
+export const CLOSED_STAGES = ['CLOSED', 'DISCARDED']
 
 /** Refleja `CrmEventType`. */
 export const CRM_EVENT_OPTIONS = [
@@ -113,7 +115,7 @@ export async function listAllLeads({ userId } = {}, options) {
 /** POST -> 201. 404 si la propiedad, la persona o el agente no existen o están de baja. */
 export const createLead = (request, options) => post(LEADS_ENDPOINT, request, options)
 
-/** No hay DELETE: un lead que no avanza pasa a `LOST`. */
+/** No hay DELETE: un lead que no avanza pasa a `DISCARDED`. */
 export const updateLead = (id, request, options) => put(`${LEADS_ENDPOINT}/${id}`, request, options)
 
 // -------------------------------------------- Ofertas, historial y alertas
@@ -150,19 +152,32 @@ export const createAlert = (leadId, request, options) => post(nested(leadId, 'al
 export const updateAlert = (leadId, alertId, request, options) =>
   put(`${nested(leadId, 'alerts')}/${alertId}`, request, options)
 export const deleteAlert = (leadId, alertId, options) => del(`${nested(leadId, 'alerts')}/${alertId}`, options)
+/**
+ * PATCH sin body -> la alerta en `DONE`. No hay vuelta atrás: una alerta
+ * cumplida no vuelve a `PENDING`.
+ */
+export const completeAlert = (leadId, alertId, options) =>
+  patch(`${nested(leadId, 'alerts')}/${alertId}/complete`, undefined, options)
+
+/** Refleja `CrmAlertStatus`. Una alerta nace `PENDING`. */
+export const ALERT_STATUS = { PENDING: 'PENDING', DONE: 'DONE' }
 
 /**
- * Avisos que todavía faltan: sin cumplir (`isRead = false`) y con fecha
- * posterior a `now`, el más próximo primero. Los vencidos quedan afuera.
+ * Avisos que todavía faltan: pendientes y sin vencer, el más próximo primero.
+ * `expired` lo calcula el backend; la comparación con `now` cubre los que
+ * vencieron después de traerlos.
  */
 export function upcomingAlerts(alerts, now) {
   return (alerts ?? [])
-    .filter((alert) => !alert.isRead && new Date(alert.alertDate).getTime() > now)
+    .filter(
+      (alert) =>
+        alert.status === ALERT_STATUS.PENDING && !alert.expired && new Date(alert.alertDate).getTime() > now,
+    )
     .sort((a, b) => new Date(a.alertDate) - new Date(b.alertDate))
 }
 
 /**
- * GET /api/crm_alerts/upcoming -> las alertas sin leer de todos los leads de la
+ * GET /api/crm_alerts/upcoming -> las alertas `PENDING` de todos los leads de la
  * inmobiliaria, la más próxima primero, vencidas incluidas. Un array sin paginar.
  * `days`: solo las que vencen dentro de esos días. `userId`: las de un agente.
  */
@@ -174,11 +189,11 @@ export function listUpcomingAlerts({ days, userId } = {}, options) {
   return get(`/api/crm_alerts/upcoming${query ? `?${query}` : ''}`, options)
 }
 
+/** `{ userId, message, alertDate }`: el estado no va en el body, se cambia con `completeAlert`. */
 export const alertToRequest = (alert, changes = {}) => ({
   userId: alert.userId,
   message: alert.message,
   alertDate: alert.alertDate,
-  isRead: alert.isRead,
   ...changes,
 })
 
@@ -191,15 +206,15 @@ export const alertToRequest = (alert, changes = {}) => ({
 
 /**
  * Cambia la etapa y deja el evento `STAGE_CHANGE` en el historial, como pide
- * el caso de uso del backend. El evento lo firma el agente del lead: todavía no
- * hay login para saber quién está operando.
+ * el caso de uso del backend. El evento lo firma `actorId`, el usuario logueado
+ * (si no viene, el agente del lead).
  */
-export async function changeLeadStage(lead, stage, options) {
+export async function changeLeadStage(lead, stage, actorId = lead.userId, options) {
   const updated = await updateLead(lead.id, leadToRequest(lead, { stage }), options)
   await createHistoryEvent(
     lead.id,
     {
-      userId: lead.userId,
+      userId: actorId,
       type: 'STAGE_CHANGE',
       // Queda en el historial como "Contactado → Negociación".
       comments: `${CRM_STAGE_LABEL[lead.stage] ?? lead.stage} → ${CRM_STAGE_LABEL[stage] ?? stage}`,
@@ -210,31 +225,31 @@ export async function changeLeadStage(lead, stage, options) {
 }
 
 /** Etapas anteriores a la negociación: una oferta nueva las adelanta. */
-const BEFORE_NEGOTIATION = ['NEW', 'CONTACTED', 'VISIT']
+const BEFORE_NEGOTIATION = ['NEW', 'CONTACTED', 'VISIT_SCHEDULED', 'VISITED']
 
 /**
- * Carga una oferta, su evento `OFFER` y adelanta el lead a `NEGOTIATION` si
+ * Carga una oferta, su evento `OFFER` y adelanta el lead a `NEGOTIATING` si
  * todavía no llegó. Devuelve la oferta y el lead como quedaron.
  */
-export async function registerOffer(lead, request, options) {
+export async function registerOffer(lead, request, actorId = lead.userId, options) {
   const offer = await createOffer(lead.id, request, options)
   await createHistoryEvent(
     lead.id,
-    { userId: lead.userId, type: 'OFFER', comments: `Oferta de ${formatPrice(offer)}` },
+    { userId: actorId, type: 'OFFER', comments: `Oferta de ${formatPrice(offer)}` },
     options,
   )
   // Si el lead ya estaba en negociación (o más adelante), no se toca la etapa.
   const updatedLead = BEFORE_NEGOTIATION.includes(lead.stage)
-    ? await changeLeadStage(lead, 'NEGOTIATION', options)
+    ? await changeLeadStage(lead, 'NEGOTIATING', actorId, options)
     : lead
   // Devuelve las dos cosas en un objeto: la pantalla usa el lead actualizado.
   return { offer, lead: updatedLead }
 }
 
-/** Acepta la oferta y da el lead por ganado. */
-export async function acceptOffer(lead, offer, options) {
+/** Acepta la oferta y da el lead por cerrado. */
+export async function acceptOffer(lead, offer, actorId = lead.userId, options) {
   const updatedOffer = await updateOffer(lead.id, offer.id, offerToRequest(offer, { status: 'ACCEPTED' }), options)
-  const updatedLead = lead.stage === 'WON' ? lead : await changeLeadStage(lead, 'WON', options)
+  const updatedLead = lead.stage === 'CLOSED' ? lead : await changeLeadStage(lead, 'CLOSED', actorId, options)
   return { offer: updatedOffer, lead: updatedLead }
 }
 

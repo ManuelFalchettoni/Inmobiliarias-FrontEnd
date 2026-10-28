@@ -67,7 +67,7 @@ function urgencyColor(ms) {
  * arma acá. Las claves de caché son las mismas que usa el detalle del lead, así
  * que lo que se cambia allá se ve acá y viceversa.
  *
- * Solo cuentan los avisos que faltan: sin cumplir y con fecha futura.
+ * Solo cuentan los avisos que faltan: pendientes y sin vencer.
  */
 export default function AlertAgenda() {
   const navigate = useNavigate()
