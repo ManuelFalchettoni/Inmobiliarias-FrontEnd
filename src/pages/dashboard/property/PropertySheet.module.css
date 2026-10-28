@@ -4,15 +4,15 @@
  * de un plano de arquitectura.
  */
 .page {
-  --sheet-paper: #eef1ef;
-  --sheet-raised: #f8faf9;
-  --sheet-ink: #17262a;
-  --sheet-pine: #0f5c55;
-  --sheet-brass: #b07d33;
-  --sheet-line: #dde4e1;
-  --sheet-line-strong: #b3c0bc;
-  --sheet-muted: #5b6b69;
-  --sheet-display: 'Archivo Variable', system-ui, sans-serif;
+  --sheet-paper: var(--app-paper);
+  --sheet-raised: var(--app-raised);
+  --sheet-ink: var(--app-ink);
+  --sheet-pine: var(--mantine-color-pine-6);
+  --sheet-brass: var(--mantine-color-brass-6);
+  --sheet-line: var(--app-line);
+  --sheet-line-strong: var(--app-line-strong);
+  --sheet-muted: var(--app-muted);
+  --sheet-display: var(--mantine-font-family-headings);
 
   min-height: 100vh;
   background: var(--sheet-paper);

@@ -207,7 +207,7 @@ export default function DashboardLayout() {
         </AppShell.Section>
       </AppShell.Navbar>
 
-      <AppShell.Main bg="var(--mantine-color-gray-0)">
+      <AppShell.Main bg="var(--app-paper)">
         {/* El "hueco" donde React Router pone la pantalla de la ruta actual. */}
         <Outlet />
       </AppShell.Main>

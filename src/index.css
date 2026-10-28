@@ -1,5 +1,16 @@
+/*
+ * Colores de la app que no son de Mantine: el papel y las líneas del rótulo de
+ * plano. Los usan el fondo del panel y la ficha de la propiedad.
+ */
 :root {
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --app-paper: #eef1ef;
+  --app-raised: #f8faf9;
+  --app-ink: #17262a;
+  --app-line: #dde4e1;
+  --app-line-strong: #b3c0bc;
+  --app-muted: #5b6b69;
+
+  font-family: var(--mantine-font-family);
   line-height: 1.5;
 }
 
@@ -10,4 +21,10 @@
 body {
   margin: 0;
   min-height: 100vh;
+}
+
+/* Títulos con Archivo angosto, como la dirección de la ficha. */
+:where(h1, h2, h3, h4, h5, h6) {
+  font-stretch: 80%;
+  letter-spacing: -0.005em;
 }
