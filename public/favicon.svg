@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-  <!-- Isotipo de Zaguán: la puerta de entrada en arco, sobre el pino del tema
-       (pine.6), con el umbral en bronce (brass.6). -->
+  <!-- Isotipo de Zaguán: una Z de trazo grueso sobre el pino del tema (pine.6);
+       la barra de abajo es el umbral de la puerta, en bronce (brass.3). -->
   <rect width="32" height="32" rx="6" fill="#0f5c55"/>
-  <path d="M10.5 25V14.5a5.5 5.5 0 0 1 11 0V25Z" fill="#eef1ef"/>
-  <rect x="7" y="25" width="18" height="2" rx="1" fill="#b07d33"/>
+  <path d="M8 7h16v3.6L13.4 22H8v-.6L18.6 10.6H8Z" fill="#eef1ef"/>
+  <rect x="8" y="22" width="16" height="3.6" fill="#d4aa63"/>
 </svg>

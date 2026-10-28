@@ -7,7 +7,7 @@ import { Group, Text } from '@mantine/core'
 export const APP_NAME = 'Zaguán'
 
 /**
- * Logotipo: el isotipo (la puerta en arco del favicon) y el nombre en Archivo
+ * Logotipo: el isotipo (la Z con el umbral bronce del favicon) y el nombre en Archivo
  * angosto, como los títulos. `size` es la altura del isotipo en px; el texto
  * acompaña esa medida.
  */
