@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { Alert, Anchor, Button, Checkbox, Group, PasswordInput, Text, TextInput } from '@mantine/core'
+import { Alert, Anchor, Button, Checkbox, Group, Modal, PasswordInput, Text, TextInput } from '@mantine/core'
 import { useForm } from '@mantine/form'
-import { IconAlertTriangle, IconCircleCheck, IconClockExclamation } from '@tabler/icons-react'
+import { useDisclosure } from '@mantine/hooks'
+import { IconAlertTriangle, IconCircleCheck, IconClockExclamation, IconKey } from '@tabler/icons-react'
 
 import AuthLayout from '../../layouts/AuthLayout.jsx'
 import { useAuth } from '../../context/auth-context.js'
@@ -28,6 +29,8 @@ export default function Login() {
 
   const [status, setStatus] = useState({ state: 'idle' })
   const abortRef = useRef(null)
+  // El backend todavía no tiene recuperación de contraseña: el link solo explica a quién pedírsela.
+  const [forgotOpened, forgot] = useDisclosure(false)
 
   const form = useForm({
     mode: 'uncontrolled',
@@ -127,7 +130,7 @@ export default function Login() {
             key={form.key('remember')}
             {...form.getInputProps('remember', { type: 'checkbox' })}
           />
-          <Anchor component="button" type="button" size="sm" c="dimmed">
+          <Anchor component="button" type="button" size="sm" c="dimmed" onClick={forgot.open}>
             ¿Olvidaste tu contraseña?
           </Anchor>
         </Group>
@@ -136,6 +139,27 @@ export default function Login() {
           Iniciar sesión
         </Button>
       </form>
+
+      <Modal
+        opened={forgotOpened}
+        onClose={forgot.close}
+        title={
+          <Group gap="xs">
+            <IconKey size={18} />
+            <Text fw={600}>Recuperar la contraseña</Text>
+          </Group>
+        }
+        centered
+        radius="md"
+      >
+        <Text size="sm">
+          Pedile a tu inmobiliaria o al administrador que te restablezca la contraseña. Después vas a
+          poder cambiarla desde Configuración.
+        </Text>
+        <Group justify="flex-end" mt="lg">
+          <Button onClick={forgot.close}>Entendido</Button>
+        </Group>
+      </Modal>
 
       <Text ta="center" mt="md">
         ¿No tenés una cuenta?{' '}
