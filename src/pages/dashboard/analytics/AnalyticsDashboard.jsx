@@ -67,7 +67,7 @@ function StatTile({ icon: Icon, label, value, detail, detailColor = 'dimmed' }) 
   return (
     <Card withBorder radius="lg" padding="lg">
       <Group justify="space-between" align="flex-start" wrap="nowrap">
-        <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+        <Text size="xs" c="dimmed" fw={600}>
           {label}
         </Text>
         <ThemeIcon variant="light" size={32} radius="md">
@@ -188,7 +188,7 @@ function LeadPipeline({ crm }) {
   return (
     <Grid gutter="xl" align="center">
       <Grid.Col span={{ base: 12, md: 8 }}>
-        <Text size="xs" c="dimmed" tt="uppercase" fw={600} mb="xs">
+        <Text size="xs" c="dimmed" fw={600} mb="xs">
           En curso · {formatCount(open)}
         </Text>
         <ColumnChart
@@ -200,7 +200,7 @@ function LeadPipeline({ crm }) {
         />
       </Grid.Col>
       <Grid.Col span={{ base: 12, md: 4 }}>
-        <Text size="xs" c="dimmed" tt="uppercase" fw={600} mb="xs">
+        <Text size="xs" c="dimmed" fw={600} mb="xs">
           Resultado · {formatCount(closed + discarded)}
         </Text>
         <Center>
@@ -332,7 +332,7 @@ function ContractBreakdown({ contracts }) {
       </div>
 
       <div>
-        <Text size="xs" c="dimmed" tt="uppercase" fw={600} mb={4}>
+        <Text size="xs" c="dimmed" fw={600} mb={4}>
           Monto de los vigentes
         </Text>
         {amounts.length === 0 ? (

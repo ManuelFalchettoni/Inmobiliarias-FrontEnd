@@ -128,7 +128,7 @@ export default function DashboardLayout() {
           <Stack gap="lg">
             {sections.map((section) => (
               <div key={section.title}>
-                <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts={0.5} mb="xs">
+                <Text size="xs" fw={600} c="dimmed" mb="xs">
                   {section.title}
                 </Text>
 
@@ -165,7 +165,7 @@ export default function DashboardLayout() {
         <AppShell.Section>
           {totals.length > 0 && (
             <>
-              <Text size="xs" fw={700} tt="uppercase" lts={0.5} mb="xs">
+              <Text size="xs" fw={600} c="dimmed" mb="xs">
                 Espacio de trabajo
               </Text>
               <Stack gap={4} mb="md">

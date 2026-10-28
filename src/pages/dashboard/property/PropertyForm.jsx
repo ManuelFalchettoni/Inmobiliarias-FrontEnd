@@ -103,10 +103,10 @@ function PageHeader({ propertyId }) {
     <Box bg="white" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
       <Container size="xl" py="xl">
         <Breadcrumbs separator={<IconChevronRight size={14} />} mb="xs">
-          <Anchor component={Link} to={LIST_PATH} size="xs" c="dimmed" tt="uppercase" fw={600}>
+          <Anchor component={Link} to={LIST_PATH} size="xs" c="dimmed" fw={600}>
             Propiedades
           </Anchor>
-          <Text size="xs" c="var(--mantine-primary-color-filled)" tt="uppercase" fw={600}>
+          <Text size="xs" c="var(--mantine-primary-color-filled)" fw={600}>
             {propertyId ? `Propiedad #${propertyId}` : 'Nueva propiedad'}
           </Text>
         </Breadcrumbs>

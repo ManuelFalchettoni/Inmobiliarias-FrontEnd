@@ -49,10 +49,10 @@ function PageHeader() {
     <Box bg="white" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
       <Container size="md" py="xl">
         <Breadcrumbs separator={<IconChevronRight size={14} />} mb="xs">
-          <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+          <Text size="xs" c="dimmed" fw={600}>
             Cuenta
           </Text>
-          <Text size="xs" c="var(--mantine-primary-color-filled)" tt="uppercase" fw={600}>
+          <Text size="xs" c="var(--mantine-primary-color-filled)" fw={600}>
             Configuración
           </Text>
         </Breadcrumbs>
@@ -117,7 +117,7 @@ function ProfileCard({ user, agency }) {
 function Field({ label, children }) {
   return (
     <div>
-      <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+      <Text size="xs" c="dimmed" fw={600}>
         {label}
       </Text>
       <Text size="sm">{children || '—'}</Text>

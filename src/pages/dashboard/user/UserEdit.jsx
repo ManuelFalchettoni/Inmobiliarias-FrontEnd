@@ -31,10 +31,10 @@ function PageHeader({ userId, user }) {
     <Box bg="white" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
       <Container size="md" py="xl">
         <Breadcrumbs separator={<IconChevronRight size={14} />} mb="xs">
-          <Anchor component={Link} to={LIST_PATH} size="xs" c="dimmed" tt="uppercase" fw={600}>
+          <Anchor component={Link} to={LIST_PATH} size="xs" c="dimmed" fw={600}>
             Usuarios
           </Anchor>
-          <Text size="xs" c="var(--mantine-primary-color-filled)" tt="uppercase" fw={600}>
+          <Text size="xs" c="var(--mantine-primary-color-filled)" fw={600}>
             Usuario #{userId}
           </Text>
         </Breadcrumbs>

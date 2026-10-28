@@ -81,7 +81,7 @@ function SectionCard({ icon: Icon, title, children, extra }) {
 function InfoRow({ label, children }) {
   return (
     <div>
-      <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+      <Text size="xs" c="dimmed" fw={600}>
         {label}
       </Text>
       <Text size="sm">{children}</Text>
@@ -206,10 +206,10 @@ export default function LeadDetail() {
       <Box bg="white" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
         <Container size="xl" py="xl">
           <Breadcrumbs separator={<IconChevronRight size={14} />} mb="xs">
-            <Anchor component={Link} to={LIST_PATH} size="xs" c="dimmed" tt="uppercase" fw={600}>
+            <Anchor component={Link} to={LIST_PATH} size="xs" c="dimmed" fw={600}>
               Clientes & Leads
             </Anchor>
-            <Text size="xs" c="var(--mantine-primary-color-filled)" tt="uppercase" fw={600}>
+            <Text size="xs" c="var(--mantine-primary-color-filled)" fw={600}>
               Lead #{lead.id}
             </Text>
           </Breadcrumbs>

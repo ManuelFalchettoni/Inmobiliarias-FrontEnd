@@ -270,15 +270,15 @@ function AgencyEditor({ agency }) {
       <Box bg="white" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
         <Container size="xl" py="xl">
           <Breadcrumbs separator={<IconChevronRight size={14} />} mb="xs">
-            <Anchor component={Link} to="/dashboard/configuracion" size="xs" c="dimmed" tt="uppercase" fw={600}>
+            <Anchor component={Link} to="/dashboard/configuracion" size="xs" c="dimmed" fw={600}>
               Configuración
             </Anchor>
             {back.isAdmin && (
-              <Anchor component={Link} to="/dashboard/agencias" size="xs" c="dimmed" tt="uppercase" fw={600}>
+              <Anchor component={Link} to="/dashboard/agencias" size="xs" c="dimmed" fw={600}>
                 Agencias
               </Anchor>
             )}
-            <Text size="xs" c="var(--mantine-primary-color-filled)" tt="uppercase" fw={600}>
+            <Text size="xs" c="var(--mantine-primary-color-filled)" fw={600}>
               {isEdit ? `Agencia #${agency.id}` : 'Nueva agencia'}
             </Text>
           </Breadcrumbs>
