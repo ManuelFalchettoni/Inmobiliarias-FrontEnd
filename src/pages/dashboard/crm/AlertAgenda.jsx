@@ -3,6 +3,7 @@ import { useQueries, useQuery } from '@tanstack/react-query'
 import {
   Alert,
   Badge,
+  Box,
   Button,
   Card,
   Container,
@@ -134,21 +135,16 @@ export default function AlertAgenda() {
 
   return (
     <Container size="xl" py="xl">
-      <Group gap="sm" align="flex-start" wrap="nowrap" mb="lg">
-        <ThemeIcon variant="light" size={44} radius="md">
-          <IconBellRinging size={24} />
-        </ThemeIcon>
-        <div>
-          <Title order={1} size="h2">
-            Agenda de avisos
-          </Title>
-          <Text c="dimmed">
-            {leadsQuery.isSuccess && !loadingAlerts
-              ? `${withAlert.length} ${withAlert.length === 1 ? 'lead tiene' : 'leads tienen'} avisos por delante · ${nextDay} en las próximas 24 h · ${nextHour} en la próxima hora`
-              : 'Leads ordenados por el tiempo que falta para su próximo aviso.'}
-          </Text>
-        </div>
-      </Group>
+      <Box mb="lg">
+        <Title order={1} size="h2">
+          Agenda de avisos
+        </Title>
+        <Text c="dimmed">
+          {leadsQuery.isSuccess && !loadingAlerts
+            ? `${withAlert.length} ${withAlert.length === 1 ? 'lead tiene' : 'leads tienen'} avisos por delante · ${nextDay} en las próximas 24 h · ${nextHour} en la próxima hora`
+            : 'Leads ordenados por el tiempo que falta para su próximo aviso.'}
+        </Text>
+      </Box>
 
       <Group align="flex-end" gap="md" mb="md">
         <Select

@@ -24,7 +24,6 @@ import {
   IconAlarm,
   IconAlertTriangle,
   IconBuildingEstate,
-  IconChartBar,
   IconFileText,
   IconMessages,
 } from '@tabler/icons-react'
@@ -508,17 +507,12 @@ export default function AnalyticsDashboard() {
   return (
     <Container size="xl" py="xl">
       <Group justify="space-between" align="flex-end" mb="lg" gap="md">
-        <Group gap="sm" align="flex-start" wrap="nowrap">
-          <ThemeIcon variant="light" size={44} radius="md">
-            <IconChartBar size={24} />
-          </ThemeIcon>
-          <div>
-            <Title order={1} size="h2">
-              Analítica & Reportes
-            </Title>
-            <Text c="dimmed">Propiedades, leads, ofertas y contratos, con el rendimiento de cada agente.</Text>
-          </div>
-        </Group>
+        <div>
+          <Title order={1} size="h2">
+            Analítica & Reportes
+          </Title>
+          <Text c="dimmed">Propiedades, leads, ofertas y contratos, con el rendimiento de cada agente.</Text>
+        </div>
         {isAdmin && (
           <Select
             w={300}

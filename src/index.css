@@ -78,3 +78,8 @@ body {
   font-stretch: 80%;
   letter-spacing: -0.005em;
 }
+
+/* El título de cada página, más angosto todavía. */
+:where(h1) {
+  font-stretch: 70%;
+}

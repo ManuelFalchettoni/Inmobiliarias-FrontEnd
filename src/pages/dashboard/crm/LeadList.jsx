@@ -76,21 +76,16 @@ export default function LeadList() {
   return (
     <Container size="xl" py="xl">
       <Group justify="space-between" align="flex-start" mb="lg" wrap="nowrap">
-        <Group gap="sm" align="flex-start" wrap="nowrap">
-          <ThemeIcon variant="light" size={44} radius="md">
-            <IconMessages size={24} />
-          </ThemeIcon>
-          <div>
-            <Title order={1} size="h2">
-              Clientes & Leads
-            </Title>
-            <Text c="dimmed">
-              {data
-                ? `${data.totalElements} ${data.totalElements === 1 ? 'lead' : 'leads'}: interesados en una propiedad, con su agente y su etapa`
-                : 'Cargando el listado...'}
-            </Text>
-          </div>
-        </Group>
+        <div>
+          <Title order={1} size="h2">
+            Clientes & Leads
+          </Title>
+          <Text c="dimmed">
+            {data
+              ? `${data.totalElements} ${data.totalElements === 1 ? 'lead' : 'leads'}: interesados en una propiedad, con su agente y su etapa`
+              : 'Cargando el listado...'}
+          </Text>
+        </div>
 
         <Button component={Link} to="/dashboard/consultas/nuevo" leftSection={<IconPlus size={16} />}>
           Nuevo lead

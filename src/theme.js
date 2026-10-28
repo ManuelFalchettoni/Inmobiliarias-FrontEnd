@@ -51,5 +51,11 @@ export const theme = createTheme({
   radius: { xs: '2px', sm: '3px', md: '4px', lg: '6px' },
   defaultRadius: 'md',
   fontFamily: ARCHIVO,
-  headings: { fontFamily: ARCHIVO, fontWeight: '700' },
+  headings: {
+    fontFamily: ARCHIVO,
+    fontWeight: '700',
+    // `h2` es el tamaño de los títulos de página (`<Title order={1} size="h2">`):
+    // grandes y apretados, como la dirección de la ficha.
+    sizes: { h2: { fontSize: '38px', lineHeight: '1' } },
+  },
 })

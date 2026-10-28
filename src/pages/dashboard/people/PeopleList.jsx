@@ -69,21 +69,16 @@ export default function PeopleList() {
   return (
     <Container size="xl" py="xl">
       <Group justify="space-between" align="flex-start" mb="lg" wrap="nowrap">
-        <Group gap="sm" align="flex-start" wrap="nowrap">
-          <ThemeIcon variant="light" size={44} radius="md">
-            <IconUsersGroup size={24} />
-          </ThemeIcon>
-          <div>
-            <Title order={1} size="h2">
-              Personas
-            </Title>
-            <Text c="dimmed">
-              {data
-                ? `${data.totalElements} ${data.totalElements === 1 ? 'persona' : 'personas'}, por nombre`
-                : 'Cargando el listado...'}
-            </Text>
-          </div>
-        </Group>
+        <div>
+          <Title order={1} size="h2">
+            Personas
+          </Title>
+          <Text c="dimmed">
+            {data
+              ? `${data.totalElements} ${data.totalElements === 1 ? 'persona' : 'personas'}, por nombre`
+              : 'Cargando el listado...'}
+          </Text>
+        </div>
 
         <Button component={Link} to="/dashboard/personas/nueva" leftSection={<IconPlus size={16} />}>
           Nueva persona

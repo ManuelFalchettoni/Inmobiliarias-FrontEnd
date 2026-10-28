@@ -166,23 +166,18 @@ export default function AgencyList() {
   return (
     <Container size="xl" py="xl">
       <Group justify="space-between" align="flex-start" mb="lg" wrap="nowrap">
-        <Group gap="sm" align="flex-start" wrap="nowrap">
-          <ThemeIcon variant="light" size={44} radius="md">
-            <IconBuildingSkyscraper size={24} />
-          </ThemeIcon>
-          <div>
-            <Title order={1} size="h2">
-              Agencias
-            </Title>
-            <Text c="dimmed">
-              {data
-                ? `${data.totalElements} ${data.totalElements === 1 ? 'agencia' : 'agencias'}`
-                : error
-                  ? 'Sin datos'
-                  : 'Cargando el listado...'}
-            </Text>
-          </div>
-        </Group>
+        <div>
+          <Title order={1} size="h2">
+            Agencias
+          </Title>
+          <Text c="dimmed">
+            {data
+              ? `${data.totalElements} ${data.totalElements === 1 ? 'agencia' : 'agencias'}`
+              : error
+                ? 'Sin datos'
+                : 'Cargando el listado...'}
+          </Text>
+        </div>
 
         <Button component={Link} to="/dashboard/agencias/nueva" leftSection={<IconPlus size={16} />}>
           Nueva agencia
