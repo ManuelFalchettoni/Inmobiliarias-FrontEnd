@@ -105,7 +105,7 @@ const sections = [
         path: 'analitica',
         label: 'Analítica & Reportes',
         icon: IconChartBar,
-        description: 'Visitas, conversión y rendimiento de las publicaciones.',
+        description: 'Propiedades, leads, ofertas y contratos, con el rendimiento de cada agente.',
       },
     ],
   },

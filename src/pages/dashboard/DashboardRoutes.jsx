@@ -7,6 +7,7 @@ import { PANEL_ROLES, USER_ROL } from '../../services/users.js'
 import AccountSettings from './account/AccountSettings.jsx'
 import { dashboardNav, homeFor } from '../../layouts/dashboard-nav.js'
 import AgencyForm from './agency/AgencyForm.jsx'
+import AnalyticsDashboard from './analytics/AnalyticsDashboard.jsx'
 import AgencyList from './agency/AgencyList.jsx'
 import AlertAgenda from './crm/AlertAgenda.jsx'
 import ContractDetail from './contract/ContractDetail.jsx'
@@ -37,6 +38,7 @@ const IMPLEMENTADAS = new Set([
   'contratos',
   'consultas',
   'avisos',
+  'analitica',
   'configuracion',
 ])
 
@@ -89,6 +91,7 @@ export default function DashboardRoutes() {
           <Route path="consultas/nuevo" element={<LeadForm />} />
           <Route path="consultas/:id" element={<LeadDetail />} />
           <Route path="avisos" element={<AlertAgenda />} />
+          <Route path="analitica" element={<AnalyticsDashboard />} />
 
           {/* Secciones del menú que todavía no están disponibles: cada ítem del
               menú sin pantalla propia recibe una "Próximamente", así ningún link

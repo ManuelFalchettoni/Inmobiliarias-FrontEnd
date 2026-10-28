@@ -36,6 +36,8 @@ export const queryKeys = {
   // Partes y dueños se traen siempre completos (el backend no los filtra).
   contractParties: { all: ['contract-parties'] },
   propertyOwners: { all: ['property-owners'] },
+  // El resumen de Analítica, por inmobiliaria (`agencyId` null: todas, solo admin).
+  analytics: { all: ['analytics'], summary: (agencyId) => ['analytics', 'summary', agencyId ?? null] },
 }
 
 /**
