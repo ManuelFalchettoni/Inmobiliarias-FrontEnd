@@ -177,6 +177,19 @@ export function upcomingAlerts(alerts, now) {
 }
 
 /**
+ * Lo opuesto: avisos pendientes que ya vencieron, el más atrasado primero.
+ * Entre las dos funciones cubren todos los `PENDING` de un lead.
+ */
+export function overdueAlerts(alerts, now) {
+  return (alerts ?? [])
+    .filter(
+      (alert) =>
+        alert.status === ALERT_STATUS.PENDING && (alert.expired || new Date(alert.alertDate).getTime() <= now),
+    )
+    .sort((a, b) => new Date(a.alertDate) - new Date(b.alertDate))
+}
+
+/**
  * GET /api/crm_alerts/upcoming -> las alertas `PENDING` de todos los leads de la
  * inmobiliaria, la más próxima primero, vencidas incluidas. Un array sin paginar.
  * `days`: solo las que vencen dentro de esos días. `userId`: las de un agente.
