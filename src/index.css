@@ -38,9 +38,12 @@ body {
   background-color: var(--app-raised);
 }
 
-/* `<Card variant="table">`: la tabla de un listado, con el borde de tinta del rótulo. */
+/*
+ * `<Card variant="table">`: la tabla de un listado. Borde fino, igual al de las
+ * demás tarjetas: la tabla se separa del fondo sin enmarcarse en tinta.
+ */
 .mantine-Card-root[data-variant='table'] {
-  border: 1.5px solid var(--app-ink);
+  border: 1px solid var(--app-line-strong);
   background-color: var(--mantine-color-white);
 }
 
@@ -61,7 +64,7 @@ body {
 }
 
 .mantine-Table-thead > .mantine-Table-tr {
-  border-bottom: 1.5px solid var(--app-ink);
+  border-bottom: 1px solid var(--app-line-strong);
 }
 
 .mantine-Table-th {
