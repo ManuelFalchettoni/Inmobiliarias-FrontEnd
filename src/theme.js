@@ -41,7 +41,7 @@ const brass = [
  * tono, así se cambian acá y no en cada pantalla.
  * - success: algo salió bien o está vigente. Un verde hoja, más amarillo que
  *   el pino para no confundirse con el color principal.
- * - danger: errores, vencidos y acciones que borran. Un rojo ladrillo.
+ * - danger: errores, vencidos y acciones que borran. Un rojo vivo, apenas cálido.
  */
 const success = [
   '#eef6e9',
@@ -56,17 +56,18 @@ const success = [
   '#1f4311',
 ]
 
+// El 6 es el más vivo que todavía se lee como texto chico sobre blanco (4.6:1).
 const danger = [
-  '#fbecea',
-  '#f4d3cf',
-  '#e8a79f',
-  '#dc7a6e',
-  '#d15647',
-  '#c94130',
-  '#b23a2b',
-  '#952f23',
-  '#78251b',
-  '#5b1b13',
+  '#fdeeec',
+  '#fad6d2',
+  '#f4aca4',
+  '#ee8275',
+  '#e85f4f',
+  '#e04a39',
+  '#d63c2c',
+  '#b83223',
+  '#96281c',
+  '#741e15',
 ]
 
 // Archivo tiene un eje de ancho: el cuerpo va en ancho normal y los títulos
