@@ -59,6 +59,11 @@ body {
   --table-hover-color: var(--app-raised);
 }
 
+/* Cifras de ancho fijo: precios, superficies y fechas quedan alineados en columna. */
+.mantine-Table-table {
+  font-variant-numeric: tabular-nums;
+}
+
 .mantine-Table-thead {
   background-color: var(--app-raised);
 }

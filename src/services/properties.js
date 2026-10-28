@@ -329,17 +329,19 @@ export const PRICE_LIMITS = {
   amount: { min: 0.01, max: 9999999999999.99, decimals: 2 },
 }
 
-/** "USD 95.000" o "ARS 450.000,50": los centavos solo aparecen si los hay. */
-export function formatPrice({ currency, amount }) {
+/** "95.000" o "450.000,50": el monto solo, sin moneda. Los centavos solo si los hay. */
+export function formatAmount(amount) {
   // El backend manda BigDecimal; en JSON llega como número (95000.00 -> 95000).
   const value = Number(amount)
   // toLocaleString con 'es-AR' usa punto de miles y coma decimal.
-  const number = value.toLocaleString('es-AR', {
+  return value.toLocaleString('es-AR', {
     minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
     maximumFractionDigits: 2,
   })
-  return `${currency} ${number}`
 }
+
+/** "USD 95.000" o "ARS 450.000,50". */
+export const formatPrice = ({ currency, amount }) => `${currency} ${formatAmount(amount)}`
 
 /** Venta antes que alquiler, el mismo orden que usa el `GET` del backend. */
 // Ordena según la posición de cada operación en OPERATION_TYPE_OPTIONS

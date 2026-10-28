@@ -1,0 +1,210 @@
+/*
+ * Listado en fichas: cada tarjeta es una versión chica de la ficha de la
+ * propiedad, con los mismos colores (papel, tinta, pino y bronce).
+ */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--app-line-strong);
+  border-radius: var(--mantine-radius-lg);
+  overflow: hidden;
+  background: var(--mantine-color-white);
+  transition: border-color 150ms;
+
+  /* Toda la tarjeta es clickeable: se marca el borde en tinta al pasar o enfocar. */
+  &:hover,
+  &:focus-within {
+    border-color: var(--app-ink);
+  }
+
+  &[data-archived] {
+    opacity: 0.7;
+  }
+}
+
+/* ------------------------------------------------------------- Portada */
+
+.photo {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: var(--app-ink);
+
+  & img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+/* Sin fotos: el papel cuadriculado de la ficha, con el tipo de propiedad. */
+.noPhoto {
+  display: grid;
+  place-content: center;
+  height: 100%;
+  background-color: var(--app-raised);
+  background-image:
+    linear-gradient(var(--app-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--app-line) 1px, transparent 1px);
+  background-size: 16px 16px;
+  font-family: var(--mantine-font-family-headings);
+  font-stretch: 75%;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--app-muted);
+}
+
+.condition {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+}
+
+/* El lápiz va por encima del link estirado de la dirección. */
+.edit {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  z-index: 2;
+}
+
+/* -------------------------------------------------------------- Cuerpo */
+
+.body {
+  flex: 1;
+  padding: 14px 16px 16px;
+}
+
+.kind {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mantine-color-pine-6);
+}
+
+.address {
+  margin: 0;
+  font-size: 24px;
+  font-stretch: 70%;
+  font-weight: 720;
+  line-height: 1.05;
+  color: var(--app-ink);
+  text-wrap: balance;
+}
+
+/*
+ * El link de la dirección se estira hasta cubrir toda la tarjeta con un
+ * `::after`, así un clic en cualquier parte abre la ficha y para el teclado y
+ * los lectores de pantalla sigue siendo un solo link con nombre claro.
+ */
+.addressLink {
+  color: inherit;
+  text-decoration: none;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+}
+
+.place {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--app-muted);
+}
+
+/* El rótulo: tres celdas separadas por líneas finas, como en la ficha. */
+.facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin: 14px 0 0;
+  border: 1px solid var(--app-line);
+  border-radius: var(--mantine-radius-sm);
+  overflow: hidden;
+  background: var(--app-line);
+}
+
+.fact {
+  padding: 8px 10px;
+  background: var(--app-raised);
+
+  & dt {
+    font-size: 12px;
+    color: var(--app-muted);
+  }
+
+  & dd {
+    margin: 2px 0 0;
+    font-family: var(--mantine-font-family-headings);
+    font-stretch: 75%;
+    font-weight: 650;
+    font-size: 20px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--app-ink);
+  }
+}
+
+.unit {
+  margin-left: 3px;
+  font-size: 0.6em;
+  font-weight: 500;
+  color: var(--app-muted);
+}
+
+/* -------------------------------------------------------------- Precio */
+
+.prices {
+  display: grid;
+  gap: 8px;
+  padding: 12px 16px 14px;
+  background: var(--app-ink);
+  color: var(--app-paper);
+}
+
+.price {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+}
+
+.operation {
+  margin: 0;
+  font-size: 13px;
+  color: #a9bab6;
+}
+
+.amount {
+  font-family: var(--mantine-font-family-headings);
+  font-stretch: 72%;
+  font-weight: 700;
+  font-size: 26px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.currency {
+  margin-right: 4px;
+  font-size: 0.55em;
+  font-weight: 600;
+  color: var(--mantine-color-brass-3);
+}

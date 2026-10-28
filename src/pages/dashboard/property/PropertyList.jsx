@@ -31,6 +31,8 @@ import {
   IconBuildingEstate,
   IconEye,
   IconFilterOff,
+  IconLayoutGrid,
+  IconList,
   IconPencil,
   IconPlus,
 } from '@tabler/icons-react'
@@ -56,11 +58,20 @@ import {
   sortPhotos,
   sortPrices,
 } from '../../../services/properties.js'
+import PropertyCards from './PropertyCards.jsx'
 
 const PAGE_SIZE = 20
 
 /** Los filtros que van en "Más filtros": si alguno tiene valor, el panel arranca abierto. */
 const EXTRA_FILTERS = ['province', 'county', 'occupancy', 'minSize', 'maxSize', 'minYear', 'maxYear']
+
+/** Texto del selector de vista con su ícono. */
+const ViewLabel = ({ icon: Icon, text }) => (
+  <Group gap={6} wrap="nowrap">
+    <Icon size={16} />
+    <span>{text}</span>
+  </Group>
+)
 
 /**
  * Listado de propiedades (`/dashboard/propiedades`). Es el modelo que siguen
@@ -112,6 +123,8 @@ export default function PropertyList() {
   const primeraCarga = query.isPending
   // `isPlaceholderData`: se está mostrando la página anterior mientras llega la nueva.
   const cargando = query.isPlaceholderData
+  // Fichas es la vista de siempre; la tabla queda en la URL (`?vista=tabla`).
+  const vista = searchParams.get('vista') === 'tabla' ? 'tabla' : 'fichas'
 
   /** Props comunes de un campo de filtro: valor de la URL y escritura sin llenar el historial. */
   const textFilter = (name) => ({
@@ -171,18 +184,18 @@ export default function PropertyList() {
             />
           )}
         </Group>
-        {!verArchivadas && (
-          <Group gap="xs">
-            {filtrando && (
-              <Button
-                variant="subtle"
-                color="gray"
-                leftSection={<IconFilterOff size={16} />}
-                onClick={() => clearFilters(PROPERTY_SEARCH_FILTERS)}
-              >
-                Limpiar filtros
-              </Button>
-            )}
+        <Group gap="xs">
+          {!verArchivadas && filtrando && (
+            <Button
+              variant="subtle"
+              color="gray"
+              leftSection={<IconFilterOff size={16} />}
+              onClick={() => clearFilters(PROPERTY_SEARCH_FILTERS)}
+            >
+              Limpiar filtros
+            </Button>
+          )}
+          {!verArchivadas && (
             <Button
               variant={masFiltros ? 'light' : 'default'}
               leftSection={<IconAdjustmentsHorizontal size={16} />}
@@ -190,8 +203,18 @@ export default function PropertyList() {
             >
               Más filtros
             </Button>
-          </Group>
-        )}
+          )}
+          {/* Cómo se ve la lista, no qué trae: cambiarla no vuelve a la página 1. */}
+          <SegmentedControl
+            aria-label="Vista del listado"
+            value={vista}
+            onChange={(valor) => setFilter('vista', valor === 'tabla' ? 'tabla' : null, { keepPage: true })}
+            data={[
+              { value: 'fichas', label: <ViewLabel icon={IconLayoutGrid} text="Fichas" /> },
+              { value: 'tabla', label: <ViewLabel icon={IconList} text="Tabla" /> },
+            ]}
+          />
+        </Group>
       </Group>
 
       {/* Los de texto son parciales y sin acentos: "cord" encuentra "Córdoba". */}
@@ -269,137 +292,141 @@ export default function PropertyList() {
         </Card>
       )}
 
-      {data?.content.length > 0 && (
-        <>
-          {/* Mientras llega la página nueva, la anterior se ve más transparente. */}
-          <Card
-            variant="table"
-            radius="lg"
-            padding={0}
-            style={{ opacity: cargando ? 0.55 : 1, transition: 'opacity 150ms' }}
-          >
-            {/* En pantallas angostas la tabla se desplaza de costado en vez de apretarse. */}
-            <Table.ScrollContainer minWidth={860}>
-              <Table verticalSpacing="sm" horizontalSpacing="md" highlightOnHover>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th>Dirección</Table.Th>
-                    <Table.Th>Tipo</Table.Th>
-                    <Table.Th>Condición</Table.Th>
-                    <Table.Th>Precio</Table.Th>
-                    <Table.Th ta="right">Ambientes</Table.Th>
-                    <Table.Th ta="right">Superficie</Table.Th>
-                    <Table.Th ta="right">Año</Table.Th>
-                    <Table.Th w={1} />
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {/* Una fila por propiedad. `key` con el id: React lo usa para
-                      saber qué fila es cuál al cambiar de página. */}
-                  {data.content.map((propiedad) => (
-                    <Table.Tr key={propiedad.id}>
-                      <Table.Td>
-                        <Group gap="sm" wrap="nowrap">
-                          {/* La portada es la foto con menor `position`. `?.` evita un
-                              error si no hay fotos; en ese caso se ve el ícono. */}
-                          <Avatar
-                            src={sortPhotos(propiedad.photos)[0]?.url}
-                            radius="md"
-                            size={40}
-                            color="gray"
-                          >
-                            <IconBuildingEstate size={18} />
-                          </Avatar>
-                          <div>
-                            {/* La dirección abre la ficha, salvo en las dadas de baja: no se pueden traer. */}
-                            {propiedad.active !== false ? (
-                              <Anchor
-                                component={Link}
-                                to={`/propiedades/${propiedad.id}`}
-                                size="sm"
-                                fw={500}
-                                c="var(--mantine-color-text)"
-                              >
-                                {propiedad.address}
-                              </Anchor>
-                            ) : (
-                              <Text size="sm" fw={500}>
-                                {propiedad.address}
-                              </Text>
-                            )}
-                            <Text size="xs" c="dimmed">
-                              {formatPropertyPlace(propiedad)}
-                            </Text>
-                          </div>
-                        </Group>
-                      </Table.Td>
-                      {/* Los enums llegan en inglés; el mapa los traduce. */}
-                      <Table.Td>{PROPERTY_TYPE_LABEL[propiedad.type] ?? propiedad.type}</Table.Td>
-                      <Table.Td>
-                        <Badge variant="light" color={PROPERTY_CONDITION_COLOR[propiedad.condition]}>
-                          {PROPERTY_CONDITION_LABEL[propiedad.condition] ?? propiedad.condition}
-                        </Badge>
-                      </Table.Td>
-                      <Table.Td>
-                        {propiedad.prices?.length > 0 ? (
-                          sortPrices(propiedad.prices).map((price) => (
-                            <Text key={price.id} size="sm" style={{ whiteSpace: 'nowrap' }}>
-                              <Text span size="xs" c="dimmed">
-                                {OPERATION_TYPE_LABEL[price.operationType] ?? price.operationType}
-                              </Text>{' '}
-                              {formatPrice(price)}
-                            </Text>
-                          ))
-                        ) : (
-                          <Text size="sm" c="dimmed">
-                            Sin precio
-                          </Text>
-                        )}
-                      </Table.Td>
-                      <Table.Td ta="right">{propiedad.rooms}</Table.Td>
-                      <Table.Td ta="right">{propiedad.size} m²</Table.Td>
-                      <Table.Td ta="right">{propiedad.year ?? '—'}</Table.Td>
-                      <Table.Td>
-                        {/* El PUT solo acepta propiedades activas: las dadas de baja no se editan. */}
-                        {propiedad.active !== false && (
-                          <Group gap={4} wrap="nowrap">
-                            <Tooltip label="Ver ficha" withArrow>
-                              <ActionIcon
-                                component={Link}
-                                to={`/propiedades/${propiedad.id}`}
-                                variant="subtle"
-                                color="gray"
-                                aria-label={`Ver la ficha de ${propiedad.address}`}
-                              >
-                                <IconEye size={18} />
-                              </ActionIcon>
-                            </Tooltip>
-                            <Tooltip label="Editar" withArrow>
-                              <ActionIcon
-                                component={Link}
-                                to={`/dashboard/propiedades/${propiedad.id}/editar`}
-                                variant="subtle"
-                                aria-label={`Editar ${propiedad.address}`}
-                              >
-                                <IconPencil size={18} />
-                              </ActionIcon>
-                            </Tooltip>
-                          </Group>
-                        )}
-                      </Table.Td>
-                    </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
-            </Table.ScrollContainer>
-          </Card>
+      {data?.content.length > 0 && vista === 'fichas' && (
+        <div style={{ opacity: cargando ? 0.55 : 1, transition: 'opacity 150ms' }}>
+          <PropertyCards properties={data.content} />
+        </div>
+      )}
 
-          {data.totalPages > 1 && (
-            <Group justify="center" mt="lg">
-              <Pagination total={data.totalPages} value={page} onChange={goToPage} />
-            </Group>
-          )}
-        </>
+      {data?.content.length > 0 && vista === 'tabla' && (
+        // Mientras llega la página nueva, la anterior se ve más transparente.
+        <Card
+          variant="table"
+          radius="lg"
+          padding={0}
+          style={{ opacity: cargando ? 0.55 : 1, transition: 'opacity 150ms' }}
+        >
+          {/* En pantallas angostas la tabla se desplaza de costado en vez de apretarse. */}
+          <Table.ScrollContainer minWidth={860}>
+            <Table verticalSpacing="sm" horizontalSpacing="md" highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Dirección</Table.Th>
+                  <Table.Th>Tipo</Table.Th>
+                  <Table.Th>Condición</Table.Th>
+                  <Table.Th>Precio</Table.Th>
+                  <Table.Th ta="right">Ambientes</Table.Th>
+                  <Table.Th ta="right">Superficie</Table.Th>
+                  <Table.Th ta="right">Año</Table.Th>
+                  <Table.Th w={1} />
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {/* Una fila por propiedad. `key` con el id: React lo usa para
+                    saber qué fila es cuál al cambiar de página. */}
+                {data.content.map((propiedad) => (
+                  <Table.Tr key={propiedad.id}>
+                    <Table.Td>
+                      <Group gap="sm" wrap="nowrap">
+                        {/* La portada es la foto con menor `position`. `?.` evita un
+                            error si no hay fotos; en ese caso se ve el ícono. */}
+                        <Avatar
+                          src={sortPhotos(propiedad.photos)[0]?.url}
+                          radius="md"
+                          size={40}
+                          color="gray"
+                        >
+                          <IconBuildingEstate size={18} />
+                        </Avatar>
+                        <div>
+                          {/* La dirección abre la ficha, salvo en las dadas de baja: no se pueden traer. */}
+                          {propiedad.active !== false ? (
+                            <Anchor
+                              component={Link}
+                              to={`/propiedades/${propiedad.id}`}
+                              size="sm"
+                              fw={500}
+                              c="var(--mantine-color-text)"
+                            >
+                              {propiedad.address}
+                            </Anchor>
+                          ) : (
+                            <Text size="sm" fw={500}>
+                              {propiedad.address}
+                            </Text>
+                          )}
+                          <Text size="xs" c="dimmed">
+                            {formatPropertyPlace(propiedad)}
+                          </Text>
+                        </div>
+                      </Group>
+                    </Table.Td>
+                    {/* Los enums llegan en inglés; el mapa los traduce. */}
+                    <Table.Td>{PROPERTY_TYPE_LABEL[propiedad.type] ?? propiedad.type}</Table.Td>
+                    <Table.Td>
+                      <Badge variant="light" color={PROPERTY_CONDITION_COLOR[propiedad.condition]}>
+                        {PROPERTY_CONDITION_LABEL[propiedad.condition] ?? propiedad.condition}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      {propiedad.prices?.length > 0 ? (
+                        sortPrices(propiedad.prices).map((price) => (
+                          <Text key={price.id} size="sm" style={{ whiteSpace: 'nowrap' }}>
+                            <Text span size="xs" c="dimmed">
+                              {OPERATION_TYPE_LABEL[price.operationType] ?? price.operationType}
+                            </Text>{' '}
+                            {formatPrice(price)}
+                          </Text>
+                        ))
+                      ) : (
+                        <Text size="sm" c="dimmed">
+                          Sin precio
+                        </Text>
+                      )}
+                    </Table.Td>
+                    <Table.Td ta="right">{propiedad.rooms}</Table.Td>
+                    <Table.Td ta="right">{propiedad.size} m²</Table.Td>
+                    <Table.Td ta="right">{propiedad.year ?? '—'}</Table.Td>
+                    <Table.Td>
+                      {/* El PUT solo acepta propiedades activas: las dadas de baja no se editan. */}
+                      {propiedad.active !== false && (
+                        <Group gap={4} wrap="nowrap">
+                          <Tooltip label="Ver ficha" withArrow>
+                            <ActionIcon
+                              component={Link}
+                              to={`/propiedades/${propiedad.id}`}
+                              variant="subtle"
+                              color="gray"
+                              aria-label={`Ver la ficha de ${propiedad.address}`}
+                            >
+                              <IconEye size={18} />
+                            </ActionIcon>
+                          </Tooltip>
+                          <Tooltip label="Editar" withArrow>
+                            <ActionIcon
+                              component={Link}
+                              to={`/dashboard/propiedades/${propiedad.id}/editar`}
+                              variant="subtle"
+                              aria-label={`Editar ${propiedad.address}`}
+                            >
+                              <IconPencil size={18} />
+                            </ActionIcon>
+                          </Tooltip>
+                        </Group>
+                      )}
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Table.ScrollContainer>
+        </Card>
+      )}
+
+      {data?.totalPages > 1 && (
+        <Group justify="center" mt="lg">
+          <Pagination total={data.totalPages} value={page} onChange={goToPage} />
+        </Group>
       )}
     </Container>
   )
