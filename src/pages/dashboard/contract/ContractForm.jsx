@@ -25,7 +25,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { usePropertyOptions } from '../../../hooks/useSelectOptions.js'
 import { queryKeys } from '../../../queries/keys.js'
-import { ApiError } from '../../../services/api.js'
+import { NotFound } from '../../../components/NotFound.jsx'
+import { ApiError, isNotFound } from '../../../services/api.js'
 import {
   CONTRACT_LIMITS,
   CONTRACT_STATUS_OPTIONS,
@@ -278,15 +279,20 @@ function ContractLoader({ id }) {
   const result = query.data
     ? { contract: query.data }
     : query.isError
-      ? {
-          error:
-            query.error instanceof ApiError && query.error.status === 404
-              ? `No existe un contrato con el identificador #${id}.`
-              : query.error.message,
-        }
+      ? { error: query.error.message, notFound: isNotFound(query.error) }
       : null
 
   if (result?.contract) return <ContractEditor contract={result.contract} />
+
+  if (result?.notFound) {
+    return (
+      <NotFound
+        title={`El contrato #${id} no existe`}
+        description="No se puede editar un contrato que no existe. Puede que la dirección esté mal."
+        back={{ to: LIST_PATH, label: 'Volver a contratos' }}
+      />
+    )
+  }
 
   return (
     <>

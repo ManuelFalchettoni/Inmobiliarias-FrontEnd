@@ -11,7 +11,8 @@ import { useQuery } from '@tanstack/react-query'
 
 import { queryKeys } from '../../../queries/keys.js'
 import { findAgency } from '../../../services/agencies.js'
-import { ApiError } from '../../../services/api.js'
+import { NotFoundPage } from '../../../components/NotFound.jsx'
+import { isNotFound } from '../../../services/api.js'
 import {
   OPERATION_TYPE_LABEL,
   PROPERTY_CONDITION_LABEL,
@@ -278,7 +279,18 @@ export default function PropertySheet() {
   // Si se entró directo (sin historial), "Volver" lleva al listado.
   const goBack = () => (window.history.length > 1 ? navigate(-1) : navigate('/dashboard/propiedades'))
 
-  const notFound = query.error instanceof ApiError && query.error.status === 404
+  const notFound = isNotFound(query.error)
+
+  if (notFound) {
+    return (
+      <NotFoundPage
+        title={`La propiedad #${id} no existe`}
+        description="Puede que la dirección esté mal, que la propiedad esté dada de baja o que sea de otra inmobiliaria."
+        back={{ to: '/dashboard/propiedades', label: 'Ir a propiedades' }}
+        showPath={false}
+      />
+    )
+  }
 
   return (
     <div className={classes.page}>
@@ -301,9 +313,7 @@ export default function PropertySheet() {
 
         {query.isError && (
           <Alert color="red" icon={<IconAlertTriangle />} title="No se puede mostrar la propiedad">
-            {notFound
-              ? `La propiedad #${id} no existe, está dada de baja o es de otra inmobiliaria.`
-              : query.error.message}{' '}
+            {query.error.message}{' '}
             <Anchor component={Link} to="/dashboard/propiedades" size="sm" fw={500}>
               Ir al listado
             </Anchor>

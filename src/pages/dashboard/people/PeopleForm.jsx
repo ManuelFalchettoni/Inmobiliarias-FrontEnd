@@ -24,7 +24,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../../context/auth-context.js'
 import { defaultAgencyId, useAgencyOptions } from '../../../hooks/useAgencyOptions.js'
 import { queryKeys } from '../../../queries/keys.js'
-import { ApiError } from '../../../services/api.js'
+import { NotFound } from '../../../components/NotFound.jsx'
+import { ApiError, isNotFound } from '../../../services/api.js'
 import { formatCuit, normalizePhone } from '../../../services/agencies.js'
 import {
   PEOPLE_CONFLICT_MESSAGE,
@@ -283,13 +284,18 @@ function PeopleLoader({ id }) {
   const result = query.data
     ? { person: query.data }
     : query.isError
-      ? {
-          error:
-            query.error instanceof ApiError && query.error.status === 404
-              ? `No existe una persona con el identificador #${id}.`
-              : query.error.message,
-        }
+      ? { error: query.error.message, notFound: isNotFound(query.error) }
       : null
+
+  if (result?.notFound) {
+    return (
+      <NotFound
+        title={`La persona #${id} no existe`}
+        description="Puede que la dirección esté mal o que la persona sea de otra inmobiliaria."
+        back={{ to: LIST_PATH, label: 'Volver a personas' }}
+      />
+    )
+  }
 
   if (!result || result.error) {
     return (
