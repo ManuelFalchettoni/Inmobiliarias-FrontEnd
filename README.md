@@ -70,10 +70,10 @@ manda sola.
 | `/dashboard/consultas`              | Leads del CRM, filtrables por agente                                |
 | `/dashboard/consultas/:id`          | Lead: etapa, historial, ofertas y recordatorios                     |
 | `/dashboard/avisos`                  | Agenda: leads ordenados por el tiempo que falta para su próximo aviso pendiente |
+| `/dashboard/archivados`             | Propiedades, agencias (solo admin) y usuarios dados de baja, cada uno con Restaurar |
 | `/dashboard/configuracion`          | Cuenta propia (`/api/users/me`): datos, contraseña e inmobiliaria. La única pantalla de un USER |
 
-Archivados, Explorador & Mapa y Analítica & Reportes muestran una pantalla
-"Próximamente".
+Explorador & Mapa muestra una pantalla "Próximamente".
 
 Una dirección que no existe muestra la página 404 (`components/NotFound.jsx`): dentro del panel con
 el menú, y fuera de él a pantalla completa. Lo mismo un registro que el backend responde con 404
@@ -96,7 +96,7 @@ src/
 │                 HeaderSearch (buscador) y AlertBell (campanita de avisos)
 ├── pages/
 │   ├── auth/         Login, registro y reglas de usuario
-│   └── dashboard/    account/, agency/, user/, property/, people/, contract/, crm/ y DashboardRoutes.jsx
+│   └── dashboard/    account/, agency/, archive/, user/, property/, people/, contract/, crm/ y DashboardRoutes.jsx
 └── context/      AuthContext: el usuario que inició sesión (`useAuth()`)
 ```
 
