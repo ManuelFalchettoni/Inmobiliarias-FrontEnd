@@ -325,15 +325,24 @@ export default function PropertyList() {
             </Text>
             {/* Deshacer restaura acá mismo; después de restaurar, se ofrece abrir la ficha. */}
             {hecho.archive ? (
-              <Button
-                size="compact-sm"
-                variant="white"
-                leftSection={<IconArrowBackUp size={16} />}
-                loading={busyId === hecho.property.id}
-                onClick={() => restore(hecho.property)}
-              >
-                Deshacer
-              </Button>
+              <Group gap="xs" wrap="nowrap">
+                {/* Lleva a la pestaña Archivadas (`?active=false`), donde quedó la
+                    propiedad. Ya estando ahí, el botón no hace falta. */}
+                {!verArchivadas && (
+                  <Button size="compact-sm" variant="white" onClick={() => setFilter('active', 'false')}>
+                    Ver archivadas
+                  </Button>
+                )}
+                <Button
+                  size="compact-sm"
+                  variant="white"
+                  leftSection={<IconArrowBackUp size={16} />}
+                  loading={busyId === hecho.property.id}
+                  onClick={() => restore(hecho.property)}
+                >
+                  Deshacer
+                </Button>
+              </Group>
             ) : (
               <Button size="compact-sm" variant="white" component={Link} to={`/propiedades/${hecho.property.id}`}>
                 Ver ficha
