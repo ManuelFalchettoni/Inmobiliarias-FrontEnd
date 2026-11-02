@@ -1,4 +1,5 @@
-import { Box, Container, Stack, Text, Title } from '@mantine/core'
+import { useState } from 'react'
+import { Accordion, Box, Button, Container, Group, Text, Title } from '@mantine/core'
 import { IconBuildingEstate, IconBuildingSkyscraper, IconUsers } from '@tabler/icons-react'
 
 import { useAuth } from '../../../context/auth-context.js'
@@ -101,6 +102,11 @@ const SECTIONS = [
 export default function ArchiveList() {
   const { isAdmin } = useAuth()
   const sections = SECTIONS.filter((section) => isAdmin || !section.adminOnly)
+  // Qué cajones están abiertos: arrancan todos abiertos y cada uno se cierra
+  // por separado. Es estado "controlado": el acordeón lo lee de acá y avisa
+  // cada cambio con `onChange`, así los botones de arriba lo pueden tocar.
+  const [open, setOpen] = useState(() => sections.map((section) => section.resource))
+  const allOpen = open.length === sections.length
 
   return (
     <Container size="xl" py="xl">
@@ -114,13 +120,34 @@ export default function ArchiveList() {
         </Text>
       </Box>
 
-      <Stack gap="xl">
+      <Group justify="flex-end" mb="sm">
+        <Button
+          variant="subtle"
+          color="gray"
+          size="compact-sm"
+          onClick={() => setOpen(allOpen ? [] : sections.map((section) => section.resource))}
+        >
+          {allOpen ? 'Cerrar todo' : 'Abrir todo'}
+        </Button>
+      </Group>
+
+      {/* `multiple`: se pueden tener varios cajones abiertos a la vez (sin él,
+          abrir uno cierra el resto). `separated`: cada cajón es una tarjeta. */}
+      <Accordion
+        multiple
+        variant="separated"
+        radius="lg"
+        chevronPosition="right"
+        value={open}
+        onChange={setOpen}
+        styles={{ item: { backgroundColor: 'var(--mantine-color-body)' } }}
+      >
         {/* `{...section}` pasa cada campo del objeto como una prop:
             resource={section.resource}, title={section.title}, etc. */}
         {sections.map((section) => (
           <ArchivedSection key={section.resource} {...section} />
         ))}
-      </Stack>
+      </Accordion>
     </Container>
   )
 }
