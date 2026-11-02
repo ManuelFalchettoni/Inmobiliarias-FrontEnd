@@ -75,6 +75,11 @@ manda sola.
 Archivados, Explorador & Mapa y Analítica & Reportes muestran una pantalla
 "Próximamente".
 
+Una dirección que no existe muestra la página 404 (`components/NotFound.jsx`): dentro del panel con
+el menú, y fuera de él a pantalla completa. Lo mismo un registro que el backend responde con 404
+(`/dashboard/propiedades/999/editar`, `/dashboard/consultas/999`...), con un texto según el recurso
+y un botón para volver a su listado. Los demás errores siguen mostrando el cartel rojo.
+
 ## Estructura
 
 ```
@@ -86,7 +91,7 @@ src/
 ├── queries/      React Query: cliente (client.js) y claves de caché (keys.js)
 ├── hooks/        useAgencyOptions, useSelectOptions (opciones de Select), useLookup (ids a registros),
 │                 useUrlFilters (página y filtros en la URL), useNow (hora que avanza cada minuto)
-├── components/   Componentes compartidos (ConfirmAction, FilterInput, RoleGate)
+├── components/   Componentes compartidos (ConfirmAction, FilterInput, RoleGate, NotFound)
 ├── layouts/      AuthLayout, DashboardLayout, el menú (dashboard-nav.js) y la barra superior:
 │                 HeaderSearch (buscador) y AlertBell (campanita de avisos)
 ├── pages/

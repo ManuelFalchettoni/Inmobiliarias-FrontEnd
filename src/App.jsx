@@ -2,6 +2,7 @@ import { Suspense, lazy } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { Center, Loader } from '@mantine/core'
 
+import { NotFoundPage } from './components/NotFound.jsx'
 import { useAuth } from './context/auth-context.js'
 import Login from './pages/auth/Login.jsx'
 import Register from './pages/auth/Register.jsx'
@@ -74,7 +75,8 @@ export default function App() {
         }
       />
 
-      <Route path="*" element={<Navigate to="/login" replace />} /> {/*Cualquier dirección que no existe redirige al login */}
+      {/* Cualquier dirección que no existe: página 404 a pantalla completa. */}
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
 }

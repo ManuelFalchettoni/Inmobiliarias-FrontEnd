@@ -36,7 +36,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { useAuth } from '../../../context/auth-context.js'
 import { queryKeys } from '../../../queries/keys.js'
-import { ApiError } from '../../../services/api.js'
+import { NotFound } from '../../../components/NotFound.jsx'
+import { ApiError, isNotFound } from '../../../services/api.js'
 import {
   AGENCY_LIMITS,
   AGENCY_STATUS_OPTIONS,
@@ -560,18 +561,25 @@ function AgencyLoader({ id }) {
   const result = query.data
     ? { agency: query.data }
     : query.isError
-      ? {
-          error:
-            query.error instanceof ApiError && query.error.status === 404
-              ? back.isAdmin
-                ? `No existe una agencia activa con el identificador #${id}. Si está dada de baja, restáurela desde el listado.`
-                : // Una inmobiliaria ajena responde 404, igual que una que no existe.
-                  `No existe la agencia #${id} o no es la tuya. Solo podés editar tu inmobiliaria.`
-              : query.error.message,
-        }
+      ? { error: query.error.message, notFound: isNotFound(query.error) }
       : null
 
   if (result?.agency) return <AgencyEditor agency={result.agency} />
+
+  if (result?.notFound) {
+    return (
+      <NotFound
+        title={`La agencia #${id} no existe`}
+        description={
+          back.isAdmin
+            ? 'Puede que la dirección esté mal o que la agencia esté dada de baja. Las dadas de baja se restauran desde el listado.'
+            : // Una inmobiliaria ajena responde 404, igual que una que no existe.
+              'O no es la tuya: solo podés editar tu inmobiliaria.'
+        }
+        back={{ to: back.to, label: back.label }}
+      />
+    )
+  }
 
   return (
     <Container size="xl" py="xl">

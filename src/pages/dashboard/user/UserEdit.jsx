@@ -19,7 +19,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { useLookup } from '../../../hooks/useLookup.js'
 import { queryKeys } from '../../../queries/keys.js'
-import { ApiError } from '../../../services/api.js'
+import { NotFound } from '../../../components/NotFound.jsx'
+import { isNotFound } from '../../../services/api.js'
 import { findAgency } from '../../../services/agencies.js'
 import { USER_ROL_COLOR, USER_ROL_LABEL, findUser } from '../../../services/users.js'
 import { AccountCard, PasswordCard } from './UserAccountForms.jsx'
@@ -62,17 +63,22 @@ export default function UserEdit() {
   const result = query.data
     ? { user: query.data }
     : query.isError
-      ? {
-          error:
-            query.error instanceof ApiError && query.error.status === 404
-              ? `No existe un usuario activo con el identificador #${id}. Si está dado de baja, restáurelo desde el listado.`
-              : query.error.message,
-        }
+      ? { error: query.error.message, notFound: isNotFound(query.error) }
       : null
 
   const user = result?.user
   // useLookup con un solo id: devuelve { [id]: agencia } y se toma la de ese id.
   const agency = useLookup('agencies', [user?.agencyId], findAgency)[user?.agencyId]
+
+  if (result?.notFound) {
+    return (
+      <NotFound
+        title={`El usuario #${id} no existe`}
+        description="Puede que nunca haya existido o que esté dado de baja. Si está dado de baja, se restaura desde el listado."
+        back={{ to: LIST_PATH, label: 'Volver a usuarios' }}
+      />
+    )
+  }
 
   return (
     <>

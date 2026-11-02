@@ -34,7 +34,8 @@ import { useAuth } from '../../../context/auth-context.js'
 import { useLookup } from '../../../hooks/useLookup.js'
 import { useUserOptions } from '../../../hooks/useSelectOptions.js'
 import { leadChildKey, queryKeys } from '../../../queries/keys.js'
-import { ApiError } from '../../../services/api.js'
+import { NotFound } from '../../../components/NotFound.jsx'
+import { isNotFound } from '../../../services/api.js'
 import {
   ALERT_STATUS,
   CRM_STAGE_COLOR,
@@ -108,11 +109,7 @@ function useLeadData(id) {
 
   const all = [lead, history, offers, alerts]
   const failed = all.find((query) => query.error)
-  const errorMessage = failed
-    ? failed.error instanceof ApiError && failed.error.status === 404
-      ? `No existe un lead con el identificador #${id}.`
-      : failed.error.message
-    : null
+  const errorMessage = failed ? failed.error.message : null
 
   // Con las cuatro respuestas se arma el objeto de la pantalla. Si falla una
   // recarga se siguen mostrando los datos anteriores junto con el aviso.
@@ -120,7 +117,8 @@ function useLeadData(id) {
   if (all.every((query) => query.data)) {
     data = { lead: lead.data, history: history.data, offers: offers.data, alerts: alerts.data, error: errorMessage }
   } else if (errorMessage) {
-    data = { error: errorMessage }
+    // Un 404 del lead es "no existe"; el de un listado que cuelga de él, también.
+    data = { error: errorMessage, notFound: isNotFound(failed.error) }
   }
 
   // Un cambio en el lead (etapa, oferta, evento) puede afectar al listado
@@ -145,6 +143,16 @@ export default function LeadDetail() {
   const property = useLookup('properties', [lead?.propertyId], findProperty)[lead?.propertyId]
   const agent = useLookup('users', [lead?.userId], findUser)[lead?.userId]
   const agents = useUserOptions(lead ? String(lead.userId) : null)
+
+  if (data?.notFound) {
+    return (
+      <NotFound
+        title={`El lead #${id} no existe`}
+        description="Puede que la dirección esté mal o que el lead sea de otra inmobiliaria."
+        back={{ to: LIST_PATH, label: 'Volver a Clientes & Leads' }}
+      />
+    )
+  }
 
   if (!lead) {
     return (

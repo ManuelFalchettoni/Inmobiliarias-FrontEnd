@@ -89,6 +89,12 @@ export class ApiError extends Error {
 }
 
 /**
+ * ¿El backend respondió 404? Las pantallas de detalle y edición lo usan para
+ * mostrar la página "no encontrado" en lugar de un cartel de error.
+ */
+export const isNotFound = (error) => error instanceof ApiError && error.status === 404
+
+/**
  * El GlobalExceptionHandler concatena los errores de validación en un único string
  * con la forma `"campo: mensaje, otroCampo: mensaje"`. Los mensajes pueden contener
  * comas y puntos, así que el corte se hace en el `, ` que precede a un `campo:`.

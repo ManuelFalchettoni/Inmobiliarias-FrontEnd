@@ -32,7 +32,8 @@ import {
 import ConfirmAction from '../../../components/ConfirmAction.jsx'
 import { useLookup } from '../../../hooks/useLookup.js'
 import { queryKeys } from '../../../queries/keys.js'
-import { ApiError } from '../../../services/api.js'
+import { NotFound } from '../../../components/NotFound.jsx'
+import { isNotFound } from '../../../services/api.js'
 import {
   CONTRACT_STATUS_COLOR,
   CONTRACT_STATUS_LABEL,
@@ -96,17 +97,13 @@ function useContractData(id) {
   })
 
   const failed = contract.error ?? parties.error
-  const errorMessage = failed
-    ? failed instanceof ApiError && failed.status === 404
-      ? `No existe un contrato con el identificador #${id}.`
-      : failed.message
-    : null
+  const errorMessage = failed ? failed.message : null
 
   // { contract, parties, error } con lo que haya; si falla una recarga se
   // siguen mostrando los datos anteriores junto con el aviso.
   let data = null
   if (contract.data && parties.data) data = { contract: contract.data, parties: parties.data, error: errorMessage }
-  else if (errorMessage) data = { error: errorMessage }
+  else if (errorMessage) data = { error: errorMessage, notFound: isNotFound(contract.error) }
 
   // Cancelar el contrato o tocar sus partes cambia el listado también.
   const reload = () => {
@@ -127,6 +124,16 @@ export default function ContractDetail() {
 
   const contract = data?.contract
   const property = useLookup('properties', [contract?.propertyId], findProperty)[contract?.propertyId]
+
+  if (data?.notFound) {
+    return (
+      <NotFound
+        title={`El contrato #${id} no existe`}
+        description="Puede que la dirección esté mal o que el contrato sea de otra inmobiliaria."
+        back={{ to: LIST_PATH, label: 'Volver a contratos' }}
+      />
+    )
+  }
 
   if (!contract) {
     return (

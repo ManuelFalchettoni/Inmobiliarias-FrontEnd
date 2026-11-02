@@ -37,7 +37,8 @@ import {
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { ApiError } from '../../../services/api.js'
+import { NotFound } from '../../../components/NotFound.jsx'
+import { ApiError, isNotFound } from '../../../services/api.js'
 import { useAuth } from '../../../context/auth-context.js'
 import { defaultAgencyId, useAgencyOptions } from '../../../hooks/useAgencyOptions.js'
 import { queryKeys } from '../../../queries/keys.js'
@@ -748,12 +749,7 @@ function PropertyLoader({ id }) {
   const result = query.data
     ? { property: query.data }
     : query.isError
-      ? {
-          error:
-            query.error instanceof ApiError && query.error.status === 404
-              ? `No existe una propiedad activa con el identificador #${id}.`
-              : query.error.message,
-        }
+      ? { error: query.error.message, notFound: isNotFound(query.error) }
       : null
 
   // Mientras carga: rectángulos grises animados (Skeleton) con la forma del formulario.
@@ -770,6 +766,16 @@ function PropertyLoader({ id }) {
           </Stack>
         </Container>
       </>
+    )
+  }
+
+  if (result.notFound) {
+    return (
+      <NotFound
+        title={`La propiedad #${id} no existe`}
+        description="Puede que la dirección esté mal, que esté dada de baja o que sea de otra inmobiliaria. Las dadas de baja se restauran desde Archivados."
+        back={{ to: LIST_PATH, label: 'Volver a propiedades' }}
+      />
     )
   }
 
