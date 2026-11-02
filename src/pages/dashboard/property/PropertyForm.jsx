@@ -79,7 +79,7 @@ const editPath = (id) => `${LIST_PATH}/${id}/editar`
  */
 function SectionCard({ icon: Icon, title, description, children }) {
   return (
-    <Card withBorder radius="lg" padding="xl" shadow="xs">
+    <Card withBorder radius="lg" padding="xl">
       <Group gap="sm" mb="lg" wrap="nowrap" align="flex-start">
         <ThemeIcon variant="light" size={40} radius="md">
           <Icon size={22} />
@@ -104,10 +104,10 @@ function PageHeader({ propertyId }) {
     <Box bg="white" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
       <Container size="xl" py="xl">
         <Breadcrumbs separator={<IconChevronRight size={14} />} mb="xs">
-          <Anchor component={Link} to={LIST_PATH} size="xs" c="dimmed" tt="uppercase" fw={600}>
+          <Anchor component={Link} to={LIST_PATH} size="xs" c="dimmed" fw={600}>
             Propiedades
           </Anchor>
-          <Text size="xs" c="var(--mantine-primary-color-filled)" tt="uppercase" fw={600}>
+          <Text size="xs" c="var(--mantine-primary-color-filled)" fw={600}>
             {propertyId ? `Propiedad #${propertyId}` : 'Nueva propiedad'}
           </Text>
         </Breadcrumbs>
@@ -389,7 +389,7 @@ function PropertyEditor({ property }) {
         {/* Un aviso distinto según cómo terminó el guardado. `condición && <X/>`
             dibuja X solo si la condición se cumple. */}
         {status.state === 'created' && (
-          <Alert color="teal" icon={<IconCircleCheck />} title="Propiedad publicada" mb="lg" withCloseButton onClose={dismiss}>
+          <Alert color="success" icon={<IconCircleCheck />} title="Propiedad publicada" mb="lg" withCloseButton onClose={dismiss}>
             La propiedad #{propertyId} se creó con {photos.length}{' '}
             {photos.length === 1 ? 'foto' : 'fotos'}.{' '}
             <Anchor component={Link} to={LIST_PATH} size="sm" fw={500}>
@@ -398,10 +398,10 @@ function PropertyEditor({ property }) {
           </Alert>
         )}
         {status.state === 'saved' && (
-          <Alert color="teal" icon={<IconCircleCheck />} title="Cambios guardados" mb="lg" withCloseButton onClose={dismiss} />
+          <Alert color="success" icon={<IconCircleCheck />} title="Cambios guardados" mb="lg" withCloseButton onClose={dismiss} />
         )}
         {status.state === 'photos-saved' && (
-          <Alert color="teal" icon={<IconCircleCheck />} title="Fotos subidas" mb="lg" withCloseButton onClose={dismiss} />
+          <Alert color="success" icon={<IconCircleCheck />} title="Fotos subidas" mb="lg" withCloseButton onClose={dismiss} />
         )}
         {status.state === 'partial' && (
           <Alert
@@ -428,7 +428,7 @@ function PropertyEditor({ property }) {
           </Alert>
         )}
         {status.state === 'error' && (
-          <Alert color="red" icon={<IconAlertTriangle />} title={status.title} mb="lg" withCloseButton onClose={dismiss}>
+          <Alert color="danger" icon={<IconAlertTriangle />} title={status.title} mb="lg" withCloseButton onClose={dismiss}>
             {status.message}
           </Alert>
         )}
@@ -669,7 +669,7 @@ function PropertyEditor({ property }) {
                   {...form.getInputProps('agencyId')}
                 />
                 {agencies.state === 'error' && (
-                  <Text size="sm" c="red" mt="xs">
+                  <Text size="sm" c="danger" mt="xs">
                     No se pudieron cargar las agencias: {agencies.message}
                   </Text>
                 )}
@@ -784,7 +784,7 @@ function PropertyLoader({ id }) {
       <>
         <PageHeader propertyId={id} />
         <Container size="xl" py="xl">
-          <Alert color="red" icon={<IconAlertTriangle />} title="No se puede editar la propiedad">
+          <Alert color="danger" icon={<IconAlertTriangle />} title="No se puede editar la propiedad">
             {result.error ?? 'La propiedad está dada de baja. Restáurela desde Archivados para editarla.'}{' '}
             <Anchor component={Link} to={LIST_PATH} size="sm" fw={500}>
               Volver al listado

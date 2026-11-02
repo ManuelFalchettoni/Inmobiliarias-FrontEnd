@@ -105,10 +105,10 @@ export default function UserForm() {
       <Box bg="white" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
         <Container size="md" py="xl">
           <Breadcrumbs separator={<IconChevronRight size={14} />} mb="xs">
-            <Anchor component={Link} to="/dashboard/usuarios" size="xs" c="dimmed" tt="uppercase" fw={600}>
+            <Anchor component={Link} to="/dashboard/usuarios" size="xs" c="dimmed" fw={600}>
               Usuarios
             </Anchor>
-            <Text size="xs" c="var(--mantine-primary-color-filled)" tt="uppercase" fw={600}>
+            <Text size="xs" c="var(--mantine-primary-color-filled)" fw={600}>
               Nuevo usuario
             </Text>
           </Breadcrumbs>
@@ -125,7 +125,7 @@ export default function UserForm() {
       <Container size="md" py="xl">
         {status.state === 'created' && (
           <Alert
-            color="teal"
+            color="success"
             icon={<IconCircleCheck />}
             title="Usuario creado"
             mb="lg"
@@ -140,7 +140,7 @@ export default function UserForm() {
 
         {status.state === 'error' && (
           <Alert
-            color="red"
+            color="danger"
             icon={<IconAlertTriangle />}
             title="No se pudo crear el usuario"
             mb="lg"
@@ -151,7 +151,7 @@ export default function UserForm() {
           </Alert>
         )}
 
-        <Card withBorder radius="lg" padding="xl" shadow="xs">
+        <Card withBorder radius="lg" padding="xl">
           <SimpleGrid cols={{ base: 1, sm: 2 }}>
             <TextInput
               label="Nombre"

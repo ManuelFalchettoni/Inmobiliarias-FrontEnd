@@ -49,10 +49,10 @@ function PageHeader() {
     <Box bg="white" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
       <Container size="md" py="xl">
         <Breadcrumbs separator={<IconChevronRight size={14} />} mb="xs">
-          <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+          <Text size="xs" c="dimmed" fw={600}>
             Cuenta
           </Text>
-          <Text size="xs" c="var(--mantine-primary-color-filled)" tt="uppercase" fw={600}>
+          <Text size="xs" c="var(--mantine-primary-color-filled)" fw={600}>
             Configuración
           </Text>
         </Breadcrumbs>
@@ -68,7 +68,7 @@ function PageHeader() {
 /** Resumen de la cuenta: quién es, su rol y desde cuándo. Solo lectura. */
 function ProfileCard({ user, agency }) {
   return (
-    <Card withBorder radius="lg" padding="xl" shadow="xs">
+    <Card withBorder radius="lg" padding="xl">
       <Group gap="lg" wrap="nowrap" align="center">
         <Avatar size={64} radius="xl" color={USER_ROL_COLOR[user.rol] ?? 'gray'}>
           {initials(user.name)}
@@ -117,7 +117,7 @@ function ProfileCard({ user, agency }) {
 function Field({ label, children }) {
   return (
     <div>
-      <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+      <Text size="xs" c="dimmed" fw={600}>
         {label}
       </Text>
       <Text size="sm">{children || '—'}</Text>
@@ -181,7 +181,7 @@ function AgencyCard({ agencyId, agency }) {
 /** Cierre de sesión. */
 function SessionCard({ onLogout }) {
   return (
-    <Card withBorder radius="lg" padding="xl" shadow="xs">
+    <Card withBorder radius="lg" padding="xl">
       <Group justify="space-between" gap="md">
         <div>
           <Text fw={600}>Sesión</Text>
@@ -189,7 +189,7 @@ function SessionCard({ onLogout }) {
             Cerrá la sesión si estás usando una computadora compartida.
           </Text>
         </div>
-        <Button variant="light" color="red" leftSection={<IconLogout size={18} />} onClick={onLogout}>
+        <Button variant="light" color="danger" leftSection={<IconLogout size={18} />} onClick={onLogout}>
           Cerrar sesión
         </Button>
       </Group>
@@ -249,7 +249,7 @@ export default function AccountSettings() {
 
         {/* Un 401 no llega acá: AuthContext limpia la sesión y la app manda al login. */}
         {!user && query.isError && (
-          <Alert color="red" icon={<IconAlertTriangle />} title="No se pudo cargar tu cuenta">
+          <Alert color="danger" icon={<IconAlertTriangle />} title="No se pudo cargar tu cuenta">
             <Text size="sm" mb="sm">
               {query.error.message}
             </Text>
@@ -257,7 +257,7 @@ export default function AccountSettings() {
               <Button size="xs" variant="light" onClick={() => query.refetch()}>
                 Reintentar
               </Button>
-              <Button size="xs" variant="subtle" color="red" onClick={handleLogout}>
+              <Button size="xs" variant="subtle" color="danger" onClick={handleLogout}>
                 Cerrar sesión
               </Button>
             </Group>

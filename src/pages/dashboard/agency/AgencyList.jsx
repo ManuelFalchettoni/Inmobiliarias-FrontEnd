@@ -107,7 +107,7 @@ function AgencyActions({ agency, onAction, disabled }) {
           ))}
           <Menu.Divider />
           <Menu.Item
-            color="red"
+            color="danger"
             leftSection={<IconArchive size={16} />}
             onClick={() => onAction(agency, () => deleteAgency(agency.id))}
           >
@@ -166,23 +166,18 @@ export default function AgencyList() {
   return (
     <Container size="xl" py="xl">
       <Group justify="space-between" align="flex-start" mb="lg" wrap="nowrap">
-        <Group gap="sm" align="flex-start" wrap="nowrap">
-          <ThemeIcon variant="light" size={44} radius="md">
-            <IconBuildingSkyscraper size={24} />
-          </ThemeIcon>
-          <div>
-            <Title order={1} size="h2">
-              Agencias
-            </Title>
-            <Text c="dimmed">
-              {data
-                ? `${data.totalElements} ${data.totalElements === 1 ? 'agencia' : 'agencias'}`
-                : error
-                  ? 'Sin datos'
-                  : 'Cargando el listado...'}
-            </Text>
-          </div>
-        </Group>
+        <div>
+          <Title order={1} size="h2">
+            Agencias
+          </Title>
+          <Text c="dimmed">
+            {data
+              ? `${data.totalElements} ${data.totalElements === 1 ? 'agencia' : 'agencias'}`
+              : error
+                ? 'Sin datos'
+                : 'Cargando el listado...'}
+          </Text>
+        </div>
 
         <Button component={Link} to="/dashboard/agencias/nueva" leftSection={<IconPlus size={16} />}>
           Nueva agencia
@@ -201,7 +196,7 @@ export default function AgencyList() {
 
       {action.isError && (
         <Alert
-          color="red"
+          color="danger"
           icon={<IconAlertTriangle />}
           title="No se pudo completar la acción"
           mb="md"
@@ -222,13 +217,13 @@ export default function AgencyList() {
       )}
 
       {error && (
-        <Alert color="red" icon={<IconAlertTriangle />} title="No se pudo cargar el listado">
+        <Alert color="danger" icon={<IconAlertTriangle />} title="No se pudo cargar el listado">
           {error}
         </Alert>
       )}
 
       {data?.content.length === 0 && (
-        <Card withBorder radius="lg" padding="xl" shadow="xs">
+        <Card variant="empty" radius="lg" padding="xl">
           <Stack align="center" gap="xs" py="xl">
             <ThemeIcon variant="light" color="gray" size={56} radius="xl">
               <IconBuildingSkyscraper size={28} />
@@ -246,10 +241,9 @@ export default function AgencyList() {
       {data?.content.length > 0 && (
         <>
           <Card
-            withBorder
+            variant="table"
             radius="lg"
             padding={0}
-            shadow="xs"
             style={{ opacity: cargando ? 0.55 : 1, transition: 'opacity 150ms' }}
           >
             <Table.ScrollContainer minWidth={860}>

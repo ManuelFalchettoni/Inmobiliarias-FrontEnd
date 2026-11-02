@@ -79,7 +79,7 @@ function UserActions({ user, onAction, disabled }) {
         </Menu.Target>
         <Menu.Dropdown>
           <Menu.Item
-            color="red"
+            color="danger"
             leftSection={<IconArchive size={16} />}
             onClick={() => onAction(user, () => deleteUser(user.id))}
           >
@@ -151,23 +151,18 @@ export default function UserList() {
   return (
     <Container size="xl" py="xl">
       <Group justify="space-between" align="flex-start" mb="lg" wrap="nowrap">
-        <Group gap="sm" align="flex-start" wrap="nowrap">
-          <ThemeIcon variant="light" size={44} radius="md">
-            <IconUsers size={24} />
-          </ThemeIcon>
-          <div>
-            <Title order={1} size="h2">
-              Usuarios
-            </Title>
-            <Text c="dimmed">
-              {data
-                ? `${data.totalElements} ${data.totalElements === 1 ? 'usuario' : 'usuarios'}`
-                : error
-                  ? 'Sin datos'
-                  : 'Cargando el listado...'}
-            </Text>
-          </div>
-        </Group>
+        <div>
+          <Title order={1} size="h2">
+            Usuarios
+          </Title>
+          <Text c="dimmed">
+            {data
+              ? `${data.totalElements} ${data.totalElements === 1 ? 'usuario' : 'usuarios'}`
+              : error
+                ? 'Sin datos'
+                : 'Cargando el listado...'}
+          </Text>
+        </div>
 
         <Button component={Link} to="/dashboard/usuarios/nuevo" leftSection={<IconPlus size={16} />}>
           Nuevo usuario
@@ -200,7 +195,7 @@ export default function UserList() {
 
       {action.isError && (
         <Alert
-          color="red"
+          color="danger"
           icon={<IconAlertTriangle />}
           title="No se pudo completar la acción"
           mb="md"
@@ -220,13 +215,13 @@ export default function UserList() {
       )}
 
       {error && (
-        <Alert color="red" icon={<IconAlertTriangle />} title="No se pudo cargar el listado">
+        <Alert color="danger" icon={<IconAlertTriangle />} title="No se pudo cargar el listado">
           {error}
         </Alert>
       )}
 
       {data?.content.length === 0 && (
-        <Card withBorder radius="lg" padding="xl" shadow="xs">
+        <Card variant="empty" radius="lg" padding="xl">
           <Stack align="center" gap="xs" py="xl">
             <ThemeIcon variant="light" color="gray" size={56} radius="xl">
               <IconUsers size={28} />
@@ -245,10 +240,9 @@ export default function UserList() {
       {data?.content.length > 0 && (
         <>
           <Card
-            withBorder
+            variant="table"
             radius="lg"
             padding={0}
-            shadow="xs"
             style={{ opacity: cargando ? 0.55 : 1, transition: 'opacity 150ms' }}
           >
             <Table.ScrollContainer minWidth={860}>

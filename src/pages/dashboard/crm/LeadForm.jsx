@@ -122,10 +122,10 @@ export default function LeadForm() {
       <Box bg="white" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
         <Container size="md" py="xl">
           <Breadcrumbs separator={<IconChevronRight size={14} />} mb="xs">
-            <Anchor component={Link} to={LIST_PATH} size="xs" c="dimmed" tt="uppercase" fw={600}>
+            <Anchor component={Link} to={LIST_PATH} size="xs" c="dimmed" fw={600}>
               Clientes & Leads
             </Anchor>
-            <Text size="xs" c="var(--mantine-primary-color-filled)" tt="uppercase" fw={600}>
+            <Text size="xs" c="var(--mantine-primary-color-filled)" fw={600}>
               Nuevo lead
             </Text>
           </Breadcrumbs>
@@ -142,7 +142,7 @@ export default function LeadForm() {
       <Container size="md" py="xl">
         {status.state === 'error' && (
           <Alert
-            color="red"
+            color="danger"
             icon={<IconAlertTriangle />}
             title="No se pudo crear el lead"
             mb="lg"
@@ -153,7 +153,7 @@ export default function LeadForm() {
           </Alert>
         )}
 
-        <Card withBorder radius="lg" padding="xl" shadow="xs">
+        <Card withBorder radius="lg" padding="xl">
           <Stack>
             <Select
               label="Propiedad"

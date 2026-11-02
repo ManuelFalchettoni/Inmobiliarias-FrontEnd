@@ -3,9 +3,6 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Alert, Anchor, Box, Button, Container, Image, ScrollArea, Skeleton, Stack, UnstyledButton } from '@mantine/core'
 import { Carousel } from '@mantine/carousel'
 import '@mantine/carousel/styles.css'
-// Archivo con eje de ancho: la versión angosta es la de la dirección y las
-// cifras. Se importa acá y no en main.jsx para que solo la descargue la ficha.
-import '@fontsource-variable/archivo/wdth.css'
 import { IconAlertTriangle, IconArrowLeft, IconMail, IconMapPin, IconPhone, IconWorld } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
 

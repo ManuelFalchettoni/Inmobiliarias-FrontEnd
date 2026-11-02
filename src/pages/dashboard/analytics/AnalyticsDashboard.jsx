@@ -24,7 +24,6 @@ import {
   IconAlarm,
   IconAlertTriangle,
   IconBuildingEstate,
-  IconChartBar,
   IconFileText,
   IconMessages,
 } from '@tabler/icons-react'
@@ -65,9 +64,9 @@ const percent = (part, total) => (total ? Math.round((part / total) * 100) : 0)
 /** Tarjeta con un número grande y una línea de contexto debajo. */
 function StatTile({ icon: Icon, label, value, detail, detailColor = 'dimmed' }) {
   return (
-    <Card withBorder radius="lg" padding="lg" shadow="xs">
+    <Card withBorder radius="lg" padding="lg">
       <Group justify="space-between" align="flex-start" wrap="nowrap">
-        <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+        <Text size="xs" c="dimmed" fw={600}>
           {label}
         </Text>
         <ThemeIcon variant="light" size={32} radius="md">
@@ -86,7 +85,7 @@ function StatTile({ icon: Icon, label, value, detail, detailColor = 'dimmed' }) 
 
 function ChartCard({ title, caption, children }) {
   return (
-    <Card withBorder radius="lg" padding="lg" shadow="xs" h="100%">
+    <Card withBorder radius="lg" padding="lg" h="100%">
       <Title order={2} size="h5">
         {title}
       </Title>
@@ -188,7 +187,7 @@ function LeadPipeline({ crm }) {
   return (
     <Grid gutter="xl" align="center">
       <Grid.Col span={{ base: 12, md: 8 }}>
-        <Text size="xs" c="dimmed" tt="uppercase" fw={600} mb="xs">
+        <Text size="xs" c="dimmed" fw={600} mb="xs">
           En curso · {formatCount(open)}
         </Text>
         <ColumnChart
@@ -200,7 +199,7 @@ function LeadPipeline({ crm }) {
         />
       </Grid.Col>
       <Grid.Col span={{ base: 12, md: 4 }}>
-        <Text size="xs" c="dimmed" tt="uppercase" fw={600} mb="xs">
+        <Text size="xs" c="dimmed" fw={600} mb="xs">
           Resultado · {formatCount(closed + discarded)}
         </Text>
         <Center>
@@ -332,7 +331,7 @@ function ContractBreakdown({ contracts }) {
       </div>
 
       <div>
-        <Text size="xs" c="dimmed" tt="uppercase" fw={600} mb={4}>
+        <Text size="xs" c="dimmed" fw={600} mb={4}>
           Monto de los vigentes
         </Text>
         {amounts.length === 0 ? (
@@ -468,7 +467,7 @@ function AgentTable({ agents }) {
               </Table.Td>
               <Table.Td ta="right">
                 {agent.expiredAlerts > 0 ? (
-                  <Badge color="red" variant="light" leftSection={<IconAlertTriangle size={12} />}>
+                  <Badge color="danger" variant="light" leftSection={<IconAlertTriangle size={12} />}>
                     {formatCount(agent.expiredAlerts)}
                   </Badge>
                 ) : (
@@ -508,17 +507,12 @@ export default function AnalyticsDashboard() {
   return (
     <Container size="xl" py="xl">
       <Group justify="space-between" align="flex-end" mb="lg" gap="md">
-        <Group gap="sm" align="flex-start" wrap="nowrap">
-          <ThemeIcon variant="light" size={44} radius="md">
-            <IconChartBar size={24} />
-          </ThemeIcon>
-          <div>
-            <Title order={1} size="h2">
-              Analítica & Reportes
-            </Title>
-            <Text c="dimmed">Propiedades, leads, ofertas y contratos, con el rendimiento de cada agente.</Text>
-          </div>
-        </Group>
+        <div>
+          <Title order={1} size="h2">
+            Analítica & Reportes
+          </Title>
+          <Text c="dimmed">Propiedades, leads, ofertas y contratos, con el rendimiento de cada agente.</Text>
+        </div>
         {isAdmin && (
           <Select
             w={300}
@@ -535,7 +529,7 @@ export default function AnalyticsDashboard() {
       </Group>
 
       {query.isError && (
-        <Alert color="red" icon={<IconAlertTriangle />} title="No se pudo cargar la analítica">
+        <Alert color="danger" icon={<IconAlertTriangle />} title="No se pudo cargar la analítica">
           {query.error.status === 403
             ? 'Tu usuario no tiene una inmobiliaria asignada: no hay datos para mostrar.'
             : query.error.message}
@@ -577,7 +571,7 @@ export default function AnalyticsDashboard() {
                   ? `${formatCount(data.crm.expiredAlerts)} ${data.crm.expiredAlerts === 1 ? 'vencido' : 'vencidos'}`
                   : 'Ninguno vencido'
               }
-              detailColor={data.crm.expiredAlerts > 0 ? 'red' : 'dimmed'}
+              detailColor={data.crm.expiredAlerts > 0 ? 'danger' : 'dimmed'}
             />
             <StatTile
               icon={IconFileText}
@@ -613,7 +607,7 @@ export default function AnalyticsDashboard() {
             </Grid.Col>
           </Grid>
 
-          <Card withBorder radius="lg" padding="lg" shadow="xs">
+          <Card withBorder radius="lg" padding="lg">
             <Title order={2} size="h5">
               Rendimiento por agente
             </Title>

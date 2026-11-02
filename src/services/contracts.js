@@ -26,7 +26,7 @@ export const CONTRACT_STATUS_OPTIONS = [
   { value: 'CANCELLED', label: 'Cancelado' },
 ]
 export const CONTRACT_STATUS_LABEL = toLabelMap(CONTRACT_STATUS_OPTIONS)
-export const CONTRACT_STATUS_COLOR = { ACTIVE: 'teal', FINISHED: 'gray', CANCELLED: 'red' }
+export const CONTRACT_STATUS_COLOR = { ACTIVE: 'success', FINISHED: 'gray', CANCELLED: 'danger' }
 
 /** Refleja `ContractRole`. */
 export const CONTRACT_ROLE_OPTIONS = [

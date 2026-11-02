@@ -24,7 +24,7 @@ export default function ConfirmAction({ label, onConfirm, disabled, children }) 
     return (
       <Button
         size="compact-sm"
-        color="red"
+        color="danger"
         disabled={disabled}
         onClick={() => {
           setArmed(false)

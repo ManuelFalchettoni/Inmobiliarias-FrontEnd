@@ -1,42 +1,127 @@
+/*
+ * Dos columnas: el formulario con un ancho cómodo de lectura y el plano, que
+ * ocupa el resto. En celular queda solo el formulario.
+ */
 .wrapper {
   min-height: 100vh;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  background: var(--app-raised);
+
+  @media (min-width: $mantine-breakpoint-sm) {
+    grid-template-columns: minmax(380px, 520px) 1fr;
+  }
 }
 
-.image {
-  width: 70%;
-  min-height: 100vh;
-  background-size: cover;
-  background-position: center;
-  background-image: linear-gradient(
-      180deg,
-      rgba(11, 61, 58, 0.45) 0%,
-      rgba(11, 61, 58, 0.15) 100%
-    ),
-    url(https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1600&q=80),
-    linear-gradient(135deg, var(--mantine-color-teal-8) 0%, var(--mantine-color-teal-4) 100%);
+.side {
+  display: flex;
+  align-items: center;
+  padding: 48px 24px;
 
-  @media (max-width: $mantine-breakpoint-sm) {
-    display: none;
+  @media (min-width: $mantine-breakpoint-sm) {
+    padding-inline: 56px;
   }
 }
 
 .form {
-  width: 50%;
-  min-height: 100vh;
-  padding: 30px;
-  padding-top: 80px;
-  border-radius: 0;
+  width: 100%;
+  max-width: 400px;
+}
 
-  @media (max-width: $mantine-breakpoint-sm) {
-    width: 100%;
-  }
+.brand {
+  margin-bottom: 56px;
 }
 
 .title {
-  color: light-dark(var(--mantine-color-black), var(--mantine-color-white));
-  font-weight: 500;
-  text-align: center;
-  margin-top: var(--mantine-spacing-md);
-  margin-bottom: 30px;
+  margin-bottom: 28px;
+  font-size: 40px;
+  font-stretch: 72%;
+  line-height: 1;
+  color: var(--app-ink);
+}
+
+/* -------------------------------------------------------------- Plano */
+
+/*
+ * Papel cuadriculado en verde pino: una trama fina cada 16 px y una marcada
+ * cada 80 px, con la cruz de referencia en un tercio del ancho.
+ */
+.plan {
+  --plan-x: 38%;
+  --plan-y: 42%;
+
+  position: relative;
+  display: none;
+  overflow: hidden;
+  background-color: var(--mantine-color-pine-7);
+  background-image:
+    linear-gradient(rgba(238, 241, 239, 0.16) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(238, 241, 239, 0.16) 1px, transparent 1px),
+    linear-gradient(rgba(238, 241, 239, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(238, 241, 239, 0.06) 1px, transparent 1px);
+  background-size: 80px 80px, 80px 80px, 16px 16px, 16px 16px;
+
+  @media (min-width: $mantine-breakpoint-sm) {
+    display: block;
+  }
+
+  /* La cruz: una línea horizontal y una vertical que se cruzan en el pin. */
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    background: var(--mantine-color-brass-3);
+    opacity: 0.45;
+  }
+
+  &::before {
+    left: 0;
+    right: 0;
+    top: var(--plan-y);
+    height: 1px;
+  }
+
+  &::after {
+    top: 0;
+    bottom: 0;
+    left: var(--plan-x);
+    width: 1px;
+  }
+}
+
+.pin {
+  position: absolute;
+  left: var(--plan-x);
+  top: var(--plan-y);
+  transform: translate(-50%, -100%);
+  color: var(--mantine-color-brass-4);
+  filter: drop-shadow(0 3px 3px rgba(6, 51, 47, 0.4));
+}
+
+.pinDot {
+  position: absolute;
+  left: var(--plan-x);
+  top: var(--plan-y);
+  width: 12px;
+  height: 12px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--mantine-color-brass-4);
+  box-shadow: 0 0 0 6px rgba(196, 147, 63, 0.25);
+}
+
+.tagline {
+  position: absolute;
+  left: 56px;
+  right: 56px;
+  bottom: 56px;
+  margin: 0;
+  max-width: 14ch;
+  font-family: var(--mantine-font-family-headings);
+  font-stretch: 68%;
+  font-weight: 700;
+  font-size: clamp(40px, 5vw, 76px);
+  line-height: 0.95;
+  color: var(--app-paper);
+  text-wrap: balance;
 }

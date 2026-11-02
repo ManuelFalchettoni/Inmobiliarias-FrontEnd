@@ -96,7 +96,7 @@ function NewPartyForm({ contract, initialPeopleId, onSaved }) {
           </Button>
         </Group>
         {status.state === 'error' && (
-          <Text size="sm" c="red">
+          <Text size="sm" c="danger">
             {status.message}
           </Text>
         )}
@@ -138,7 +138,7 @@ export default function ContractParties({ contract, parties, initialPeopleId, on
       )}
 
       {error && (
-        <Text size="sm" c="red">
+        <Text size="sm" c="danger">
           {error}
         </Text>
       )}

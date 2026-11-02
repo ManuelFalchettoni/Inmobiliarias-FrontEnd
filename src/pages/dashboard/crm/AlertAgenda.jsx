@@ -3,6 +3,7 @@ import { useQueries, useQuery } from '@tanstack/react-query'
 import {
   Alert,
   Badge,
+  Box,
   Button,
   Card,
   Container,
@@ -31,6 +32,7 @@ import {
   CRM_STAGE_LABEL,
   listAlerts,
   listAllLeads,
+  overdueAlerts,
   upcomingAlerts,
 } from '../../../services/crm.js'
 import { formatDateTime, formatTimeLeft } from '../../../services/format.js'
@@ -49,9 +51,9 @@ const DEFAULT_SORT = 'proximo'
 
 const HOUR = 60 * 60 * 1000
 
-/** Color del "falta" según la urgencia. */
+/** Color del "falta" según la urgencia. Vencido o a menos de una hora: rojo. */
 function urgencyColor(ms) {
-  if (ms < HOUR) return 'red'
+  if (ms < HOUR) return 'danger'
   if (ms < 24 * HOUR) return 'orange'
   if (ms < 3 * 24 * HOUR) return 'yellow'
   return 'blue'
@@ -67,7 +69,9 @@ function urgencyColor(ms) {
  * arma acá. Las claves de caché son las mismas que usa el detalle del lead, así
  * que lo que se cambia allá se ve acá y viceversa.
  *
- * Solo cuentan los avisos que faltan: pendientes y sin vencer.
+ * Cuentan todos los avisos pendientes. Los vencidos van siempre primero, el
+ * más atrasado arriba, porque son los que hay que atender ya; después, los que
+ * faltan, en el orden elegido.
  */
 export default function AlertAgenda() {
   const navigate = useNavigate()
@@ -101,22 +105,31 @@ export default function AlertAgenda() {
   const failedAlerts = alertQueries.filter((q) => q.isError).length
   const loadingAlerts = leads.length > 0 && loadedAlerts < leads.length
 
-  // 3. Cada lead con su próximo aviso y cuánto falta.
+  // 3. Cada lead con el aviso que muestra: el vencido más atrasado si tiene
+  //    alguno, si no el próximo. `timeLeft` es negativo en los vencidos.
   const rows = leads.map((lead, index) => {
-    const upcoming = upcomingAlerts(alertQueries[index]?.data, now)
-    const next = upcoming[0] ?? null
+    const alerts = alertQueries[index]?.data
+    const overdue = overdueAlerts(alerts, now)
+    const upcoming = upcomingAlerts(alerts, now)
+    const next = overdue[0] ?? upcoming[0] ?? null
     return {
       lead,
       next,
-      pending: upcoming.length,
+      overdue: overdue.length > 0,
+      pending: overdue.length + upcoming.length,
       timeLeft: next ? new Date(next.alertDate).getTime() - now : null,
       loading: alertQueries[index]?.isPending ?? true,
     }
   })
 
-  const withAlert = rows.filter((row) => row.next)
+  const overdueRows = rows.filter((row) => row.overdue)
+  const upcomingRows = rows.filter((row) => row.next && !row.overdue)
   const withoutAlert = rows.filter((row) => !row.next)
-  withAlert.sort((a, b) => (sort === 'proximo' ? a.timeLeft - b.timeLeft : b.timeLeft - a.timeLeft))
+  // Los vencidos siempre arriba (el más atrasado primero); el orden elegido
+  // solo reordena los que faltan.
+  overdueRows.sort((a, b) => a.timeLeft - b.timeLeft)
+  upcomingRows.sort((a, b) => (sort === 'proximo' ? a.timeLeft - b.timeLeft : b.timeLeft - a.timeLeft))
+  const withAlert = [...overdueRows, ...upcomingRows]
   const sorted = showEmpty ? [...withAlert, ...withoutAlert] : withAlert
 
   // Paginado en el navegador: el orden necesita todos los leads a la vez.
@@ -129,26 +142,29 @@ export default function AlertAgenda() {
   const properties = useLookup('properties', visible.map((r) => r.lead.propertyId), findProperty)
   const users = useLookup('users', visible.map((r) => r.lead.userId), findUser)
 
-  const nextHour = withAlert.filter((r) => r.timeLeft < HOUR).length
-  const nextDay = withAlert.filter((r) => r.timeLeft < 24 * HOUR).length
+  const nextHour = upcomingRows.filter((r) => r.timeLeft < HOUR).length
+  const nextDay = upcomingRows.filter((r) => r.timeLeft < 24 * HOUR).length
 
   return (
     <Container size="xl" py="xl">
-      <Group gap="sm" align="flex-start" wrap="nowrap" mb="lg">
-        <ThemeIcon variant="light" size={44} radius="md">
-          <IconBellRinging size={24} />
-        </ThemeIcon>
-        <div>
-          <Title order={1} size="h2">
-            Agenda de avisos
-          </Title>
+      <Box mb="lg">
+        <Title order={1} size="h2">
+          Agenda de avisos
+        </Title>
+        {leadsQuery.isSuccess && !loadingAlerts ? (
           <Text c="dimmed">
-            {leadsQuery.isSuccess && !loadingAlerts
-              ? `${withAlert.length} ${withAlert.length === 1 ? 'lead tiene' : 'leads tienen'} avisos por delante · ${nextDay} en las próximas 24 h · ${nextHour} en la próxima hora`
-              : 'Leads ordenados por el tiempo que falta para su próximo aviso.'}
+            {overdueRows.length > 0 && (
+              <Text span c="danger" fw={600}>
+                {overdueRows.length} {overdueRows.length === 1 ? 'lead con avisos vencidos' : 'leads con avisos vencidos'}
+                {' · '}
+              </Text>
+            )}
+            {`${upcomingRows.length} ${upcomingRows.length === 1 ? 'lead tiene' : 'leads tienen'} avisos por delante · ${nextDay} en las próximas 24 h · ${nextHour} en la próxima hora`}
           </Text>
-        </div>
-      </Group>
+        ) : (
+          <Text c="dimmed">Leads ordenados por el tiempo que falta para su próximo aviso.</Text>
+        )}
+      </Box>
 
       <Group align="flex-end" gap="md" mb="md">
         <Select
@@ -173,7 +189,7 @@ export default function AlertAgenda() {
         />
         <Switch
           mb={8}
-          label="Mostrar leads sin avisos próximos"
+          label="Mostrar leads sin avisos pendientes"
           checked={showEmpty}
           onChange={(event) => setFilter('sinAvisos', event.currentTarget.checked ? null : '0')}
         />
@@ -191,7 +207,7 @@ export default function AlertAgenda() {
       {failedAlerts > 0 && !loadingAlerts && (
         <Alert color="yellow" icon={<IconAlertTriangle />} mb="md">
           No se pudieron cargar los avisos de {failedAlerts} {failedAlerts === 1 ? 'lead' : 'leads'}: aparecen
-          como sin avisos próximos.
+          como sin avisos.
         </Alert>
       )}
 
@@ -204,13 +220,13 @@ export default function AlertAgenda() {
       )}
 
       {leadsQuery.isError && (
-        <Alert color="red" icon={<IconAlertTriangle />} title="No se pudo cargar la agenda">
+        <Alert color="danger" icon={<IconAlertTriangle />} title="No se pudo cargar la agenda">
           {leadsQuery.error.message}
         </Alert>
       )}
 
       {leadsQuery.isSuccess && !loadingAlerts && sorted.length === 0 && (
-        <Card withBorder radius="lg" padding="xl" shadow="xs">
+        <Card variant="empty" radius="lg" padding="xl">
           <Stack align="center" gap="xs" py="xl">
             <ThemeIcon variant="light" color="gray" size={56} radius="xl">
               <IconBellRinging size={28} />
@@ -220,7 +236,7 @@ export default function AlertAgenda() {
                 ? userId
                   ? 'Este agente no tiene leads'
                   : 'Todavía no hay leads'
-                : 'No hay avisos por delante'}
+                : 'No hay avisos pendientes'}
             </Text>
             <Text size="sm" c="dimmed" ta="center" maw={420}>
               Los avisos se agendan desde el detalle de cada lead.
@@ -235,13 +251,13 @@ export default function AlertAgenda() {
       {/* La tabla espera a tener todos los avisos: sin ellos el orden saltaría. */}
       {!loadingAlerts && visible.length > 0 && (
         <>
-          <Card withBorder radius="lg" padding={0} shadow="xs">
+          <Card variant="table" radius="lg" padding={0}>
             <Table.ScrollContainer minWidth={960}>
               <Table verticalSpacing="sm" horizontalSpacing="md" highlightOnHover>
                 <Table.Thead>
                   <Table.Tr>
-                    <Table.Th>Falta</Table.Th>
-                    <Table.Th>Próximo aviso</Table.Th>
+                    <Table.Th>Cuándo</Table.Th>
+                    <Table.Th>Aviso</Table.Th>
                     <Table.Th>Interesado</Table.Th>
                     <Table.Th>Propiedad</Table.Th>
                     <Table.Th>Agente</Table.Th>
@@ -250,7 +266,7 @@ export default function AlertAgenda() {
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {visible.map(({ lead, next, pending, timeLeft, loading }) => {
+                  {visible.map(({ lead, next, overdue, pending, timeLeft, loading }) => {
                     const person = people[lead.peopleId]
                     const property = properties[lead.propertyId]
                     const detalle = `/dashboard/consultas/${lead.id}`
@@ -269,7 +285,10 @@ export default function AlertAgenda() {
                               tt="none"
                               styles={{ root: { overflow: 'visible' }, label: { overflow: 'visible' } }}
                             >
-                              {formatTimeLeft(timeLeft)}
+                              {overdue
+                                ? // Al menos 1 ms: justo en el segundo del aviso dice "menos de 1 min".
+                                  `Vencido hace ${formatTimeLeft(Math.max(-timeLeft, 1))}`
+                                : formatTimeLeft(timeLeft)}
                             </Badge>
                           ) : (
                             <Text size="sm" c="dimmed">

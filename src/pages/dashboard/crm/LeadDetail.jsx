@@ -62,7 +62,7 @@ const LIST_PATH = '/dashboard/consultas'
 
 function SectionCard({ icon: Icon, title, children, extra }) {
   return (
-    <Card withBorder radius="lg" padding="lg" shadow="xs">
+    <Card withBorder radius="lg" padding="lg">
       <Group justify="space-between" mb="md" wrap="nowrap">
         <Group gap="sm" wrap="nowrap">
           <ThemeIcon variant="light" size={34} radius="md">
@@ -82,7 +82,7 @@ function SectionCard({ icon: Icon, title, children, extra }) {
 function InfoRow({ label, children }) {
   return (
     <div>
-      <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+      <Text size="xs" c="dimmed" fw={600}>
         {label}
       </Text>
       <Text size="sm">{children}</Text>
@@ -158,7 +158,7 @@ export default function LeadDetail() {
     return (
       <Container size="xl" py="xl">
         {data?.error ? (
-          <Alert color="red" icon={<IconAlertTriangle />} title="No se pudo abrir el lead">
+          <Alert color="danger" icon={<IconAlertTriangle />} title="No se pudo abrir el lead">
             {data.error}{' '}
             <Anchor component={Link} to={LIST_PATH} size="sm" fw={500}>
               Volver al listado
@@ -214,10 +214,10 @@ export default function LeadDetail() {
       <Box bg="white" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
         <Container size="xl" py="xl">
           <Breadcrumbs separator={<IconChevronRight size={14} />} mb="xs">
-            <Anchor component={Link} to={LIST_PATH} size="xs" c="dimmed" tt="uppercase" fw={600}>
+            <Anchor component={Link} to={LIST_PATH} size="xs" c="dimmed" fw={600}>
               Clientes & Leads
             </Anchor>
-            <Text size="xs" c="var(--mantine-primary-color-filled)" tt="uppercase" fw={600}>
+            <Text size="xs" c="var(--mantine-primary-color-filled)" fw={600}>
               Lead #{lead.id}
             </Text>
           </Breadcrumbs>
@@ -241,7 +241,7 @@ export default function LeadDetail() {
       <Container size="xl" py="xl">
         {created && (
           <Alert
-            color="teal"
+            color="success"
             icon={<IconCircleCheck />}
             title="Lead creado"
             mb="lg"
@@ -253,7 +253,7 @@ export default function LeadDetail() {
         )}
         {action.state === 'error' && (
           <Alert
-            color="red"
+            color="danger"
             icon={<IconAlertTriangle />}
             title="No se pudo actualizar el lead"
             mb="lg"
@@ -269,7 +269,7 @@ export default function LeadDetail() {
           </Alert>
         )}
 
-        <Card withBorder radius="lg" padding="lg" shadow="xs" mb="xl">
+        <Card withBorder radius="lg" padding="lg" mb="xl">
           <Text size="sm" fw={600} mb="xs">
             Etapa
           </Text>

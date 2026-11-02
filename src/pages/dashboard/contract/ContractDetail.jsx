@@ -57,7 +57,7 @@ const SAVED_MESSAGE = {
 
 function SectionCard({ icon: Icon, title, children }) {
   return (
-    <Card withBorder radius="lg" padding="lg" shadow="xs">
+    <Card withBorder radius="lg" padding="lg">
       <Group gap="sm" mb="md" wrap="nowrap">
         <ThemeIcon variant="light" size={34} radius="md">
           <Icon size={18} />
@@ -74,7 +74,7 @@ function SectionCard({ icon: Icon, title, children }) {
 function InfoRow({ label, children }) {
   return (
     <div>
-      <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+      <Text size="xs" c="dimmed" fw={600}>
         {label}
       </Text>
       <Text size="sm">{children}</Text>
@@ -139,7 +139,7 @@ export default function ContractDetail() {
     return (
       <Container size="xl" py="xl">
         {data?.error ? (
-          <Alert color="red" icon={<IconAlertTriangle />} title="No se pudo abrir el contrato">
+          <Alert color="danger" icon={<IconAlertTriangle />} title="No se pudo abrir el contrato">
             {data.error}{' '}
             <Anchor component={Link} to={LIST_PATH} size="sm" fw={500}>
               Volver al listado
@@ -177,10 +177,10 @@ export default function ContractDetail() {
       <Box bg="white" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
         <Container size="xl" py="xl">
           <Breadcrumbs separator={<IconChevronRight size={14} />} mb="xs">
-            <Anchor component={Link} to={LIST_PATH} size="xs" c="dimmed" tt="uppercase" fw={600}>
+            <Anchor component={Link} to={LIST_PATH} size="xs" c="dimmed" fw={600}>
               Contratos
             </Anchor>
-            <Text size="xs" c="var(--mantine-primary-color-filled)" tt="uppercase" fw={600}>
+            <Text size="xs" c="var(--mantine-primary-color-filled)" fw={600}>
               Contrato #{contract.id}
             </Text>
           </Breadcrumbs>
@@ -209,7 +209,7 @@ export default function ContractDetail() {
               {canCancel && (
                 <ConfirmAction label="¿Cancelar el contrato?" disabled={action.state === 'saving'} onConfirm={cancel}>
                   {(props) => (
-                    <Button variant="light" color="red" leftSection={<IconBan size={16} />} {...props}>
+                    <Button variant="light" color="danger" leftSection={<IconBan size={16} />} {...props}>
                       Cancelar contrato
                     </Button>
                   )}
@@ -223,7 +223,7 @@ export default function ContractDetail() {
       <Container size="xl" py="xl">
         {savedMessage && (
           <Alert
-            color="teal"
+            color="success"
             icon={<IconCircleCheck />}
             title={savedMessage.title}
             mb="lg"
@@ -244,7 +244,7 @@ export default function ContractDetail() {
         )}
         {action.state === 'error' && (
           <Alert
-            color="red"
+            color="danger"
             icon={<IconAlertTriangle />}
             title="No se pudo cancelar el contrato"
             mb="lg"

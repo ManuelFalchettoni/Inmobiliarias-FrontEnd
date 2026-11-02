@@ -76,7 +76,7 @@ function useBackLink() {
 
 function SectionCard({ icon: Icon, title, description, children }) {
   return (
-    <Card withBorder radius="lg" padding="xl" shadow="xs">
+    <Card withBorder radius="lg" padding="xl">
       <Group gap="sm" mb="lg" wrap="nowrap" align="flex-start">
         <ThemeIcon variant="light" size={40} radius="md">
           <Icon size={22} />
@@ -271,15 +271,15 @@ function AgencyEditor({ agency }) {
       <Box bg="white" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
         <Container size="xl" py="xl">
           <Breadcrumbs separator={<IconChevronRight size={14} />} mb="xs">
-            <Anchor component={Link} to="/dashboard/configuracion" size="xs" c="dimmed" tt="uppercase" fw={600}>
+            <Anchor component={Link} to="/dashboard/configuracion" size="xs" c="dimmed" fw={600}>
               Configuración
             </Anchor>
             {back.isAdmin && (
-              <Anchor component={Link} to="/dashboard/agencias" size="xs" c="dimmed" tt="uppercase" fw={600}>
+              <Anchor component={Link} to="/dashboard/agencias" size="xs" c="dimmed" fw={600}>
                 Agencias
               </Anchor>
             )}
-            <Text size="xs" c="var(--mantine-primary-color-filled)" tt="uppercase" fw={600}>
+            <Text size="xs" c="var(--mantine-primary-color-filled)" fw={600}>
               {isEdit ? `Agencia #${agency.id}` : 'Nueva agencia'}
             </Text>
           </Breadcrumbs>
@@ -298,7 +298,7 @@ function AgencyEditor({ agency }) {
       <Container size="xl" py="xl">
         {status.state === 'created' && (
           <Alert
-            color="teal"
+            color="success"
             icon={<IconCircleCheck />}
             title="Agencia creada"
             mb="lg"
@@ -323,7 +323,7 @@ function AgencyEditor({ agency }) {
 
         {status.state === 'saved' && (
           <Alert
-            color="teal"
+            color="success"
             icon={<IconCircleCheck />}
             title="Cambios guardados"
             mb="lg"
@@ -338,7 +338,7 @@ function AgencyEditor({ agency }) {
 
         {status.state === 'error' && (
           <Alert
-            color="red"
+            color="danger"
             icon={<IconAlertTriangle />}
             title={isEdit ? 'No se pudieron guardar los cambios' : 'No se pudo crear la agencia'}
             mb="lg"
@@ -477,7 +477,7 @@ function AgencyEditor({ agency }) {
 
               {/* Las condiciones se aceptan una sola vez, en el alta. */}
               {!isEdit && (
-                <Card withBorder radius="lg" padding="lg" shadow="xs">
+                <Card withBorder radius="lg" padding="lg">
                   <Checkbox
                     label="Acepto las condiciones del servicio y el tratamiento de los datos de la agencia"
                     key={form.key('acceptTerms')}
@@ -584,7 +584,7 @@ function AgencyLoader({ id }) {
   return (
     <Container size="xl" py="xl">
       {result?.error ? (
-        <Alert color="red" icon={<IconAlertTriangle />} title="No se puede editar la agencia">
+        <Alert color="danger" icon={<IconAlertTriangle />} title="No se puede editar la agencia">
           {result.error}{' '}
           <Anchor component={Link} to={back.to} size="sm" fw={500}>
             {back.label}

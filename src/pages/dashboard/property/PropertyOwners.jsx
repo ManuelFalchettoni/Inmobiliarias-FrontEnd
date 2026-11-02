@@ -101,7 +101,7 @@ function NewOwnerForm({ propertyId, initialPeopleId, onSaved }) {
         </Button>
       </Group>
       {status.state === 'error' && (
-        <Text size="sm" c="red">
+        <Text size="sm" c="danger">
           {status.message}
         </Text>
       )}
@@ -155,7 +155,7 @@ function OwnerComment({ owner, disabled, onSave }) {
         }}
         error={!value.trim()}
       />
-      <ActionIcon variant="subtle" color="teal" size="sm" aria-label="Guardar comentario" onClick={save}>
+      <ActionIcon variant="subtle" color="success" size="sm" aria-label="Guardar comentario" onClick={save}>
         <IconCheck size={14} />
       </ActionIcon>
       <ActionIcon variant="subtle" color="gray" size="sm" aria-label="Descartar" onClick={() => setEditing(false)}>
@@ -220,12 +220,12 @@ export default function PropertyOwners({ propertyId, initialPeopleId }) {
   return (
     <Stack gap="sm">
       {data.error && (
-        <Text size="sm" c="red">
+        <Text size="sm" c="danger">
           No se pudieron cargar los dueños: {data.error}
         </Text>
       )}
       {error && (
-        <Text size="sm" c="red">
+        <Text size="sm" c="danger">
           {error}
         </Text>
       )}

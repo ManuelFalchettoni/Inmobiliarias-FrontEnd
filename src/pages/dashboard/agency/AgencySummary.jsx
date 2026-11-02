@@ -72,7 +72,7 @@ export default function AgencySummary({ form, rules, isEdit = false }) {
   const statusLabel = AGENCY_STATUS_SHORT_LABEL[status] ?? status
 
   return (
-    <Card withBorder radius="lg" padding="lg" shadow="xs" pos="sticky" top="calc(var(--app-shell-header-height, 72px) + var(--mantine-spacing-md))">
+    <Card withBorder radius="lg" padding="lg" pos="sticky" top="calc(var(--app-shell-header-height, 72px) + var(--mantine-spacing-md))">
       <Group justify="space-between" mb="md">
         <Group gap="xs">
           <IconEye size={20} color="var(--mantine-primary-color-filled)" />
@@ -127,15 +127,15 @@ export default function AgencySummary({ form, rules, isEdit = false }) {
         <Text size="sm" fw={600}>
           {isEdit ? 'Datos obligatorios' : 'Progreso del alta'}
         </Text>
-        <Text size="sm" fw={600} c={isReady ? 'teal' : 'var(--mantine-primary-color-filled)'}>
+        <Text size="sm" fw={600} c={isReady ? 'success' : 'var(--mantine-primary-color-filled)'}>
           {progress}%
         </Text>
       </Group>
-      <Progress value={progress} radius="xl" size="md" color={isReady ? 'teal' : undefined} />
+      <Progress value={progress} radius="xl" size="md" color={isReady ? 'success' : undefined} />
 
       {isReady && (
         <Group gap="xs" mt="md" wrap="nowrap">
-          <ThemeIcon size={28} radius="md" variant="light" color="teal">
+          <ThemeIcon size={28} radius="md" variant="light" color="success">
             <IconShieldCheck size={16} />
           </ThemeIcon>
           <Text size="xs" c="dimmed">

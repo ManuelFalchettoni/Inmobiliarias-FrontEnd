@@ -1,6 +1,26 @@
+/*
+ * Colores de la app que no son de Mantine: el papel y las líneas del rótulo de
+ * plano. Los usan el fondo del panel y la ficha de la propiedad.
+ */
 :root {
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --app-paper: #eef1ef;
+  --app-raised: #f8faf9;
+  --app-ink: #17262a;
+  --app-line: #dde4e1;
+  --app-line-strong: #b3c0bc;
+  --app-muted: #5b6b69;
+
+  font-family: var(--mantine-font-family);
   line-height: 1.5;
+}
+
+/*
+ * Mantine pinta los campos con error y algunos avisos con estas dos variables
+ * (rojo y teal de fábrica): se apuntan a los colores del tema (ver theme.js).
+ */
+:root[data-mantine-color-scheme='light'] {
+  --mantine-color-error: var(--mantine-color-danger-6);
+  --mantine-color-success: var(--mantine-color-success-7);
 }
 
 * {
@@ -10,4 +30,70 @@
 body {
   margin: 0;
   min-height: 100vh;
+}
+
+/*
+ * Superficies. Mantine les pone a sus componentes clases fijas
+ * (`mantine-Card-root`, `mantine-Table-th`...) para poder darles estilo desde
+ * acá. El selector de esquema repite el de Mantine para ganarle.
+ *
+ * Las tarjetas son el papel "levantado" de la ficha, con borde y sin sombra.
+ */
+[data-mantine-color-scheme='light'] :is(.mantine-Card-root, .mantine-Paper-root) {
+  --paper-border-color: var(--app-line-strong);
+}
+
+[data-mantine-color-scheme='light'] .mantine-Card-root {
+  background-color: var(--app-raised);
+}
+
+/*
+ * `<Card variant="table">`: la tabla de un listado. Borde fino, igual al de las
+ * demás tarjetas: la tabla se separa del fondo sin enmarcarse en tinta.
+ */
+.mantine-Card-root[data-variant='table'] {
+  border: 1px solid var(--app-line-strong);
+  background-color: var(--mantine-color-white);
+}
+
+/* `<Card variant="empty">`: listado vacío. Un hueco por llenar, no una tarjeta. */
+.mantine-Card-root[data-variant='empty'] {
+  border: 1.5px dashed var(--app-line-strong);
+  background-color: transparent;
+}
+
+/* Encabezado de las tablas: como las etiquetas de las celdas del rótulo. */
+[data-mantine-color-scheme='light'] .mantine-Table-table {
+  --table-border-color: var(--app-line);
+  --table-hover-color: var(--app-raised);
+}
+
+/* Cifras de ancho fijo: precios, superficies y fechas quedan alineados en columna. */
+.mantine-Table-table {
+  font-variant-numeric: tabular-nums;
+}
+
+.mantine-Table-thead {
+  background-color: var(--app-raised);
+}
+
+.mantine-Table-thead > .mantine-Table-tr {
+  border-bottom: 1px solid var(--app-line-strong);
+}
+
+.mantine-Table-th {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--app-muted);
+}
+
+/* Títulos con Archivo angosto, como la dirección de la ficha. */
+:where(h1, h2, h3, h4, h5, h6) {
+  font-stretch: 80%;
+  letter-spacing: -0.005em;
+}
+
+/* El título de cada página, más angosto todavía. */
+:where(h1) {
+  font-stretch: 70%;
 }

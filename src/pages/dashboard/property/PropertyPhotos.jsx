@@ -47,7 +47,7 @@ const DROPZONE_ERRORS = {
 const QUEUE_BADGE = {
   pending: { color: 'gray', label: 'Pendiente' },
   uploading: { color: 'blue', label: 'Subiendo' },
-  error: { color: 'red', label: 'Error' },
+  error: { color: 'danger', label: 'Error' },
 }
 
 /**
@@ -101,7 +101,7 @@ function StoredPhotoTile({ photo, isCover, onDelete, disabled }) {
           <Popover.Target>
             <ActionIcon
               variant="white"
-              color="red"
+              color="danger"
               size="sm"
               aria-label="Eliminar foto"
               disabled={disabled || deleting}
@@ -119,14 +119,14 @@ function StoredPhotoTile({ photo, isCover, onDelete, disabled }) {
               <Button size="xs" variant="default" onClick={() => setConfirming(false)}>
                 Cancelar
               </Button>
-              <Button size="xs" color="red" onClick={handleDelete}>
+              <Button size="xs" color="danger" onClick={handleDelete}>
                 Eliminar
               </Button>
             </Group>
           </Popover.Dropdown>
         </Popover>
       </Group>
-      <Text size="xs" c={error ? 'red' : 'dimmed'} px="xs" py={6} truncate>
+      <Text size="xs" c={error ? 'danger' : 'dimmed'} px="xs" py={6} truncate>
         {error ?? photo.photoName ?? 'Foto'}
       </Text>
     </Tile>
@@ -164,7 +164,7 @@ function QueuedPhotoTile({ item, onRemove, disabled }) {
           <IconX size={14} />
         </ActionIcon>
       </Group>
-      <Text size="xs" c={item.error ? 'red' : 'dimmed'} px="xs" py={6} truncate title={item.error ?? item.file.name}>
+      <Text size="xs" c={item.error ? 'danger' : 'dimmed'} px="xs" py={6} truncate title={item.error ?? item.file.name}>
         {item.error ?? `${item.file.name} · ${formatFileSize(item.file.size)}`}
       </Text>
     </Tile>
@@ -243,7 +243,7 @@ export default function PropertyPhotos({
             <IconUpload size={44} color="var(--mantine-color-blue-6)" stroke={1.5} />
           </Dropzone.Accept>
           <Dropzone.Reject>
-            <IconPhotoX size={44} color="var(--mantine-color-red-6)" stroke={1.5} />
+            <IconPhotoX size={44} color="var(--mantine-color-danger-6)" stroke={1.5} />
           </Dropzone.Reject>
           <Dropzone.Idle>
             <IconPhoto size={44} color="var(--mantine-color-dimmed)" stroke={1.5} />

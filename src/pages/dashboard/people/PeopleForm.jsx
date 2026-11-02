@@ -45,10 +45,10 @@ function PageHeader({ personId }) {
     <Box bg="white" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
       <Container size="md" py="xl">
         <Breadcrumbs separator={<IconChevronRight size={14} />} mb="xs">
-          <Anchor component={Link} to={LIST_PATH} size="xs" c="dimmed" tt="uppercase" fw={600}>
+          <Anchor component={Link} to={LIST_PATH} size="xs" c="dimmed" fw={600}>
             Personas
           </Anchor>
-          <Text size="xs" c="var(--mantine-primary-color-filled)" tt="uppercase" fw={600}>
+          <Text size="xs" c="var(--mantine-primary-color-filled)" fw={600}>
             {personId ? `Persona #${personId}` : 'Nueva persona'}
           </Text>
         </Breadcrumbs>
@@ -145,7 +145,7 @@ function PeopleEditor({ person, returnTo }) {
       <Container size="md" py="xl">
         {status.state === 'saved' && (
           <Alert
-            color="teal"
+            color="success"
             icon={<IconCircleCheck />}
             title={status.created ? 'Persona creada' : 'Cambios guardados'}
             mb="lg"
@@ -161,7 +161,7 @@ function PeopleEditor({ person, returnTo }) {
 
         {status.state === 'error' && (
           <Alert
-            color="red"
+            color="danger"
             icon={<IconAlertTriangle />}
             title={isEdit ? 'No se pudieron guardar los cambios' : 'No se pudo crear la persona'}
             mb="lg"
@@ -172,7 +172,7 @@ function PeopleEditor({ person, returnTo }) {
           </Alert>
         )}
 
-        <Card withBorder radius="lg" padding="xl" shadow="xs">
+        <Card withBorder radius="lg" padding="xl">
           <SimpleGrid cols={{ base: 1, sm: 2 }}>
             <Select
               label="Inmobiliaria"
@@ -303,7 +303,7 @@ function PeopleLoader({ id }) {
         <PageHeader personId={id} />
         <Container size="md" py="xl">
           {result?.error ? (
-            <Alert color="red" icon={<IconAlertTriangle />} title="No se puede editar la persona">
+            <Alert color="danger" icon={<IconAlertTriangle />} title="No se puede editar la persona">
               {result.error}{' '}
               <Anchor component={Link} to={LIST_PATH} size="sm" fw={500}>
                 Volver al listado

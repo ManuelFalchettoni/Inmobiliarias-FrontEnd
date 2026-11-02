@@ -69,21 +69,16 @@ export default function PeopleList() {
   return (
     <Container size="xl" py="xl">
       <Group justify="space-between" align="flex-start" mb="lg" wrap="nowrap">
-        <Group gap="sm" align="flex-start" wrap="nowrap">
-          <ThemeIcon variant="light" size={44} radius="md">
-            <IconUsersGroup size={24} />
-          </ThemeIcon>
-          <div>
-            <Title order={1} size="h2">
-              Personas
-            </Title>
-            <Text c="dimmed">
-              {data
-                ? `${data.totalElements} ${data.totalElements === 1 ? 'persona' : 'personas'}, por nombre`
-                : 'Cargando el listado...'}
-            </Text>
-          </div>
-        </Group>
+        <div>
+          <Title order={1} size="h2">
+            Personas
+          </Title>
+          <Text c="dimmed">
+            {data
+              ? `${data.totalElements} ${data.totalElements === 1 ? 'persona' : 'personas'}, por nombre`
+              : 'Cargando el listado...'}
+          </Text>
+        </div>
 
         <Button component={Link} to="/dashboard/personas/nueva" leftSection={<IconPlus size={16} />}>
           Nueva persona
@@ -91,40 +86,38 @@ export default function PeopleList() {
       </Group>
 
       {/* Todos los de texto son parciales: "garc" encuentra "García", "3012" un DNI que lo contenga. */}
-      <Card withBorder radius="lg" shadow="xs" mb="md">
-        <SimpleGrid cols={{ base: 1, xs: 2, md: 4 }}>
-          {/* Elegir inmobiliaria es solo del admin: los demás ven siempre la suya. */}
-          {isAdmin && (
-            <Select
-              label="Inmobiliaria"
-              placeholder={agencyOptions.state === 'loading' ? 'Cargando inmobiliarias...' : 'Todas'}
-              data={agencyOptions.options}
-              value={agencyId}
-              onChange={(valor) => setFilter('agencyId', valor)}
-              searchable
-              clearable
-              nothingFoundMessage="Sin coincidencias"
-            />
-          )}
-          <FilterInput label="Nombre" {...textFilter('name')} />
-          <FilterInput label="DNI" {...textFilter('dni')} />
-          <FilterInput label="CUIT" {...textFilter('cuit')} />
-          <FilterInput label="Teléfono" {...textFilter('phone')} />
-          <FilterInput label="Email" {...textFilter('email')} />
-          <FilterInput label="Dirección" {...textFilter('address')} />
-          {filtrando && (
-            <Button
-              variant="subtle"
-              color="gray"
-              leftSection={<IconFilterOff size={16} />}
-              style={{ alignSelf: 'end' }}
-              onClick={() => clearFilters(PEOPLE_SEARCH_FILTERS)}
-            >
-              Limpiar filtros
-            </Button>
-          )}
-        </SimpleGrid>
-      </Card>
+      <SimpleGrid cols={{ base: 1, xs: 2, md: 4 }} mb="lg">
+        {/* Elegir inmobiliaria es solo del admin: los demás ven siempre la suya. */}
+        {isAdmin && (
+          <Select
+            label="Inmobiliaria"
+            placeholder={agencyOptions.state === 'loading' ? 'Cargando inmobiliarias...' : 'Todas'}
+            data={agencyOptions.options}
+            value={agencyId}
+            onChange={(valor) => setFilter('agencyId', valor)}
+            searchable
+            clearable
+            nothingFoundMessage="Sin coincidencias"
+          />
+        )}
+        <FilterInput label="Nombre" {...textFilter('name')} />
+        <FilterInput label="DNI" {...textFilter('dni')} />
+        <FilterInput label="CUIT" {...textFilter('cuit')} />
+        <FilterInput label="Teléfono" {...textFilter('phone')} />
+        <FilterInput label="Email" {...textFilter('email')} />
+        <FilterInput label="Dirección" {...textFilter('address')} />
+        {filtrando && (
+          <Button
+            variant="subtle"
+            color="gray"
+            leftSection={<IconFilterOff size={16} />}
+            style={{ alignSelf: 'end' }}
+            onClick={() => clearFilters(PEOPLE_SEARCH_FILTERS)}
+          >
+            Limpiar filtros
+          </Button>
+        )}
+      </SimpleGrid>
 
       {query.isPending && (
         <Stack gap="xs">
@@ -135,13 +128,13 @@ export default function PeopleList() {
       )}
 
       {error && (
-        <Alert color="red" icon={<IconAlertTriangle />} title="No se pudo cargar el listado">
+        <Alert color="danger" icon={<IconAlertTriangle />} title="No se pudo cargar el listado">
           {error}
         </Alert>
       )}
 
       {data?.content.length === 0 && (
-        <Card withBorder radius="lg" padding="xl" shadow="xs">
+        <Card variant="empty" radius="lg" padding="xl">
           <Stack align="center" gap="xs" py="xl">
             <ThemeIcon variant="light" color="gray" size={56} radius="xl">
               <IconUsersGroup size={28} />
@@ -169,10 +162,9 @@ export default function PeopleList() {
       {data?.content.length > 0 && (
         <>
           <Card
-            withBorder
+            variant="table"
             radius="lg"
             padding={0}
-            shadow="xs"
             style={{ opacity: cargando ? 0.55 : 1, transition: 'opacity 150ms' }}
           >
             <Table.ScrollContainer minWidth={760}>

@@ -71,7 +71,7 @@ export default function Register() {
     <AuthLayout title="Creá tu cuenta">
       {status.state === 'error' && (
         <Alert
-          color="red"
+          color="danger"
           icon={<IconAlertTriangle />}
           title="No se pudo crear la cuenta"
           mb="md"
@@ -167,7 +167,7 @@ export default function Register() {
         </Button>
       </form>
 
-      <Text ta="center" mt="md">
+      <Text mt="lg">
         ¿Ya tenés una cuenta?{' '}
         <Anchor component={Link} to="/login" fw={500}>
           Iniciá sesión

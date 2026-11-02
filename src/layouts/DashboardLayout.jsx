@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
 import { Link, NavLink as RouterNavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { AppShell, Avatar, Burger, Button, Group, NavLink, Stack, Text, ThemeIcon, UnstyledButton } from '@mantine/core'
+import { AppShell, Avatar, Burger, Button, Group, NavLink, Stack, Text, UnstyledButton } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { IconHome, IconLogout } from '@tabler/icons-react'
+import { IconLogout } from '@tabler/icons-react'
 
 import { useQueries } from '@tanstack/react-query'
 
@@ -10,6 +10,7 @@ import { useAuth } from '../context/auth-context.js'
 import { queryKeys } from '../queries/keys.js'
 import { PANEL_ROLES, USER_ROL_COLOR, USER_ROL_LABEL, hasRole } from '../services/users.js'
 import { WORKSPACE_TOTALS, fetchWorkspaceTotal } from '../services/workspace.js'
+import Wordmark from '../components/Wordmark.jsx'
 import AlertBell from './AlertBell.jsx'
 import HeaderSearch from './HeaderSearch.jsx'
 import { SETTINGS_PATH, getActiveNavPath, homeFor, sectionsFor } from './dashboard-nav.js'
@@ -93,19 +94,7 @@ export default function DashboardLayout() {
               aria-label={opened ? 'Cerrar el menú' : 'Abrir el menú'}
             />
             <UnstyledButton component={Link} to={homeFor(user)}>
-              <Group gap="sm" wrap="nowrap">
-                <ThemeIcon size={36} radius="md" variant="filled">
-                  <IconHome size={20} />
-                </ThemeIcon>
-                <div>
-                  <Text fw={700} lh={1.1}>
-                    HabitatPro
-                  </Text>
-                  <Text size="xs" c="dimmed" tt="uppercase" fw={600} lts={1}>
-                    Enterprise Suite
-                  </Text>
-                </div>
-              </Group>
+              <Wordmark size={32} />
             </UnstyledButton>
           </Group>
 
@@ -117,7 +106,7 @@ export default function DashboardLayout() {
             {/* El usuario que entró: lleva a Configuración. */}
             <UnstyledButton component={Link} to={SETTINGS_PATH} visibleFrom="lg" aria-label="Ir a la configuración de la cuenta">
               <Group gap="xs" wrap="nowrap">
-                <Avatar radius="xl" color={USER_ROL_COLOR[user.rol] ?? 'teal'} name={user.name} />
+                <Avatar radius="xl" color={USER_ROL_COLOR[user.rol] ?? 'pine'} name={user.name} />
                 <div>
                   <Text size="sm" fw={600} lh={1.2}>
                     {user.name}
@@ -139,7 +128,7 @@ export default function DashboardLayout() {
           <Stack gap="lg">
             {sections.map((section) => (
               <div key={section.title}>
-                <Text size="xs" fw={700} c="dimmed" tt="uppercase" lts={0.5} mb="xs">
+                <Text size="xs" fw={600} c="dimmed" mb="xs">
                   {section.title}
                 </Text>
 
@@ -176,7 +165,7 @@ export default function DashboardLayout() {
         <AppShell.Section>
           {totals.length > 0 && (
             <>
-              <Text size="xs" fw={700} tt="uppercase" lts={0.5} mb="xs">
+              <Text size="xs" fw={600} c="dimmed" mb="xs">
                 Espacio de trabajo
               </Text>
               <Stack gap={4} mb="md">
@@ -207,7 +196,7 @@ export default function DashboardLayout() {
         </AppShell.Section>
       </AppShell.Navbar>
 
-      <AppShell.Main bg="var(--mantine-color-gray-0)">
+      <AppShell.Main bg="var(--app-paper)">
         {/* El "hueco" donde React Router pone la pantalla de la ruta actual. */}
         <Outlet />
       </AppShell.Main>

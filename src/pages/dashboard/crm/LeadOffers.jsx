@@ -75,7 +75,7 @@ function NewOfferForm({ lead, onSaved }) {
         </Button>
       </Group>
       {status.state === 'error' && (
-        <Text size="sm" c="red" mt={4}>
+        <Text size="sm" c="danger" mt={4}>
           {status.message}
         </Text>
       )}
@@ -113,7 +113,7 @@ export default function LeadOffers({ lead, offers, onChanged }) {
       <NewOfferForm lead={lead} onSaved={onChanged} />
 
       {error && (
-        <Text size="sm" c="red">
+        <Text size="sm" c="danger">
           {error}
         </Text>
       )}
@@ -145,7 +145,7 @@ export default function LeadOffers({ lead, offers, onChanged }) {
                 <Button
                   size="compact-sm"
                   variant="light"
-                  color="teal"
+                  color="success"
                   leftSection={<IconCheck size={14} />}
                   disabled={busyId != null}
                   onClick={() => run(offer, async () => (await acceptOffer(lead, offer, user.id)).lead)}
@@ -155,7 +155,7 @@ export default function LeadOffers({ lead, offers, onChanged }) {
                 <Button
                   size="compact-sm"
                   variant="light"
-                  color="red"
+                  color="danger"
                   leftSection={<IconX size={14} />}
                   disabled={busyId != null}
                   onClick={() =>

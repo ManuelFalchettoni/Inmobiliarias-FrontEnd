@@ -35,7 +35,7 @@ export const CRM_STAGE_COLOR = {
   VISIT_SCHEDULED: 'violet',
   VISITED: 'grape',
   NEGOTIATING: 'orange',
-  CLOSED: 'teal',
+  CLOSED: 'success',
   DISCARDED: 'gray',
 }
 
@@ -65,7 +65,7 @@ export const OFFER_STATUS_OPTIONS = [
 
 export const OFFER_STATUS_LABEL = toLabelMap(OFFER_STATUS_OPTIONS)
 
-export const OFFER_STATUS_COLOR = { PENDING: 'yellow', ACCEPTED: 'teal', REJECTED: 'red' }
+export const OFFER_STATUS_COLOR = { PENDING: 'yellow', ACCEPTED: 'success', REJECTED: 'danger' }
 
 /** `@Positive` y `@Digits(integer = 13, fraction = 2)` del `OfferRequest`. */
 export const OFFER_LIMITS = { amount: { min: 0.01, max: 9999999999999.99, decimals: 2 } }
@@ -172,6 +172,19 @@ export function upcomingAlerts(alerts, now) {
     .filter(
       (alert) =>
         alert.status === ALERT_STATUS.PENDING && !alert.expired && new Date(alert.alertDate).getTime() > now,
+    )
+    .sort((a, b) => new Date(a.alertDate) - new Date(b.alertDate))
+}
+
+/**
+ * Lo opuesto: avisos pendientes que ya vencieron, el más atrasado primero.
+ * Entre las dos funciones cubren todos los `PENDING` de un lead.
+ */
+export function overdueAlerts(alerts, now) {
+  return (alerts ?? [])
+    .filter(
+      (alert) =>
+        alert.status === ALERT_STATUS.PENDING && (alert.expired || new Date(alert.alertDate).getTime() <= now),
     )
     .sort((a, b) => new Date(a.alertDate) - new Date(b.alertDate))
 }

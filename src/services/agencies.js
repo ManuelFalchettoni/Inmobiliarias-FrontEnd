@@ -39,8 +39,8 @@ export const AGENCY_STATUS_SHORT_LABEL = {
 /** Color de Mantine para el Badge de cada estado. */
 export const AGENCY_STATUS_COLOR = {
   [AGENCY_STATUS.PENDING]: 'yellow',
-  [AGENCY_STATUS.VERIFY]: 'teal',
-  [AGENCY_STATUS.DENIED]: 'red',
+  [AGENCY_STATUS.VERIFY]: 'success',
+  [AGENCY_STATUS.DENIED]: 'danger',
   [AGENCY_STATUS.DELETED]: 'gray',
 }
 

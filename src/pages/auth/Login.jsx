@@ -74,7 +74,7 @@ export default function Login() {
   if (user) return <Navigate to={from ?? AFTER_LOGIN} replace />
 
   return (
-    <AuthLayout title="Bienvenido a Inmobiliarias">
+    <AuthLayout title="Iniciá sesión">
       {expired && status.state !== 'error' && (
         <Alert color="yellow" icon={<IconClockExclamation />} title="Tu sesión venció" mb="md">
           Volvé a iniciar sesión para seguir donde estabas.
@@ -82,14 +82,14 @@ export default function Login() {
       )}
 
       {registered && status.state !== 'error' && (
-        <Alert color="teal" icon={<IconCircleCheck />} title="Cuenta creada" mb="md">
+        <Alert color="success" icon={<IconCircleCheck />} title="Cuenta creada" mb="md">
           {registered.name}, tu cuenta quedó registrada con {registered.email}.
         </Alert>
       )}
 
       {status.state === 'error' && (
         <Alert
-          color="red"
+          color="danger"
           icon={<IconAlertTriangle />}
           title="No se pudo iniciar sesión"
           mb="md"
@@ -161,7 +161,7 @@ export default function Login() {
         </Group>
       </Modal>
 
-      <Text ta="center" mt="md">
+      <Text mt="lg">
         ¿No tenés una cuenta?{' '}
         <Anchor component={Link} to="/registro" fw={500}>
           Registrate

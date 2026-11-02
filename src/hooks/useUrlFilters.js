@@ -27,15 +27,17 @@ export function useUrlFilters() {
    * Cambia un filtro y vuelve a la página 1, o queda una lista vacía. Un valor
    * vacío (un Select limpiado, un campo borrado) saca el filtro de la dirección.
    * `replace` evita llenar el historial del navegador mientras se tipea.
+   * `keepPage` deja la página como está: para lo que cambia cómo se ve la
+   * lista y no qué trae (por ejemplo, tabla o fichas).
    */
-  const setFilter = (name, value, { replace = false } = {}) =>
+  const setFilter = (name, value, { replace = false, keepPage = false } = {}) =>
     setSearchParams(
       (current) => {
         // Se copian los parámetros actuales para no perder los otros filtros.
         const next = new URLSearchParams(current)
         if (hasValue(value)) next.set(name, String(value))
         else next.delete(name)
-        next.delete('page')
+        if (!keepPage) next.delete('page')
         return next
       },
       { replace },
