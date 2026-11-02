@@ -4,12 +4,14 @@ import { AppShell, Avatar, Burger, Button, Group, NavLink, Stack, Text, Unstyled
 import { useDisclosure } from '@mantine/hooks'
 import { IconLogout } from '@tabler/icons-react'
 
-import { useQueries } from '@tanstack/react-query'
+import { useQueries, useQuery } from '@tanstack/react-query'
 
 import { useAuth } from '../context/auth-context.js'
 import { queryKeys } from '../queries/keys.js'
-import { PANEL_ROLES, USER_ROL_COLOR, USER_ROL_LABEL, hasRole } from '../services/users.js'
+import { findAgency } from '../services/agencies.js'
+import { PANEL_ROLES, USER_ROL_COLOR, USER_ROL_LABEL, findMe, hasRole } from '../services/users.js'
 import { WORKSPACE_TOTALS, fetchWorkspaceTotal } from '../services/workspace.js'
+import AgencyLogo from '../components/AgencyLogo.jsx'
 import Wordmark from '../components/Wordmark.jsx'
 import AlertBell from './AlertBell.jsx'
 import HeaderSearch from './HeaderSearch.jsx'
@@ -41,6 +43,39 @@ function useWorkspaceTotals(user) {
     const total = results[index].data
     return { ...entry, total: Number.isFinite(total) ? total : null }
   })
+}
+
+/**
+ * La inmobiliaria del usuario logueado, en el encabezado: su logo (o las
+ * iniciales si no tiene) y su nombre. El admin no es de ninguna: no se muestra.
+ *
+ * El logo sale de `agencyIconUrl` (`GET /api/users/me`) y el nombre, del
+ * detalle de la agencia. Las dos consultas usan las mismas claves que
+ * Configuración y la edición de la agencia, así comparten la caché: al subir o
+ * quitar el logo, esa pantalla invalida `users.me()` y las agencias, y este
+ * encabezado se redibuja solo, sin recargar la página.
+ */
+function AgencyBadge({ agencyId }) {
+  const { data: me } = useQuery({
+    queryKey: queryKeys.users.me(),
+    queryFn: ({ signal }) => findMe({ signal }),
+  })
+  const { data: agency } = useQuery({
+    queryKey: queryKeys.agencies.detail(agencyId),
+    queryFn: ({ signal }) => findAgency(agencyId, { signal }),
+  })
+
+  // Mientras llega el nombre, el texto queda vacío y el cuadrado muestra "?".
+  const name = agency?.publicName ?? ''
+
+  return (
+    <Group gap="xs" wrap="nowrap" visibleFrom="sm">
+      <AgencyLogo src={me?.agencyIconUrl} name={name} size={36} />
+      <Text size="sm" fw={600} lh={1.2} maw={160} truncate="end">
+        {name}
+      </Text>
+    </Group>
+  )
 }
 
 /**
@@ -102,6 +137,8 @@ export default function DashboardLayout() {
           {inPanel && <HeaderSearch flex={1} maw={420} visibleFrom="md" />}
 
           <Group gap="md" wrap="nowrap">
+            {/* USER y ADMIN no tienen inmobiliaria propia: solo AGENCY y AGENT la ven. */}
+            {user.agencyId != null && <AgencyBadge agencyId={user.agencyId} />}
             {inPanel && <AlertBell />}
             {/* El usuario que entró: lleva a Configuración. */}
             <UnstyledButton component={Link} to={SETTINGS_PATH} visibleFrom="lg" aria-label="Ir a la configuración de la cuenta">

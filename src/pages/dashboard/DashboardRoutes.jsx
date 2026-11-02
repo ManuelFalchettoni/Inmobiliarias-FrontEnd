@@ -8,6 +8,7 @@ import { PANEL_ROLES, USER_ROL } from '../../services/users.js'
 import AccountSettings from './account/AccountSettings.jsx'
 import { dashboardNav, homeFor } from '../../layouts/dashboard-nav.js'
 import AgencyForm from './agency/AgencyForm.jsx'
+import ArchiveList from './archive/ArchiveList.jsx'
 import AnalyticsDashboard from './analytics/AnalyticsDashboard.jsx'
 import AgencyList from './agency/AgencyList.jsx'
 import AlertAgenda from './crm/AlertAgenda.jsx'
@@ -37,6 +38,7 @@ const IMPLEMENTADAS = new Set([
   'usuarios',
   'personas',
   'contratos',
+  'archivados',
   'consultas',
   'avisos',
   'analitica',
@@ -92,6 +94,8 @@ export default function DashboardRoutes() {
           <Route path="consultas/nuevo" element={<LeadForm />} />
           <Route path="consultas/:id" element={<LeadDetail />} />
           <Route path="avisos" element={<AlertAgenda />} />
+          {/* Lo dado de baja de propiedades, agencias (solo admin) y usuarios. */}
+          <Route path="archivados" element={<ArchiveList />} />
           <Route path="analitica" element={<AnalyticsDashboard />} />
 
           {/* Secciones del menú que todavía no están disponibles: cada ítem del

@@ -51,6 +51,7 @@ import {
   toAgencyRequest,
   updateAgency,
 } from '../../../services/agencies.js'
+import AgencyLogoCard from './AgencyLogoCard.jsx'
 import AgencySummary from './AgencySummary.jsx'
 import {
   clearDraft,
@@ -352,6 +353,9 @@ function AgencyEditor({ agency }) {
         <Grid gutter="xl">
           <Grid.Col span={{ base: 12, lg: 8 }}>
             <Stack gap="xl">
+              {/* El logo necesita una agencia que ya exista: en el alta no se muestra. */}
+              {isEdit && <AgencyLogoCard agency={agency} />}
+
               <SectionCard
                 icon={IconBuildingSkyscraper}
                 title="Identidad de la agencia"

@@ -1,8 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ActionIcon, Badge, Button, Tooltip } from '@mantine/core'
-import { IconArchive, IconArrowBackUp, IconPencil } from '@tabler/icons-react'
+import { IconArrowBackUp, IconPencil } from '@tabler/icons-react'
 
-import ConfirmAction from '../../../components/ConfirmAction.jsx'
 import {
   OPERATION_TYPE_LABEL,
   PROPERTY_CONDITION_COLOR,
@@ -19,12 +18,13 @@ import classes from './PropertyCards.module.css'
  * Una propiedad del listado como una ficha chica: la portada, la dirección, el
  * rótulo con ambientes, superficie y año, y el precio en el bloque oscuro.
  * Toda la tarjeta abre la ficha (el link de la dirección se estira por encima,
- * ver `.addressLink` en el CSS); el lápiz y archivar quedan por arriba.
+ * ver `.addressLink` en el CSS); el lápiz queda por arriba. Archivar se hace
+ * desde la edición, para que no se archive una propiedad de un clic al pasar.
  *
  * Una archivada es de solo lectura: el backend no la trae por id, así que se
  * pinta con lo que vino en el listado y lo único que se puede hacer es restaurarla.
  */
-function PropertyCard({ property, busy, onArchive, onRestore }) {
+function PropertyCard({ property, busy, onRestore }) {
   const cover = sortPhotos(property.photos)[0]?.url
   const prices = sortPrices(property.prices)
   const active = property.active !== false
@@ -56,15 +56,6 @@ function PropertyCard({ property, busy, onArchive, onRestore }) {
                 <IconPencil size={18} />
               </ActionIcon>
             </Tooltip>
-            <ConfirmAction label="¿Archivar?" disabled={busy} onConfirm={() => onArchive(property)}>
-              {(trigger) => (
-                <Tooltip label="Archivar" withArrow>
-                  <ActionIcon {...trigger} variant="white" color="dark" aria-label={`Archivar ${property.address}`}>
-                    <IconArchive size={18} />
-                  </ActionIcon>
-                </Tooltip>
-              )}
-            </ConfirmAction>
           </div>
         ) : (
           <span className={classes.stamp}>Archivada</span>
@@ -135,9 +126,9 @@ function PropertyCard({ property, busy, onArchive, onRestore }) {
 
 /**
  * El listado en fichas: una grilla que se acomoda sola al ancho disponible.
- * `busyId` es la propiedad que se está archivando o restaurando.
+ * `busyId` es la propiedad que se está restaurando.
  */
-export default function PropertyCards({ properties, busyId, onArchive, onRestore }) {
+export default function PropertyCards({ properties, busyId, onRestore }) {
   return (
     <ul className={classes.grid}>
       {properties.map((property) => (
@@ -145,7 +136,6 @@ export default function PropertyCards({ properties, busyId, onArchive, onRestore
           key={property.id}
           property={property}
           busy={busyId === property.id}
-          onArchive={onArchive}
           onRestore={onRestore}
         />
       ))}
