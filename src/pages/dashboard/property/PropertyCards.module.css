@@ -27,8 +27,44 @@
     border-color: var(--app-ink);
   }
 
+  /*
+   * Archivada: el borde punteado de los vacíos del panel y la foto en gris.
+   * No hay link que abrir, así que tampoco se marca al pasar.
+   */
   &[data-archived] {
-    opacity: 0.7;
+    border-style: dashed;
+
+    &:hover {
+      border-color: var(--app-line-strong);
+    }
+
+    & .photo img {
+      filter: grayscale(1) contrast(0.9);
+      opacity: 0.75;
+    }
+
+    & .address,
+    & .fact dd {
+      color: var(--app-muted);
+    }
+
+    & .prices {
+      background: var(--app-raised);
+      border-top: 1px dashed var(--app-line-strong);
+      color: var(--app-muted);
+    }
+
+    & .operation {
+      color: var(--app-muted);
+    }
+
+    & .currency {
+      color: var(--mantine-color-brass-7);
+    }
+  }
+
+  &[aria-busy] {
+    opacity: 0.6;
   }
 }
 
@@ -70,12 +106,32 @@
   top: 10px;
 }
 
-/* El lápiz va por encima del link estirado de la dirección. */
-.edit {
+/* Editar y archivar van por encima del link estirado de la dirección. */
+.actions {
   position: absolute;
   right: 10px;
   top: 10px;
   z-index: 2;
+  display: flex;
+  gap: 6px;
+}
+
+/* El sello de archivada, donde en las activas van las acciones. */
+.stamp {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  padding: 3px 9px 2px;
+  border: 1.5px solid var(--app-paper);
+  border-radius: var(--mantine-radius-sm);
+  background: rgb(23 38 42 / 0.82);
+  font-family: var(--mantine-font-family-headings);
+  font-stretch: 75%;
+  font-weight: 650;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  color: var(--app-paper);
+  transform: rotate(-3deg);
 }
 
 /* -------------------------------------------------------------- Cuerpo */
@@ -200,6 +256,16 @@
   font-size: 26px;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+}
+
+/* Solo en las archivadas: la única acción posible, al pie de la ficha. */
+.restore {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--app-muted);
 }
 
 .currency {

@@ -282,7 +282,7 @@ export default function PropertySheet() {
     return (
       <NotFoundPage
         title={`La propiedad #${id} no existe`}
-        description="Puede que la dirección esté mal, que la propiedad esté dada de baja o que sea de otra inmobiliaria."
+        description="Puede que la dirección esté mal, que la propiedad esté archivada o que sea de otra inmobiliaria."
         back={{ to: '/dashboard/propiedades', label: 'Ir a propiedades' }}
         showPath={false}
       />
