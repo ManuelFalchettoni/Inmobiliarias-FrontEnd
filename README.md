@@ -57,7 +57,7 @@ manda sola.
 | `/propiedades/:id`                  | Ficha de la propiedad para mostrarle a un cliente: fotos, datos, precio, mapa y contacto. Fuera del panel y sin edición |
 | `/dashboard/propiedades`            | Listado de propiedades, activas o archivadas, con búsqueda por filtros   |
 | `/dashboard/propiedades/nueva`      | Alta de propiedad con precios y fotos                               |
-| `/dashboard/propiedades/:id/editar` | Edición de propiedad: datos, precios, dueños y fotos                |
+| `/dashboard/propiedades/:id/editar` | Edición de propiedad: datos, precios, dueños, fotos y archivar      |
 | `/dashboard/agencias`               | Listado de agencias: estado de verificación, baja y restauración (solo admin) |
 | `/dashboard/agencias/nueva`         | Alta de agencia, con borrador local (solo admin)                    |
 | `/dashboard/agencias/:id/editar`    | Edición de agencia (los demás roles, solo la suya), con subir, cambiar o quitar el logo |
@@ -119,8 +119,9 @@ src/
   opcionales); propiedades pasa a `/search` en cuanto hay un filtro. El texto no distingue
   mayúsculas ni acentos. Los campos de texto (`FilterInput`) escriben en la URL 400 ms después de la
   última tecla, así no se pide una vez por letra. La búsqueda de propiedades solo trae activas:
-  con "Archivadas" no se filtra. Archivar (`PATCH /archive`) y restaurar sacan la propiedad de la
-  lista actual; una archivada no se abre por id (404), así que se muestra con los datos del listado.
+  con "Archivadas" no se filtra. Archivar (`PATCH /archive`) se hace solo desde la edición, que
+  vuelve al listado con un aviso para deshacer; restaurar se hace desde la pestaña Archivadas. Una
+  archivada no se abre por id (404), así que se muestra con los datos del listado.
 - **`agencyId`.** Solo lo manda el admin, en listados y búsquedas (sin él ve todas). Para AGENCY y
   AGENT el backend usa el de la sesión, así que el front ni lo manda; en las altas va el suyo porque
   la validación lo pide. Algo de otra inmobiliaria responde 404, como si no existiera.

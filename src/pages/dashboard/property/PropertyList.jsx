@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ActionIcon,
@@ -28,7 +28,6 @@ import {
 import {
   IconAdjustmentsHorizontal,
   IconAlertTriangle,
-  IconArchive,
   IconArrowBackUp,
   IconBuildingEstate,
   IconCircleCheck,
@@ -40,7 +39,6 @@ import {
   IconPlus,
 } from '@tabler/icons-react'
 
-import ConfirmAction from '../../../components/ConfirmAction.jsx'
 import FilterInput from '../../../components/FilterInput.jsx'
 import { useAuth } from '../../../context/auth-context.js'
 import { useAgencyOptions } from '../../../hooks/useAgencyOptions.js'
@@ -55,7 +53,6 @@ import {
   PROPERTY_SEARCH_FILTERS,
   PROPERTY_TYPE_LABEL,
   PROPERTY_TYPE_OPTIONS,
-  archiveProperty,
   formatPrice,
   formatPropertyPlace,
   listProperties,
@@ -125,15 +122,18 @@ export default function PropertyList() {
   })
 
   /**
-   * Archivar y restaurar. Las dos sacan la propiedad de la lista actual: se la
-   * quita de la página en caché apenas responde el backend (sin esperar el GET
-   * nuevo) y después se invalida todo ['properties'] para traer la página real,
-   * el total del menú y la otra pestaña. `listKey` viaja en las variables para
-   * tocar la página donde se hizo clic, no la que se vea cuando llegue la respuesta.
+   * Restaurar. Saca la propiedad de la lista actual: se la quita de la página
+   * en caché apenas responde el backend (sin esperar el GET nuevo) y después se
+   * invalida todo ['properties'] para traer la página real, el total del menú y
+   * la otra pestaña. `listKey` viaja en las variables para tocar la página
+   * donde se hizo clic, no la que se vea cuando llegue la respuesta.
+   *
+   * Archivar no está acá: se hace solo desde la edición de la propiedad, que
+   * vuelve a este listado con `state.archived` (ver PropertyForm).
    */
   const queryClient = useQueryClient()
   const action = useMutation({
-    mutationFn: ({ property, archive }) => (archive ? archiveProperty : restoreProperty)(property.id),
+    mutationFn: ({ property }) => restoreProperty(property.id),
     onSuccess: (_, { property, listKey: key }) => {
       queryClient.setQueryData(key, (old) =>
         old && {
@@ -145,11 +145,28 @@ export default function PropertyList() {
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.properties.all }),
   })
-  const archive = (property) => action.mutate({ property, archive: true, listKey })
-  const restore = (property) => action.mutate({ property, archive: false, listKey })
+  const restore = (property) => action.mutate({ property, listKey })
   const busyId = action.isPending ? action.variables.property.id : null
-  // Lo último que salió bien, para el aviso de arriba del listado.
-  const hecho = action.isSuccess ? action.variables : null
+
+  // La propiedad que se acaba de archivar en la edición. El `state` de la
+  // navegación viaja en el historial del navegador, así que se copia a un
+  // estado propio y se borra del historial: recargar la página no repite el aviso.
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [archivadaRecien, setArchivadaRecien] = useState(() => location.state?.archived ?? null)
+  useEffect(() => {
+    if (location.state?.archived) navigate({ search: location.search }, { replace: true, state: null })
+  }, [location.state, location.search, navigate])
+
+  // El aviso de arriba del listado: lo último que se restauró o, si no, lo que
+  // se archivó en la edición (con "Deshacer", que lo restaura acá mismo).
+  const hecho = action.isSuccess
+    ? { property: action.variables.property, archive: false }
+    : archivadaRecien && { property: archivadaRecien, archive: true }
+  const cerrarAviso = () => {
+    action.reset()
+    setArchivadaRecien(null)
+  }
 
   const data = query.data ?? null
   const error = query.isError ? query.error.message : null
@@ -289,7 +306,7 @@ export default function PropertyList() {
         <Alert
           color="danger"
           icon={<IconAlertTriangle />}
-          title={action.variables.archive ? 'No se pudo archivar' : 'No se pudo restaurar'}
+          title="No se pudo restaurar"
           mb="md"
           withCloseButton
           onClose={action.reset}
@@ -299,7 +316,7 @@ export default function PropertyList() {
       )}
 
       {hecho && (
-        <Alert color="pine" icon={<IconCircleCheck />} mb="md" withCloseButton onClose={action.reset}>
+        <Alert color="pine" icon={<IconCircleCheck />} mb="md" withCloseButton onClose={cerrarAviso}>
           <Group gap="sm" justify="space-between">
             <Text size="sm">
               {hecho.archive
@@ -312,6 +329,7 @@ export default function PropertyList() {
                 size="compact-sm"
                 variant="white"
                 leftSection={<IconArrowBackUp size={16} />}
+                loading={busyId === hecho.property.id}
                 onClick={() => restore(hecho.property)}
               >
                 Deshacer
@@ -368,7 +386,7 @@ export default function PropertyList() {
 
       {data?.content.length > 0 && vista === 'fichas' && (
         <div style={{ opacity: cargando ? 0.55 : 1, transition: 'opacity 150ms' }}>
-          <PropertyCards properties={data.content} busyId={busyId} onArchive={archive} onRestore={restore} />
+          <PropertyCards properties={data.content} busyId={busyId} onRestore={restore} />
         </div>
       )}
 
@@ -497,24 +515,6 @@ export default function PropertyList() {
                               <IconPencil size={18} />
                             </ActionIcon>
                           </Tooltip>
-                          <ConfirmAction
-                            label="¿Archivar?"
-                            disabled={busyId === propiedad.id}
-                            onConfirm={() => archive(propiedad)}
-                          >
-                            {(trigger) => (
-                              <Tooltip label="Archivar" withArrow>
-                                <ActionIcon
-                                  {...trigger}
-                                  variant="subtle"
-                                  color="gray"
-                                  aria-label={`Archivar ${propiedad.address}`}
-                                >
-                                  <IconArchive size={18} />
-                                </ActionIcon>
-                              </Tooltip>
-                            )}
-                          </ConfirmAction>
                         </Group>
                       )}
                     </Table.Td>

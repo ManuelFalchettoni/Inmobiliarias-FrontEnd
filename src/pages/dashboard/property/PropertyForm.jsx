@@ -24,6 +24,7 @@ import {
 import { useForm } from '@mantine/form'
 import {
   IconAlertTriangle,
+  IconArchive,
   IconBuildingSkyscraper,
   IconChevronRight,
   IconCircleCheck,
@@ -37,6 +38,7 @@ import {
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
+import ConfirmAction from '../../../components/ConfirmAction.jsx'
 import { NotFound } from '../../../components/NotFound.jsx'
 import { ApiError, isNotFound } from '../../../services/api.js'
 import { useAuth } from '../../../context/auth-context.js'
@@ -48,6 +50,7 @@ import {
   PROPERTY_LIMITS,
   PROPERTY_OCCUPANCY_OPTIONS,
   PROPERTY_TYPE_OPTIONS,
+  archiveProperty,
   createProperty,
   deletePropertyPhoto,
   findProperty,
@@ -376,9 +379,38 @@ function PropertyEditor({ property }) {
     setStatus(failed > 0 ? { state: 'partial', failed, isNew: false, id: propertyId } : { state: 'photos-saved' })
   }
 
+  /**
+   * Botón "Archivar" (solo en edición, y es el único lugar donde se archiva).
+   * Una archivada no se trae por id ni acepta PUT, así que no tiene sentido
+   * quedarse en esta pantalla: se vuelve al listado, que muestra el aviso con
+   * "Deshacer". Lo que no se haya guardado del formulario se pierde.
+   */
+  const handleArchive = async () => {
+    const signal = startRequest()
+    setStatus({ state: 'archiving' })
+    try {
+      await archiveProperty(property.id, { signal })
+    } catch (error) {
+      if (signal.aborted) return
+      setStatus({
+        state: 'error',
+        title: 'No se pudo archivar',
+        message: error instanceof ApiError ? error.message : 'Ocurrió un error inesperado.',
+      })
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+    // Listados, total del menú y este detalle. El detalle vuelve con 404, pero
+    // PropertyLoader sigue mostrando los datos que ya tenía hasta que se sale.
+    invalidateProperties()
+    // `state` viaja con la navegación sin aparecer en la URL: el listado lo lee
+    // para el aviso. Va la dirección guardada, no la que esté a medio editar.
+    navigate(LIST_PATH, { state: { archived: { id: property.id, address: property.address } } })
+  }
+
   const onSubmit = (event) => form.onSubmit(handleSubmit, handleSubmitFail)(event)
-  // Mientras se guarda o se suben fotos, los botones quedan deshabilitados.
-  const busy = status.state === 'saving' || status.state === 'uploading'
+  // Mientras se guarda, se suben fotos o se archiva, los botones quedan deshabilitados.
+  const busy = status.state === 'saving' || status.state === 'uploading' || status.state === 'archiving'
   const dismiss = () => setStatus({ state: 'idle' })
 
   return (
@@ -688,7 +720,7 @@ function PropertyEditor({ property }) {
                     {queue.length > 0 && `, ${queue.length} pendientes`} (máximo {PHOTO_LIMITS.maxPhotos}).
                   </List.Item>
                   <List.Item>El año de construcción es opcional.</List.Item>
-                  <List.Item>La baja de la propiedad es lógica y se puede restaurar.</List.Item>
+                  <List.Item>Archivar se hace desde la edición y se puede deshacer: la propiedad se restaura desde Archivadas.</List.Item>
                 </List>
               </SectionCard>
             </Box>
@@ -716,10 +748,33 @@ function PropertyEditor({ property }) {
                   : 'Los campos con * son obligatorios.'}
             </Text>
             <Group gap="sm" ml="auto" wrap="nowrap">
+              {/* Solo al editar una propiedad que ya existe. Dos clics: el primero
+                  muestra "¿Archivar?" y el segundo confirma (ver ConfirmAction). */}
+              {property && (
+                <ConfirmAction label="¿Archivar?" onConfirm={handleArchive} disabled={busy}>
+                  {(trigger) => (
+                    <Button
+                      {...trigger}
+                      variant="subtle"
+                      color="danger"
+                      leftSection={<IconArchive size={18} />}
+                      loading={status.state === 'archiving'}
+                    >
+                      Archivar
+                    </Button>
+                  )}
+                </ConfirmAction>
+              )}
               <Button component={Link} to={LIST_PATH} variant="subtle" color="gray" disabled={busy}>
                 Volver al listado
               </Button>
-              <Button type="submit" leftSection={<IconCircleCheck size={18} />} loading={busy}>
+              {/* Gira solo mientras guarda; si se está archivando, queda apagado. */}
+              <Button
+                type="submit"
+                leftSection={<IconCircleCheck size={18} />}
+                loading={busy && status.state !== 'archiving'}
+                disabled={busy}
+              >
                 {propertyId ? 'Guardar cambios' : 'Publicar propiedad'}
               </Button>
             </Group>
