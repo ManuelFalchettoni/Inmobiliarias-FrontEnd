@@ -55,7 +55,7 @@ manda sola.
 | `/registro`                         | Registro público (`POST /api/auth/register`)                        |
 | `/login`                            | Login (`POST /api/auth/login`); con sesión vigente, entra directo al panel |
 | `/propiedades/:id`                  | Ficha de la propiedad para mostrarle a un cliente: fotos, datos, precio, mapa y contacto. Fuera del panel y sin edición |
-| `/dashboard/propiedades`            | Listado de propiedades, activas o dadas de baja, con búsqueda por filtros |
+| `/dashboard/propiedades`            | Listado de propiedades, activas o archivadas, con búsqueda por filtros   |
 | `/dashboard/propiedades/nueva`      | Alta de propiedad con precios y fotos                               |
 | `/dashboard/propiedades/:id/editar` | Edición de propiedad: datos, precios, dueños y fotos                |
 | `/dashboard/agencias`               | Listado de agencias: estado de verificación, baja y restauración (solo admin) |
@@ -118,8 +118,9 @@ src/
 - **Búsqueda.** Personas y contratos usan siempre `GET .../search` (todos los filtros son
   opcionales); propiedades pasa a `/search` en cuanto hay un filtro. El texto no distingue
   mayúsculas ni acentos. Los campos de texto (`FilterInput`) escriben en la URL 400 ms después de la
-  última tecla, así no se pide una vez por letra. La búsqueda de propiedades solo trae publicadas:
-  con "Dadas de baja" no se filtra.
+  última tecla, así no se pide una vez por letra. La búsqueda de propiedades solo trae activas:
+  con "Archivadas" no se filtra. Archivar (`PATCH /archive`) y restaurar sacan la propiedad de la
+  lista actual; una archivada no se abre por id (404), así que se muestra con los datos del listado.
 - **`agencyId`.** Solo lo manda el admin, en listados y búsquedas (sin él ve todas). Para AGENCY y
   AGENT el backend usa el de la sesión, así que el front ni lo manda; en las altas va el suyo porque
   la validación lo pide. Algo de otra inmobiliaria responde 404, como si no existiera.
