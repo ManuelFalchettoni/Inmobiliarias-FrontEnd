@@ -773,8 +773,8 @@ function PropertyLoader({ id }) {
     return (
       <NotFound
         title={`La propiedad #${id} no existe`}
-        description="Puede que la dirección esté mal, que esté dada de baja o que sea de otra inmobiliaria. Las dadas de baja se restauran desde Archivados."
-        back={{ to: LIST_PATH, label: 'Volver a propiedades' }}
+        description="Puede que la dirección esté mal, que esté archivada o que sea de otra inmobiliaria. Las archivadas se restauran desde la pestaña Archivadas del listado."
+        back={{ to: `${LIST_PATH}?active=false`, label: 'Ver archivadas' }}
       />
     )
   }
@@ -785,9 +785,9 @@ function PropertyLoader({ id }) {
         <PageHeader propertyId={id} />
         <Container size="xl" py="xl">
           <Alert color="danger" icon={<IconAlertTriangle />} title="No se puede editar la propiedad">
-            {result.error ?? 'La propiedad está dada de baja. Restáurela desde Archivados para editarla.'}{' '}
-            <Anchor component={Link} to={LIST_PATH} size="sm" fw={500}>
-              Volver al listado
+            {result.error ?? 'La propiedad está archivada. Restaurala desde Archivadas para editarla.'}{' '}
+            <Anchor component={Link} to={`${LIST_PATH}?active=false`} size="sm" fw={500}>
+              Ver archivadas
             </Anchor>
           </Alert>
         </Container>

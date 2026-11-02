@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ActionIcon,
   Alert,
@@ -28,7 +28,10 @@ import {
 import {
   IconAdjustmentsHorizontal,
   IconAlertTriangle,
+  IconArchive,
+  IconArrowBackUp,
   IconBuildingEstate,
+  IconCircleCheck,
   IconEye,
   IconFilterOff,
   IconLayoutGrid,
@@ -37,6 +40,7 @@ import {
   IconPlus,
 } from '@tabler/icons-react'
 
+import ConfirmAction from '../../../components/ConfirmAction.jsx'
 import FilterInput from '../../../components/FilterInput.jsx'
 import { useAuth } from '../../../context/auth-context.js'
 import { useAgencyOptions } from '../../../hooks/useAgencyOptions.js'
@@ -51,9 +55,11 @@ import {
   PROPERTY_SEARCH_FILTERS,
   PROPERTY_TYPE_LABEL,
   PROPERTY_TYPE_OPTIONS,
+  archiveProperty,
   formatPrice,
   formatPropertyPlace,
   listProperties,
+  restoreProperty,
   searchProperties,
   sortPhotos,
   sortPrices,
@@ -90,7 +96,7 @@ export default function PropertyList() {
   const agencyId = isAdmin ? (searchParams.get('agencyId') ?? null) : null
   const agencyOptions = useAgencyOptions(agencyId)
 
-  // La búsqueda del backend solo trae publicadas: con "Dadas de baja" los
+  // La búsqueda del backend solo trae activas: con "Archivadas" los
   // filtros no se muestran ni se mandan (quedan en la URL para cuando se vuelva).
   const filters = verArchivadas ? {} : pick(PROPERTY_SEARCH_FILTERS)
   const filtrando = Object.keys(filters).length > 0
@@ -109,13 +115,41 @@ export default function PropertyList() {
   // ['properties', 'list', params]. Cuando cambian la página o el filtro, cambia
   // la clave y React Query pide la nueva; si ya la tenía (volver a la página 1),
   // la muestra al instante. También cancela el pedido viejo con el `signal`.
+  const listKey = queryKeys.properties.list(params)
   const query = useQuery({
-    queryKey: queryKeys.properties.list(params),
+    queryKey: listKey,
     queryFn: ({ signal }) => (filtrando ? searchProperties : listProperties)(params, { signal }),
     // Mientras llega la página nueva se sigue mostrando la anterior: si no, la
     // tabla y el paginador desaparecen en cada clic y el usuario pierde el lugar.
     placeholderData: keepPreviousData,
   })
+
+  /**
+   * Archivar y restaurar. Las dos sacan la propiedad de la lista actual: se la
+   * quita de la página en caché apenas responde el backend (sin esperar el GET
+   * nuevo) y después se invalida todo ['properties'] para traer la página real,
+   * el total del menú y la otra pestaña. `listKey` viaja en las variables para
+   * tocar la página donde se hizo clic, no la que se vea cuando llegue la respuesta.
+   */
+  const queryClient = useQueryClient()
+  const action = useMutation({
+    mutationFn: ({ property, archive }) => (archive ? archiveProperty : restoreProperty)(property.id),
+    onSuccess: (_, { property, listKey: key }) => {
+      queryClient.setQueryData(key, (old) =>
+        old && {
+          ...old,
+          content: old.content.filter((p) => p.id !== property.id),
+          totalElements: old.totalElements - 1,
+        },
+      )
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.properties.all }),
+  })
+  const archive = (property) => action.mutate({ property, archive: true, listKey })
+  const restore = (property) => action.mutate({ property, archive: false, listKey })
+  const busyId = action.isPending ? action.variables.property.id : null
+  // Lo último que salió bien, para el aviso de arriba del listado.
+  const hecho = action.isSuccess ? action.variables : null
 
   const data = query.data ?? null
   const error = query.isError ? query.error.message : null
@@ -166,8 +200,8 @@ export default function PropertyList() {
             value={active}
             onChange={(valor) => setFilter('active', valor)}
             data={[
-              { value: 'true', label: 'Publicadas' },
-              { value: 'false', label: 'Dadas de baja' },
+              { value: 'true', label: 'Activas' },
+              { value: 'false', label: 'Archivadas' },
             ]}
           />
           {isAdmin && (
@@ -251,6 +285,46 @@ export default function PropertyList() {
         </Box>
       )}
 
+      {action.isError && (
+        <Alert
+          color="danger"
+          icon={<IconAlertTriangle />}
+          title={action.variables.archive ? 'No se pudo archivar' : 'No se pudo restaurar'}
+          mb="md"
+          withCloseButton
+          onClose={action.reset}
+        >
+          {action.variables.property.address}: {action.error.message}
+        </Alert>
+      )}
+
+      {hecho && (
+        <Alert color="pine" icon={<IconCircleCheck />} mb="md" withCloseButton onClose={action.reset}>
+          <Group gap="sm" justify="space-between">
+            <Text size="sm">
+              {hecho.archive
+                ? `Archivaste ${hecho.property.address}. Ya no aparece en búsquedas ni se puede editar.`
+                : `Restauraste ${hecho.property.address}. Volvió a las activas.`}
+            </Text>
+            {/* Deshacer restaura acá mismo; después de restaurar, se ofrece abrir la ficha. */}
+            {hecho.archive ? (
+              <Button
+                size="compact-sm"
+                variant="white"
+                leftSection={<IconArrowBackUp size={16} />}
+                onClick={() => restore(hecho.property)}
+              >
+                Deshacer
+              </Button>
+            ) : (
+              <Button size="compact-sm" variant="white" component={Link} to={`/propiedades/${hecho.property.id}`}>
+                Ver ficha
+              </Button>
+            )}
+          </Group>
+        </Alert>
+      )}
+
       {primeraCarga && (
         <Stack gap="xs">
           {Array.from({ length: 6 }, (_, i) => (
@@ -273,7 +347,7 @@ export default function PropertyList() {
             </ThemeIcon>
             <Text fw={600}>
               {verArchivadas
-                ? 'No hay propiedades dadas de baja'
+                ? 'No hay propiedades archivadas'
                 : filtrando
                   ? 'Ninguna propiedad coincide con los filtros'
                   : 'Todavía no hay propiedades'}
@@ -294,7 +368,7 @@ export default function PropertyList() {
 
       {data?.content.length > 0 && vista === 'fichas' && (
         <div style={{ opacity: cargando ? 0.55 : 1, transition: 'opacity 150ms' }}>
-          <PropertyCards properties={data.content} />
+          <PropertyCards properties={data.content} busyId={busyId} onArchive={archive} onRestore={restore} />
         </div>
       )}
 
@@ -339,7 +413,7 @@ export default function PropertyList() {
                           <IconBuildingEstate size={18} />
                         </Avatar>
                         <div>
-                          {/* La dirección abre la ficha, salvo en las dadas de baja: no se pueden traer. */}
+                          {/* La dirección abre la ficha, salvo en las archivadas: no se pueden traer. */}
                           {propiedad.active !== false ? (
                             <Anchor
                               component={Link}
@@ -388,8 +462,19 @@ export default function PropertyList() {
                     <Table.Td ta="right">{propiedad.size} m²</Table.Td>
                     <Table.Td ta="right">{propiedad.year ?? '—'}</Table.Td>
                     <Table.Td>
-                      {/* El PUT solo acepta propiedades activas: las dadas de baja no se editan. */}
-                      {propiedad.active !== false && (
+                      {/* El PUT solo acepta propiedades activas: las archivadas solo se restauran. */}
+                      {propiedad.active === false ? (
+                        <Button
+                          size="compact-sm"
+                          variant="light"
+                          leftSection={<IconArrowBackUp size={16} />}
+                          loading={busyId === propiedad.id}
+                          onClick={() => restore(propiedad)}
+                          aria-label={`Restaurar ${propiedad.address}`}
+                        >
+                          Restaurar
+                        </Button>
+                      ) : (
                         <Group gap={4} wrap="nowrap">
                           <Tooltip label="Ver ficha" withArrow>
                             <ActionIcon
@@ -412,6 +497,24 @@ export default function PropertyList() {
                               <IconPencil size={18} />
                             </ActionIcon>
                           </Tooltip>
+                          <ConfirmAction
+                            label="¿Archivar?"
+                            disabled={busyId === propiedad.id}
+                            onConfirm={() => archive(propiedad)}
+                          >
+                            {(trigger) => (
+                              <Tooltip label="Archivar" withArrow>
+                                <ActionIcon
+                                  {...trigger}
+                                  variant="subtle"
+                                  color="gray"
+                                  aria-label={`Archivar ${propiedad.address}`}
+                                >
+                                  <IconArchive size={18} />
+                                </ActionIcon>
+                              </Tooltip>
+                            )}
+                          </ConfirmAction>
                         </Group>
                       )}
                     </Table.Td>

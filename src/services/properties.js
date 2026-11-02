@@ -211,10 +211,18 @@ export const createProperty = (request, options) => post(PROPERTIES_ENDPOINT, re
 export const updateProperty = (id, request, options) =>
   put(`${PROPERTIES_ENDPOINT}/${id}`, request, options)
 
-/** Baja lógica: responde 204 y la propiedad queda con `active = false`. */
-export const deleteProperty = (id, options) => del(`${PROPERTIES_ENDPOINT}/${id}`, options)
+/**
+ * Baja lógica: 200 con el `PropertyResponse` ya con `active = false` (si ya
+ * estaba archivada, 200 igual). Reemplaza al DELETE, que hace lo mismo pero
+ * responde 204 sin body.
+ *
+ * Una archivada no se trae por id (404), no aparece en /search y no acepta
+ * fotos, precios, leads ni PUT hasta que se restaure.
+ */
+export const archiveProperty = (id, options) =>
+  patch(`${PROPERTIES_ENDPOINT}/${id}/archive`, undefined, options)
 
-/** Revierte la baja lógica. Se llega a estas propiedades listando con `active: false`. */
+/** Revierte el archivo: 200 con `active = true`. Se llega listando con `active: false`. */
 export const restoreProperty = (id, options) =>
   patch(`${PROPERTIES_ENDPOINT}/${id}/restore`, undefined, options)
 
