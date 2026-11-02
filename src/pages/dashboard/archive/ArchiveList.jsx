@@ -102,10 +102,11 @@ const SECTIONS = [
 export default function ArchiveList() {
   const { isAdmin } = useAuth()
   const sections = SECTIONS.filter((section) => isAdmin || !section.adminOnly)
-  // Qué cajones están abiertos: arrancan todos abiertos y cada uno se cierra
-  // por separado. Es estado "controlado": el acordeón lo lee de acá y avisa
-  // cada cambio con `onChange`, así los botones de arriba lo pueden tocar.
-  const [open, setOpen] = useState(() => sections.map((section) => section.resource))
+  // Qué cajones están abiertos: arrancan todos cerrados (los contadores de cada
+  // barra ya dicen qué hay) y cada uno se abre por separado. Es estado
+  // "controlado": el acordeón lo lee de acá y avisa cada cambio con `onChange`,
+  // así el botón "Abrir todo" también lo puede tocar.
+  const [open, setOpen] = useState([])
   const allOpen = open.length === sections.length
 
   return (
