@@ -212,3 +212,34 @@ export const deleteAgency = (id, options) => del(`${AGENCIES_ENDPOINT}/${id}`, o
 
 // `undefined` como body: un restore no lleva cuerpo (ver encodeBody en api.js).
 export const restoreAgency = (id, options) => patch(`${AGENCIES_ENDPOINT}/${id}/restore`, undefined, options)
+
+// ---------------------------------------------------------------- Logo
+
+/**
+ * Las reglas del logo son las mismas que las de las fotos de propiedades
+ * (jpg, jpeg, png o webp y hasta 5 MB; SVG no), así que se reutiliza la misma
+ * validación en lugar de copiarla. Si el backend las separa, se separan acá.
+ */
+export { validatePhotoFile as validateAgencyIcon } from './properties.js'
+
+/** Valor del `accept` del `<input type="file">`: el selector de archivos muestra solo estas imágenes. */
+export const AGENCY_ICON_ACCEPT = 'image/png,image/jpeg,image/webp'
+
+const iconEndpoint = (id) => `${AGENCIES_ENDPOINT}/${id}/icon`
+
+/**
+ * PUT multipart con una sola parte `file` -> 200 con el `AgencyResponse` ya
+ * actualizado (trae el `iconUrl` nuevo). Sirve para subir y para reemplazar:
+ * el backend borra el logo anterior.
+ */
+export function uploadAgencyIcon(id, file, options) {
+  // 'file' tiene que coincidir con el @RequestPart("file") del controller. El
+  // Content-Type lo pone el navegador (ver encodeBody en api.js).
+  const body = new FormData()
+  body.append('file', file, file.name)
+  // Mismo timeout largo que las fotos: el archivo puede pesar hasta 5 MB.
+  return put(iconEndpoint(id), body, { timeout: 60000, ...options })
+}
+
+/** DELETE -> 204. Responde igual aunque la agencia no tuviera logo. */
+export const removeAgencyIcon = (id, options) => del(iconEndpoint(id), options)

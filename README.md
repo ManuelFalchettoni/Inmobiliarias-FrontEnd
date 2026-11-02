@@ -60,7 +60,7 @@ manda sola.
 | `/dashboard/propiedades/:id/editar` | Edición de propiedad: datos, precios, dueños y fotos                |
 | `/dashboard/agencias`               | Listado de agencias: estado de verificación, baja y restauración (solo admin) |
 | `/dashboard/agencias/nueva`         | Alta de agencia, con borrador local (solo admin)                    |
-| `/dashboard/agencias/:id/editar`    | Edición de agencia (los demás roles, solo la suya)                  |
+| `/dashboard/agencias/:id/editar`    | Edición de agencia (los demás roles, solo la suya), con subir, cambiar o quitar el logo |
 | `/dashboard/usuarios`               | Listado de usuarios, filtrable por agencia (el admin)               |
 | `/dashboard/usuarios/nuevo`         | Alta de usuario con rol, agencia, CUIT y matrícula                  |
 | `/dashboard/usuarios/:id/editar`    | Edición de usuario y cambio de contraseña                           |
@@ -91,7 +91,7 @@ src/
 ├── queries/      React Query: cliente (client.js) y claves de caché (keys.js)
 ├── hooks/        useAgencyOptions, useSelectOptions (opciones de Select), useLookup (ids a registros),
 │                 useUrlFilters (página y filtros en la URL), useNow (hora que avanza cada minuto)
-├── components/   Componentes compartidos (ConfirmAction, FilterInput, RoleGate, NotFound)
+├── components/   Componentes compartidos (AgencyLogo, ConfirmAction, FilterInput, RoleGate, NotFound)
 ├── layouts/      AuthLayout, DashboardLayout, el menú (dashboard-nav.js) y la barra superior:
 │                 HeaderSearch (buscador) y AlertBell (campanita de avisos)
 ├── pages/
@@ -129,7 +129,13 @@ src/
   (el backend no busca propiedades por dirección) y lleva a la ficha o al listado filtrado. La
   campanita usa `GET /api/crm_alerts/upcoming`: un agente ve sus avisos; la inmobiliaria y el admin,
   los de todos. Se refresca cada minuto, se pone roja si hay vencidos y deja marcarlos como
-  cumplidos. Un USER no ve ninguno de los dos.
+  cumplidos. Un USER no ve ninguno de los dos. AGENCY y AGENT ven además el logo y el nombre de su
+  inmobiliaria (`agencyIconUrl` de `/api/users/me`); sin logo, sus iniciales.
+- **Logo de la agencia.** Se sube o reemplaza con `PUT /api/agencies/{id}/icon` (multipart, parte
+  `file`) y se quita con `DELETE` al mismo endpoint, al momento y aparte del "Guardar cambios".
+  Antes de subir se valida formato (JPG, PNG o WEBP; SVG no) y tamaño (5 MB), y mientras sube se
+  muestra la imagen elegida con `URL.createObjectURL`. Después se actualizan la agencia en caché y
+  `users.me()`, así el encabezado cambia sin recargar.
 
 ## Limitaciones actuales
 
