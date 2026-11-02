@@ -180,26 +180,76 @@ export const listProperties = (params, options) =>
 
 /**
  * Filtros de GET /api/properties/search. Todos opcionales; los de texto son
- * parciales y no distinguen mayúsculas ni acentos.
+ * parciales y no distinguen mayúsculas ni acentos. `type`, `condition` y
+ * `occupancy` aceptan varios valores separados por coma (`HOUSE,PH`).
+ *
+ * El backend ya no acepta `rooms`: si llega, lo ignora sin error y no filtra.
+ * Los rangos incluyen los extremos. Piso deja afuera las propiedades que no lo
+ * tienen cargado.
+ *
+ * El backend también acepta el recuadro de un mapa (`minLat`, `maxLat`,
+ * `minLng`, `maxLng`; deja afuera las que no tienen coordenadas). No está acá
+ * porque todavía no hay mapa: sería un filtro que viaja sin campo que lo muestre.
  */
 export const PROPERTY_SEARCH_FILTERS = [
   'type',
   'condition',
   'occupancy',
+  'address',
   'province',
   'county',
   'city',
-  'rooms',
+  'minRooms',
+  'maxRooms',
+  'minFloor',
+  'maxFloor',
   'minSize',
   'maxSize',
   'minYear',
   'maxYear',
+  'operationType',
+  'currency',
+  'minPrice',
+  'maxPrice',
 ]
+
+/**
+ * Pares desde/hasta del buscador. Con el mínimo mayor que el máximo el backend
+ * responde 400 ("minFloor cannot be greater than maxFloor"): el listado lo
+ * frena antes de pedir.
+ */
+export const PROPERTY_SEARCH_RANGES = [
+  ['minRooms', 'maxRooms'],
+  ['minFloor', 'maxFloor'],
+  ['minSize', 'maxSize'],
+  ['minYear', 'maxYear'],
+  ['minPrice', 'maxPrice'],
+]
+
+/**
+ * Los filtros de precio se aplican todos sobre el mismo precio: con
+ * `operationType=SALE&currency=USD&maxPrice=100000` no entra una propiedad que
+ * cumpla el rango solo con su alquiler. Sin `currency`, precio es un 400.
+ */
+export const PRICE_FILTERS = ['minPrice', 'maxPrice']
+
+/**
+ * Órdenes del buscador. Ordenar por precio exige `operationType` y `currency`
+ * (400 si faltan), porque ordena por ese precio puntual.
+ */
+export const PROPERTY_SORT_OPTIONS = [
+  { value: 'createdAt,desc', label: 'Más recientes' },
+  { value: 'price,asc', label: 'Precio: menor a mayor' },
+  { value: 'price,desc', label: 'Precio: mayor a menor' },
+]
+
+export const DEFAULT_PROPERTY_SORT = PROPERTY_SORT_OPTIONS[0].value
 
 /**
  * GET /api/properties/search -> `Page<PropertyResponse>`. Solo trae activas (no
  * acepta `active`). `agencyId` lo usa solo el admin: AGENCY y AGENT buscan
- * siempre en la suya. Mismo paginado que el listado.
+ * siempre en la suya. Mismo paginado que el listado; un `sort` por un campo
+ * que no existe es un 400 "Invalid sort property".
  */
 export const searchProperties = (params, options) =>
   get(`${PROPERTIES_ENDPOINT}/search?${pageQuery(params)}`, options)

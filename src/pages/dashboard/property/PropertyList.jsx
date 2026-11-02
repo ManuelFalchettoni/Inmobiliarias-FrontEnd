@@ -13,6 +13,7 @@ import {
   Collapse,
   Container,
   Group,
+  MultiSelect,
   Pagination,
   SegmentedControl,
   Select,
@@ -45,12 +46,18 @@ import { useAgencyOptions } from '../../../hooks/useAgencyOptions.js'
 import { useUrlFilters } from '../../../hooks/useUrlFilters.js'
 import { queryKeys } from '../../../queries/keys.js'
 import {
+  CURRENCY_OPTIONS,
+  DEFAULT_PROPERTY_SORT,
   OPERATION_TYPE_LABEL,
+  OPERATION_TYPE_OPTIONS,
+  PRICE_FILTERS,
   PROPERTY_CONDITION_COLOR,
   PROPERTY_CONDITION_LABEL,
   PROPERTY_CONDITION_OPTIONS,
   PROPERTY_OCCUPANCY_OPTIONS,
   PROPERTY_SEARCH_FILTERS,
+  PROPERTY_SEARCH_RANGES,
+  PROPERTY_SORT_OPTIONS,
   PROPERTY_TYPE_LABEL,
   PROPERTY_TYPE_OPTIONS,
   formatPrice,
@@ -65,8 +72,36 @@ import PropertyCards from './PropertyCards.jsx'
 
 const PAGE_SIZE = 20
 
+/** Los filtros que se ven siempre. El resto va en "Más filtros". */
+const MAIN_FILTERS = ['city', 'type', 'operationType', 'minRooms']
+
 /** Los filtros que van en "Más filtros": si alguno tiene valor, el panel arranca abierto. */
-const EXTRA_FILTERS = ['province', 'county', 'occupancy', 'minSize', 'maxSize', 'minYear', 'maxYear']
+const EXTRA_FILTERS = PROPERTY_SEARCH_FILTERS.filter((name) => !MAIN_FILTERS.includes(name))
+
+/**
+ * Saca de los filtros los que el backend rechazaría con un 400 y devuelve, por
+ * campo, el motivo para mostrarlo debajo. Así un "desde" mayor que el "hasta"
+ * marca el campo en vez de reemplazar el listado por un cartel de error.
+ */
+function validateFilters(filters) {
+  const valid = { ...filters }
+  const errors = {}
+
+  for (const [min, max] of PROPERTY_SEARCH_RANGES) {
+    if (min in valid && max in valid && Number(valid[min]) > Number(valid[max])) {
+      errors[max] = 'Es menor que el "desde"'
+      delete valid[min]
+      delete valid[max]
+    }
+  }
+
+  if (!valid.currency && PRICE_FILTERS.some((name) => name in valid)) {
+    errors.currency = 'Elegí la moneda para filtrar por precio'
+    for (const name of PRICE_FILTERS) delete valid[name]
+  }
+
+  return { valid, errors }
+}
 
 /** Texto del selector de vista con su ícono. */
 const ViewLabel = ({ icon: Icon, text }) => (
@@ -95,17 +130,33 @@ export default function PropertyList() {
 
   // La búsqueda del backend solo trae activas: con "Archivadas" los
   // filtros no se muestran ni se mandan (quedan en la URL para cuando se vuelva).
-  const filters = verArchivadas ? {} : pick(PROPERTY_SEARCH_FILTERS)
+  const urlFilters = verArchivadas ? {} : pick(PROPERTY_SEARCH_FILTERS)
+  const { valid: filters, errors: filterErrors } = validateFilters(urlFilters)
   const filtrando = Object.keys(filters).length > 0
+  const hayFiltros = Object.keys(urlFilters).length > 0
   const filterValue = (name) => searchParams.get(name) ?? ''
+
+  // Ordenar por precio es ordenar por UN precio: el de la operación y la moneda
+  // elegidas. Sin las dos, se pide el orden de siempre (el backend daría 400).
+  const puedeOrdenarPorPrecio = Boolean(filters.operationType && filters.currency)
+  const pedido = searchParams.get('sort')
+  const sort =
+    PROPERTY_SORT_OPTIONS.some((o) => o.value === pedido) && (puedeOrdenarPorPrecio || !pedido.startsWith('price,'))
+      ? pedido
+      : DEFAULT_PROPERTY_SORT
+  const sortOptions = PROPERTY_SORT_OPTIONS.map((o) => ({
+    ...o,
+    disabled: o.value.startsWith('price,') && !puedeOrdenarPorPrecio,
+  }))
 
   const [masFiltros, setMasFiltros] = useState(() => EXTRA_FILTERS.some((name) => searchParams.get(name)))
 
   // Spring cuenta desde 0. Con algún filtro se usa /search, sin filtros el
   // listado de siempre: la clave decide sola a qué endpoint se pide. Los dos
-  // aceptan `agencyId` (sin valor no viaja, ver pageQuery).
+  // aceptan `agencyId` (sin valor no viaja, ver pageQuery). El orden por precio
+  // solo es posible con filtros, así que sin ellos `sort` siempre es el de siempre.
   const params = filtrando
-    ? { page: page - 1, size: PAGE_SIZE, agencyId, ...filters }
+    ? { page: page - 1, size: PAGE_SIZE, sort, agencyId, ...filters }
     : { page: page - 1, size: PAGE_SIZE, active, agencyId }
 
   // useQuery pide la página y la guarda en la caché con la clave
@@ -181,12 +232,30 @@ export default function PropertyList() {
   const textFilter = (name) => ({
     value: filterValue(name),
     onChange: (valor) => setFilter(name, valor, { replace: true }),
+    error: filterErrors[name],
   })
-  // Ambientes, superficie y año: el backend los recibe como Integer.
+  // Ambientes, piso, superficie y año: el backend los recibe como Integer.
   const intFilter = (name) => ({ ...textFilter(name), min: 0, allowDecimal: false, allowNegative: false })
+  // Precio: BigDecimal con centavos, escrito como 95.000,50.
+  const priceFilter = (name) => ({
+    ...textFilter(name),
+    min: 0,
+    decimalScale: 2,
+    decimalSeparator: ',',
+    thousandSeparator: '.',
+    allowNegative: false,
+  })
   const selectFilter = (name) => ({
     value: filterValue(name) || null,
     onChange: (valor) => setFilter(name, valor),
+    clearable: true,
+    error: filterErrors[name],
+  })
+  // Varios valores en un solo parámetro de la URL, separados por coma
+  // (`type=HOUSE,PH`): el backend acepta esa misma forma.
+  const multiFilter = (name) => ({
+    value: filterValue(name) ? filterValue(name).split(',') : [],
+    onChange: (valores) => setFilter(name, valores.join(',')),
     clearable: true,
   })
 
@@ -236,15 +305,31 @@ export default function PropertyList() {
           )}
         </Group>
         <Group gap="xs">
-          {!verArchivadas && filtrando && (
+          {!verArchivadas && hayFiltros && (
             <Button
               variant="subtle"
               color="gray"
               leftSection={<IconFilterOff size={16} />}
-              onClick={() => clearFilters(PROPERTY_SEARCH_FILTERS)}
+              onClick={() => clearFilters([...PROPERTY_SEARCH_FILTERS, 'sort'])}
             >
               Limpiar filtros
             </Button>
+          )}
+          {!verArchivadas && (
+            <Tooltip
+              label="Para ordenar por precio, elegí operación y moneda"
+              withArrow
+              disabled={puedeOrdenarPorPrecio}
+            >
+              <Select
+                w={210}
+                aria-label="Orden"
+                data={sortOptions}
+                value={sort}
+                onChange={(valor) => setFilter('sort', valor === DEFAULT_PROPERTY_SORT ? null : valor)}
+                allowDeselect={false}
+              />
+            </Tooltip>
           )}
           {!verArchivadas && (
             <Button
@@ -273,26 +358,46 @@ export default function PropertyList() {
         <Box mb="lg">
           <SimpleGrid cols={{ base: 1, xs: 2, md: 4 }}>
             <FilterInput label="Ciudad" placeholder="Cualquiera" {...textFilter('city')} />
-            <Select label="Tipo" placeholder="Todos" data={PROPERTY_TYPE_OPTIONS} {...selectFilter('type')} />
-            <Select
-              label="Condición"
-              placeholder="Todas"
-              data={PROPERTY_CONDITION_OPTIONS}
-              {...selectFilter('condition')}
+            <MultiSelect
+              label="Tipo"
+              placeholder={filterValue('type') ? undefined : 'Todos'}
+              data={PROPERTY_TYPE_OPTIONS}
+              {...multiFilter('type')}
             />
-            <FilterInput number label="Ambientes" placeholder="Cualquiera" {...intFilter('rooms')} />
+            <Select
+              label="Operación"
+              placeholder="Venta o alquiler"
+              data={OPERATION_TYPE_OPTIONS}
+              {...selectFilter('operationType')}
+            />
+            <FilterInput number label="Ambientes desde" placeholder="Cualquiera" {...intFilter('minRooms')} />
           </SimpleGrid>
 
           <Collapse expanded={masFiltros}>
             <SimpleGrid cols={{ base: 1, xs: 2, md: 4 }} mt="md">
+              {/* El precio que se filtra es el de la operación elegida arriba. */}
+              <Select label="Moneda" placeholder="Cualquiera" data={CURRENCY_OPTIONS} {...selectFilter('currency')} />
+              <FilterInput number label="Precio desde" {...priceFilter('minPrice')} />
+              <FilterInput number label="Precio hasta" {...priceFilter('maxPrice')} />
+              <FilterInput number label="Ambientes hasta" placeholder="Cualquiera" {...intFilter('maxRooms')} />
+              <FilterInput label="Dirección" placeholder="Cualquiera" {...textFilter('address')} />
               <FilterInput label="Partido" placeholder="Cualquiera" {...textFilter('county')} />
               <FilterInput label="Provincia" placeholder="Cualquiera" {...textFilter('province')} />
-              <Select
-                label="Ocupación"
-                placeholder="Todas"
-                data={PROPERTY_OCCUPANCY_OPTIONS}
-                {...selectFilter('occupancy')}
+              <MultiSelect
+                label="Condición"
+                placeholder={filterValue('condition') ? undefined : 'Todas'}
+                data={PROPERTY_CONDITION_OPTIONS}
+                {...multiFilter('condition')}
               />
+              <MultiSelect
+                label="Ocupación"
+                placeholder={filterValue('occupancy') ? undefined : 'Todas'}
+                data={PROPERTY_OCCUPANCY_OPTIONS}
+                {...multiFilter('occupancy')}
+              />
+              {/* Con piso, las propiedades sin piso cargado (casas, terrenos) quedan afuera. */}
+              <FilterInput number label="Piso desde" {...intFilter('minFloor')} />
+              <FilterInput number label="Piso hasta" {...intFilter('maxFloor')} />
               <FilterInput number label="Superficie desde" suffix=" m²" {...intFilter('minSize')} />
               <FilterInput number label="Superficie hasta" suffix=" m²" {...intFilter('maxSize')} />
               <FilterInput number label="Año desde" {...intFilter('minYear')} />
@@ -380,7 +485,7 @@ export default function PropertyList() {
                   : 'Todavía no hay propiedades'}
             </Text>
             {filtrando && (
-              <Button mt="md" variant="light" onClick={() => clearFilters(PROPERTY_SEARCH_FILTERS)}>
+              <Button mt="md" variant="light" onClick={() => clearFilters([...PROPERTY_SEARCH_FILTERS, 'sort'])}>
                 Limpiar filtros
               </Button>
             )}
