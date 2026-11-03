@@ -7,17 +7,14 @@ import {
   Anchor,
   Avatar,
   Badge,
-  Box,
   Button,
   Card,
-  Collapse,
   Container,
   Group,
   MultiSelect,
   Pagination,
   SegmentedControl,
   Select,
-  SimpleGrid,
   Skeleton,
   Stack,
   Table,
@@ -33,9 +30,9 @@ import {
   IconBuildingEstate,
   IconCircleCheck,
   IconEye,
-  IconFilterOff,
   IconLayoutGrid,
   IconList,
+  IconMapPin,
   IconPencil,
   IconPlus,
 } from '@tabler/icons-react'
@@ -46,15 +43,12 @@ import { useAgencyOptions } from '../../../hooks/useAgencyOptions.js'
 import { useUrlFilters } from '../../../hooks/useUrlFilters.js'
 import { queryKeys } from '../../../queries/keys.js'
 import {
-  CURRENCY_OPTIONS,
   DEFAULT_PROPERTY_SORT,
   OPERATION_TYPE_LABEL,
   OPERATION_TYPE_OPTIONS,
   PRICE_FILTERS,
   PROPERTY_CONDITION_COLOR,
   PROPERTY_CONDITION_LABEL,
-  PROPERTY_CONDITION_OPTIONS,
-  PROPERTY_OCCUPANCY_OPTIONS,
   PROPERTY_SEARCH_FILTERS,
   PROPERTY_SEARCH_RANGES,
   PROPERTY_SORT_OPTIONS,
@@ -69,14 +63,10 @@ import {
   sortPrices,
 } from '../../../services/properties.js'
 import PropertyCards from './PropertyCards.jsx'
+import { activeFilterChips } from './property-filter-chips.js'
+import { ActiveFilters, FilterDrawer } from './PropertyFilters.jsx'
 
 const PAGE_SIZE = 20
-
-/** Los filtros que se ven siempre. El resto va en "Más filtros". */
-const MAIN_FILTERS = ['city', 'type', 'operationType', 'minRooms']
-
-/** Los filtros que van en "Más filtros": si alguno tiene valor, el panel arranca abierto. */
-const EXTRA_FILTERS = PROPERTY_SEARCH_FILTERS.filter((name) => !MAIN_FILTERS.includes(name))
 
 /**
  * Saca de los filtros los que el backend rechazaría con un 400 y devuelve, por
@@ -149,7 +139,10 @@ export default function PropertyList() {
     disabled: o.value.startsWith('price,') && !puedeOrdenarPorPrecio,
   }))
 
-  const [masFiltros, setMasFiltros] = useState(() => EXTRA_FILTERS.some((name) => searchParams.get(name)))
+  // El panel lateral con todos los filtros y los chips de lo que está aplicado.
+  const [panelAbierto, setPanelAbierto] = useState(false)
+  const chips = activeFilterChips(urlFilters)
+  const limpiarFiltros = () => clearFilters([...PROPERTY_SEARCH_FILTERS, 'sort'])
 
   // Spring cuenta desde 0. Con algún filtro se usa /search, sin filtros el
   // listado de siempre: la clave decide sola a qué endpoint se pide. Los dos
@@ -280,8 +273,10 @@ export default function PropertyList() {
         </Button>
       </Group>
 
-      <Group mb="md" justify="space-between">
-        <Group gap="md">
+      {/* Arriba, qué se lista (activas o archivadas, de qué inmobiliaria);
+          a la derecha, cómo se ve (orden y vista). */}
+      <Group mb="md" justify="space-between" gap="sm">
+        <Group gap="sm">
           <SegmentedControl
             value={active}
             onChange={(valor) => setFilter('active', valor)}
@@ -304,17 +299,7 @@ export default function PropertyList() {
             />
           )}
         </Group>
-        <Group gap="xs">
-          {!verArchivadas && hayFiltros && (
-            <Button
-              variant="subtle"
-              color="gray"
-              leftSection={<IconFilterOff size={16} />}
-              onClick={() => clearFilters([...PROPERTY_SEARCH_FILTERS, 'sort'])}
-            >
-              Limpiar filtros
-            </Button>
-          )}
+        <Group gap="sm">
           {!verArchivadas && (
             <Tooltip
               label="Para ordenar por precio, elegí operación y moneda"
@@ -331,15 +316,6 @@ export default function PropertyList() {
               />
             </Tooltip>
           )}
-          {!verArchivadas && (
-            <Button
-              variant={masFiltros ? 'light' : 'default'}
-              leftSection={<IconAdjustmentsHorizontal size={16} />}
-              onClick={() => setMasFiltros((abierto) => !abierto)}
-            >
-              Más filtros
-            </Button>
-          )}
           {/* Cómo se ve la lista, no qué trae: cambiarla no vuelve a la página 1. */}
           <SegmentedControl
             aria-label="Vista del listado"
@@ -353,58 +329,61 @@ export default function PropertyList() {
         </Group>
       </Group>
 
-      {/* Los de texto son parciales y sin acentos: "cord" encuentra "Córdoba". */}
+      {/* Los filtros más usados quedan a mano; el resto, agrupado en el panel.
+          Los de texto son parciales y sin acentos: "cord" encuentra "Córdoba". */}
       {!verArchivadas && (
-        <Box mb="lg">
-          <SimpleGrid cols={{ base: 1, xs: 2, md: 4 }}>
-            <FilterInput label="Ciudad" placeholder="Cualquiera" {...textFilter('city')} />
+        <>
+          <Group gap="sm" mb={chips.length > 0 ? 'sm' : 'lg'}>
+            <FilterInput
+              w={{ base: '100%', sm: 200 }}
+              aria-label="Ciudad"
+              placeholder="Ciudad"
+              leftSection={<IconMapPin size={16} />}
+              {...textFilter('city')}
+            />
             <MultiSelect
-              label="Tipo"
-              placeholder={filterValue('type') ? undefined : 'Todos'}
+              w={{ base: '100%', sm: 240 }}
+              aria-label="Tipo"
+              placeholder={filterValue('type') ? undefined : 'Tipo de propiedad'}
               data={PROPERTY_TYPE_OPTIONS}
+              // En una sola línea, para no desalinear la fila: la lista completa está en el chip.
+              styles={{ pillsList: { flexWrap: 'nowrap', overflow: 'hidden' } }}
               {...multiFilter('type')}
             />
             <Select
-              label="Operación"
+              w={{ base: '100%', sm: 180 }}
+              aria-label="Operación"
               placeholder="Venta o alquiler"
               data={OPERATION_TYPE_OPTIONS}
               {...selectFilter('operationType')}
             />
-            <FilterInput number label="Ambientes desde" placeholder="Cualquiera" {...intFilter('minRooms')} />
-          </SimpleGrid>
+            <Button
+              variant={chips.length > 0 ? 'light' : 'default'}
+              leftSection={<IconAdjustmentsHorizontal size={16} />}
+              rightSection={
+                chips.length > 0 && (
+                  <Badge size="sm" circle>
+                    {chips.length}
+                  </Badge>
+                )
+              }
+              onClick={() => setPanelAbierto(true)}
+            >
+              Filtros
+            </Button>
+          </Group>
 
-          <Collapse expanded={masFiltros}>
-            <SimpleGrid cols={{ base: 1, xs: 2, md: 4 }} mt="md">
-              {/* El precio que se filtra es el de la operación elegida arriba. */}
-              <Select label="Moneda" placeholder="Cualquiera" data={CURRENCY_OPTIONS} {...selectFilter('currency')} />
-              <FilterInput number label="Precio desde" {...priceFilter('minPrice')} />
-              <FilterInput number label="Precio hasta" {...priceFilter('maxPrice')} />
-              <FilterInput number label="Ambientes hasta" placeholder="Cualquiera" {...intFilter('maxRooms')} />
-              <FilterInput label="Dirección" placeholder="Cualquiera" {...textFilter('address')} />
-              <FilterInput label="Partido" placeholder="Cualquiera" {...textFilter('county')} />
-              <FilterInput label="Provincia" placeholder="Cualquiera" {...textFilter('province')} />
-              <MultiSelect
-                label="Condición"
-                placeholder={filterValue('condition') ? undefined : 'Todas'}
-                data={PROPERTY_CONDITION_OPTIONS}
-                {...multiFilter('condition')}
-              />
-              <MultiSelect
-                label="Ocupación"
-                placeholder={filterValue('occupancy') ? undefined : 'Todas'}
-                data={PROPERTY_OCCUPANCY_OPTIONS}
-                {...multiFilter('occupancy')}
-              />
-              {/* Con piso, las propiedades sin piso cargado (casas, terrenos) quedan afuera. */}
-              <FilterInput number label="Piso desde" {...intFilter('minFloor')} />
-              <FilterInput number label="Piso hasta" {...intFilter('maxFloor')} />
-              <FilterInput number label="Superficie desde" suffix=" m²" {...intFilter('minSize')} />
-              <FilterInput number label="Superficie hasta" suffix=" m²" {...intFilter('maxSize')} />
-              <FilterInput number label="Año desde" {...intFilter('minYear')} />
-              <FilterInput number label="Año hasta" {...intFilter('maxYear')} />
-            </SimpleGrid>
-          </Collapse>
-        </Box>
+          <ActiveFilters chips={chips} errors={filterErrors} onRemove={clearFilters} onClear={limpiarFiltros} />
+
+          <FilterDrawer
+            opened={panelAbierto}
+            onClose={() => setPanelAbierto(false)}
+            fields={{ textFilter, intFilter, priceFilter, selectFilter, multiFilter, filterValue }}
+            total={data?.totalElements}
+            hayFiltros={hayFiltros}
+            onClear={limpiarFiltros}
+          />
+        </>
       )}
 
       {action.isError && (
