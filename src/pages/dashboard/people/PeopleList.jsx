@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
@@ -6,6 +7,7 @@ import {
   Button,
   Card,
   Container,
+  Divider,
   Group,
   Pagination,
   Select,
@@ -17,9 +19,10 @@ import {
   ThemeIcon,
   Title,
 } from '@mantine/core'
-import { IconAlertTriangle, IconFilterOff, IconPencil, IconPlus, IconUsersGroup } from '@tabler/icons-react'
+import { IconAlertTriangle, IconPencil, IconPlus, IconSearch, IconUsersGroup } from '@tabler/icons-react'
 
 import FilterInput from '../../../components/FilterInput.jsx'
+import { ActiveFilters, FilterButton, FilterPanel, FilterSection } from '../../../components/FilterPanel.jsx'
 import { useAuth } from '../../../context/auth-context.js'
 import { useAgencyOptions } from '../../../hooks/useAgencyOptions.js'
 import { useLookup } from '../../../hooks/useLookup.js'
@@ -30,6 +33,16 @@ import { formatDate } from '../../../services/format.js'
 import { PEOPLE_SEARCH_FILTERS, searchPeople } from '../../../services/people.js'
 
 const PAGE_SIZE = 20
+
+/** Cómo se llama cada filtro en su chip. */
+const FILTER_LABEL = {
+  name: 'Nombre',
+  dni: 'DNI',
+  cuit: 'CUIT',
+  phone: 'Teléfono',
+  email: 'Email',
+  address: 'Dirección',
+}
 
 /**
  * Listado de personas, siempre con la búsqueda del backend: pagina, ordena por
@@ -66,6 +79,15 @@ export default function PeopleList() {
     onChange: (valor) => setFilter(name, valor, { replace: true }),
   })
 
+  // El panel lateral con todos los filtros y un chip por cada uno aplicado.
+  const [panelAbierto, setPanelAbierto] = useState(false)
+  const chips = PEOPLE_SEARCH_FILTERS.filter((name) => filters[name]).map((name) => ({
+    key: name,
+    label: `${FILTER_LABEL[name]}: ${filters[name]}`,
+    names: [name],
+  }))
+  const limpiarFiltros = () => clearFilters(PEOPLE_SEARCH_FILTERS)
+
   return (
     <Container size="xl" py="xl">
       <Group justify="space-between" align="flex-start" mb="lg" wrap="nowrap">
@@ -85,13 +107,15 @@ export default function PeopleList() {
         </Button>
       </Group>
 
-      {/* Todos los de texto son parciales: "garc" encuentra "García", "3012" un DNI que lo contenga. */}
-      <SimpleGrid cols={{ base: 1, xs: 2, md: 4 }} mb="lg">
+      {/* El nombre queda a mano; el resto, en el panel. Todos los de texto son
+          parciales: "garc" encuentra "García", "3012" un DNI que lo contenga. */}
+      <Group gap="sm" mb={chips.length > 0 ? 'sm' : 'lg'}>
         {/* Elegir inmobiliaria es solo del admin: los demás ven siempre la suya. */}
         {isAdmin && (
           <Select
-            label="Inmobiliaria"
-            placeholder={agencyOptions.state === 'loading' ? 'Cargando inmobiliarias...' : 'Todas'}
+            w={{ base: '100%', sm: 240 }}
+            aria-label="Inmobiliaria"
+            placeholder={agencyOptions.state === 'loading' ? 'Cargando inmobiliarias...' : 'Todas las inmobiliarias'}
             data={agencyOptions.options}
             value={agencyId}
             onChange={(valor) => setFilter('agencyId', valor)}
@@ -100,24 +124,44 @@ export default function PeopleList() {
             nothingFoundMessage="Sin coincidencias"
           />
         )}
-        <FilterInput label="Nombre" {...textFilter('name')} />
-        <FilterInput label="DNI" {...textFilter('dni')} />
-        <FilterInput label="CUIT" {...textFilter('cuit')} />
-        <FilterInput label="Teléfono" {...textFilter('phone')} />
-        <FilterInput label="Email" {...textFilter('email')} />
-        <FilterInput label="Dirección" {...textFilter('address')} />
-        {filtrando && (
-          <Button
-            variant="subtle"
-            color="gray"
-            leftSection={<IconFilterOff size={16} />}
-            style={{ alignSelf: 'end' }}
-            onClick={() => clearFilters(PEOPLE_SEARCH_FILTERS)}
-          >
-            Limpiar filtros
-          </Button>
-        )}
-      </SimpleGrid>
+        <FilterInput
+          w={{ base: '100%', sm: 260 }}
+          aria-label="Nombre"
+          placeholder="Buscar por nombre"
+          leftSection={<IconSearch size={16} />}
+          {...textFilter('name')}
+        />
+        <FilterButton count={chips.length} onClick={() => setPanelAbierto(true)} />
+      </Group>
+
+      <ActiveFilters chips={chips} onRemove={clearFilters} onClear={limpiarFiltros} />
+
+      <FilterPanel
+        opened={panelAbierto}
+        onClose={() => setPanelAbierto(false)}
+        total={data?.totalElements}
+        noun={['persona', 'personas']}
+        hayFiltros={filtrando}
+        onClear={limpiarFiltros}
+      >
+        <FilterSection title="Identidad">
+          <FilterInput label="Nombre" placeholder="Cualquiera" {...textFilter('name')} />
+          <SimpleGrid cols={2}>
+            <FilterInput label="DNI" placeholder="Cualquiera" {...textFilter('dni')} />
+            <FilterInput label="CUIT" placeholder="Cualquiera" {...textFilter('cuit')} />
+          </SimpleGrid>
+        </FilterSection>
+
+        <Divider />
+
+        <FilterSection title="Contacto">
+          <SimpleGrid cols={2}>
+            <FilterInput label="Teléfono" placeholder="Cualquiera" {...textFilter('phone')} />
+            <FilterInput label="Email" placeholder="Cualquiera" {...textFilter('email')} />
+          </SimpleGrid>
+          <FilterInput label="Dirección" placeholder="Cualquiera" {...textFilter('address')} />
+        </FilterSection>
+      </FilterPanel>
 
       {query.isPending && (
         <Stack gap="xs">

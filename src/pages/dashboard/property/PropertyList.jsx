@@ -24,7 +24,6 @@ import {
   Tooltip,
 } from '@mantine/core'
 import {
-  IconAdjustmentsHorizontal,
   IconAlertTriangle,
   IconArrowBackUp,
   IconBuildingEstate,
@@ -64,7 +63,8 @@ import {
 } from '../../../services/properties.js'
 import PropertyCards from './PropertyCards.jsx'
 import { activeFilterChips } from './property-filter-chips.js'
-import { ActiveFilters, FilterDrawer } from './PropertyFilters.jsx'
+import { ActiveFilters, FilterButton } from '../../../components/FilterPanel.jsx'
+import { FilterDrawer } from './PropertyFilters.jsx'
 
 const PAGE_SIZE = 20
 
@@ -357,20 +357,7 @@ export default function PropertyList() {
               data={OPERATION_TYPE_OPTIONS}
               {...selectFilter('operationType')}
             />
-            <Button
-              variant={chips.length > 0 ? 'light' : 'default'}
-              leftSection={<IconAdjustmentsHorizontal size={16} />}
-              rightSection={
-                chips.length > 0 && (
-                  <Badge size="sm" circle>
-                    {chips.length}
-                  </Badge>
-                )
-              }
-              onClick={() => setPanelAbierto(true)}
-            >
-              Filtros
-            </Button>
+            <FilterButton count={chips.length} onClick={() => setPanelAbierto(true)} />
           </Group>
 
           <ActiveFilters chips={chips} errors={filterErrors} onRemove={clearFilters} onClear={limpiarFiltros} />

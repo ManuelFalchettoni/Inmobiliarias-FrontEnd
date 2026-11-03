@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
@@ -9,18 +10,16 @@ import {
   Group,
   Pagination,
   Select,
-  SimpleGrid,
   Skeleton,
   Stack,
   Table,
   Text,
-  TextInput,
   ThemeIcon,
   Title,
 } from '@mantine/core'
-import { IconAlertTriangle, IconChevronRight, IconFileText, IconFilterOff, IconPlus } from '@tabler/icons-react'
+import { IconAlertTriangle, IconChevronRight, IconFileText, IconPlus } from '@tabler/icons-react'
 
-import FilterInput from '../../../components/FilterInput.jsx'
+import { ActiveFilters, FilterButton } from '../../../components/FilterPanel.jsx'
 import { useAuth } from '../../../context/auth-context.js'
 import { useAgencyOptions } from '../../../hooks/useAgencyOptions.js'
 import { useLookup } from '../../../hooks/useLookup.js'
@@ -34,7 +33,6 @@ import {
   CONTRACT_STATUS_LABEL,
   CONTRACT_STATUS_OPTIONS,
   CONTRACT_TYPE_LABEL,
-  CONTRACT_TYPE_OPTIONS,
   formatContractTerm,
   groupPartiesByContract,
   isContractOverdue,
@@ -42,12 +40,9 @@ import {
   searchContracts,
 } from '../../../services/contracts.js'
 import { findPerson } from '../../../services/people.js'
-import {
-  CURRENCY_OPTIONS,
-  findProperty,
-  formatPrice,
-  formatPropertyPlace,
-} from '../../../services/properties.js'
+import { findProperty, formatPrice, formatPropertyPlace } from '../../../services/properties.js'
+import { contractFilterChips } from './contract-filter-chips.js'
+import { ContractFilterPanel } from './ContractFilters.jsx'
 
 const PAGE_SIZE = 20
 
@@ -100,6 +95,12 @@ export default function ContractList() {
     decimalScale: 2,
     allowNegative: false,
   })
+
+  // El panel lateral con todos los filtros y los chips de lo que está aplicado.
+  const [panelAbierto, setPanelAbierto] = useState(false)
+  const chips = contractFilterChips(filters, propertyOptions.options)
+  const limpiarFiltros = () => clearFilters(CONTRACT_SEARCH_FILTERS)
+
   const partiesQuery = useQuery({
     queryKey: queryKeys.contractParties.all,
     queryFn: ({ signal }) => listAllParties({ signal }),
@@ -143,13 +144,14 @@ export default function ContractList() {
         </Button>
       </Group>
 
-      {/* Los rangos son inclusivos; con "Vence" desde/hasta salen los que terminan en un período. */}
-      <SimpleGrid cols={{ base: 1, xs: 2, md: 4 }} mb="lg">
+      {/* Los filtros más usados quedan a mano; el resto, agrupado en el panel. */}
+      <Group gap="sm" mb={chips.length > 0 ? 'sm' : 'lg'}>
         {/* Elegir inmobiliaria es solo del admin: los demás ven siempre la suya. */}
         {isAdmin && (
           <Select
-            label="Inmobiliaria"
-            placeholder={agencyOptions.state === 'loading' ? 'Cargando inmobiliarias...' : 'Todas'}
+            w={{ base: '100%', sm: 240 }}
+            aria-label="Inmobiliaria"
+            placeholder={agencyOptions.state === 'loading' ? 'Cargando inmobiliarias...' : 'Todas las inmobiliarias'}
             data={agencyOptions.options}
             value={agencyId}
             onChange={(valor) => setFilter('agencyId', valor)}
@@ -159,34 +161,35 @@ export default function ContractList() {
           />
         )}
         <Select
-          label="Propiedad"
-          placeholder={propertyOptions.state === 'loading' ? 'Cargando propiedades...' : 'Todas'}
+          w={{ base: '100%', sm: 280 }}
+          aria-label="Propiedad"
+          placeholder={propertyOptions.state === 'loading' ? 'Cargando propiedades...' : 'Propiedad'}
           data={propertyOptions.options}
           searchable
           nothingFoundMessage="Sin coincidencias"
           {...selectFilter('propertyId')}
         />
-        <Select label="Estado" placeholder="Todos" data={CONTRACT_STATUS_OPTIONS} {...selectFilter('status')} />
-        <Select label="Tipo" placeholder="Todos" data={CONTRACT_TYPE_OPTIONS} {...selectFilter('type')} />
-        <Select label="Moneda" placeholder="Todas" data={CURRENCY_OPTIONS} {...selectFilter('currency')} />
-        <TextInput label="Empieza desde" {...dateFilter('startFrom')} />
-        <TextInput label="Empieza hasta" {...dateFilter('startTo')} />
-        <TextInput label="Vence desde" {...dateFilter('endFrom')} />
-        <TextInput label="Vence hasta" {...dateFilter('endTo')} />
-        <FilterInput number label="Monto desde" {...amountFilter('minAmount')} />
-        <FilterInput number label="Monto hasta" {...amountFilter('maxAmount')} />
-        {filtrando && (
-          <Button
-            variant="subtle"
-            color="gray"
-            leftSection={<IconFilterOff size={16} />}
-            style={{ alignSelf: 'end' }}
-            onClick={() => clearFilters(CONTRACT_SEARCH_FILTERS)}
-          >
-            Limpiar filtros
-          </Button>
-        )}
-      </SimpleGrid>
+        <Select
+          w={{ base: '100%', sm: 160 }}
+          aria-label="Estado"
+          placeholder="Estado"
+          data={CONTRACT_STATUS_OPTIONS}
+          {...selectFilter('status')}
+        />
+        <FilterButton count={chips.length} onClick={() => setPanelAbierto(true)} />
+      </Group>
+
+      <ActiveFilters chips={chips} onRemove={clearFilters} onClear={limpiarFiltros} />
+
+      <ContractFilterPanel
+        opened={panelAbierto}
+        onClose={() => setPanelAbierto(false)}
+        fields={{ selectFilter, dateFilter, amountFilter }}
+        propertyOptions={propertyOptions}
+        total={data?.totalElements}
+        hayFiltros={filtrando}
+        onClear={limpiarFiltros}
+      />
 
       {contractsQuery.isPending && (
         <Stack gap="xs">
