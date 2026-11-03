@@ -47,6 +47,8 @@ function RequireAuth({ children }) {
 export default function App() {
   return (
     <Routes>
+      {/* La raíz va al panel; sin sesión, RequireAuth la manda al login. */}
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="/login" element={<Login />} />
       <Route path="/registro" element={<Register />} />
 
