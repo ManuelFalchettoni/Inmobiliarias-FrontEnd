@@ -52,10 +52,11 @@ manda sola.
 
 | Ruta                                | Pantalla                                                            |
 | ----------------------------------- | ------------------------------------------------------------------- |
+| `/`, `/dashboard`                   | Redirigen al inicio: Propiedades, o Configuración para un USER      |
 | `/registro`                         | Registro público (`POST /api/auth/register`)                        |
 | `/login`                            | Login (`POST /api/auth/login`); con sesión vigente, entra directo al panel |
 | `/propiedades/:id`                  | Ficha de la propiedad para mostrarle a un cliente: fotos, datos, precio, mapa y contacto. Fuera del panel y sin edición |
-| `/dashboard/propiedades`            | Listado de propiedades, activas o archivadas, con búsqueda por filtros   |
+| `/dashboard/propiedades`            | Listado de propiedades, activas o archivadas, en fichas o en tabla (`?vista=tabla`), con panel de filtros y orden |
 | `/dashboard/propiedades/nueva`      | Alta de propiedad con precios y fotos                               |
 | `/dashboard/propiedades/:id/editar` | Edición de propiedad: datos, precios, dueños, fotos y archivar      |
 | `/dashboard/agencias`               | Listado de agencias: estado de verificación, baja y restauración (solo admin) |
@@ -65,15 +66,23 @@ manda sola.
 | `/dashboard/usuarios/nuevo`         | Alta de usuario con rol, agencia, CUIT y matrícula                  |
 | `/dashboard/usuarios/:id/editar`    | Edición de usuario y cambio de contraseña                           |
 | `/dashboard/personas`               | Personas (clientes y propietarios), con búsqueda por nombre, DNI, CUIT y contacto |
+| `/dashboard/personas/nueva`         | Alta de persona                                                     |
+| `/dashboard/personas/:id/editar`    | Edición de persona                                                  |
 | `/dashboard/contratos`              | Contratos de venta y alquiler, filtrables por propiedad, estado, fechas y monto |
+| `/dashboard/contratos/nuevo`        | Alta de contrato                                                    |
 | `/dashboard/contratos/:id`          | Detalle del contrato y sus partes                                   |
+| `/dashboard/contratos/:id/editar`   | Edición de contrato                                                 |
 | `/dashboard/consultas`              | Leads del CRM, filtrables por agente                                |
+| `/dashboard/consultas/nuevo`        | Alta de lead                                                        |
 | `/dashboard/consultas/:id`          | Lead: etapa, historial, ofertas y recordatorios                     |
-| `/dashboard/avisos`                  | Agenda: leads ordenados por el tiempo que falta para su próximo aviso pendiente |
+| `/dashboard/avisos`                 | Agenda: leads ordenados por el tiempo que falta para su próximo aviso pendiente |
 | `/dashboard/archivados`             | Propiedades, agencias (solo admin) y usuarios dados de baja, cada uno con Restaurar |
+| `/dashboard/analitica`              | Analítica (`GET /api/analytics/summary`): propiedades, leads, ofertas, contratos y rendimiento por agente; el admin elige inmobiliaria |
 | `/dashboard/configuracion`          | Cuenta propia (`/api/users/me`): datos, contraseña e inmobiliaria. La única pantalla de un USER |
 
-Explorador & Mapa muestra una pantalla "Próximamente".
+Explorador & Mapa (`/dashboard/explorador`) muestra una pantalla "Próximamente". El mapa de la
+ficha (`PropertyMap.jsx`) es por ahora un plano dibujado con el pin y las coordenadas, listo para
+reemplazar por Leaflet o MapLibre.
 
 Una dirección que no existe muestra la página 404 (`components/NotFound.jsx`): dentro del panel con
 el menú, y fuera de él a pantalla completa. Lo mismo un registro que el backend responde con 404
@@ -87,17 +96,20 @@ src/
 ├── services/     Un módulo por recurso del backend. Única capa que hace pedidos HTTP.
 │   ├── api.js        fetch, timeout, cancelación y errores (ApiError)
 │   ├── format.js     Fechas
-│   └── auth, agencies, users, properties, people, owners, contracts, crm, workspace
+│   └── auth, agencies, users, properties, people, owners, contracts, crm, analytics, workspace
 ├── queries/      React Query: cliente (client.js) y claves de caché (keys.js)
 ├── hooks/        useAgencyOptions, useSelectOptions (opciones de Select), useLookup (ids a registros),
 │                 useUrlFilters (página y filtros en la URL), useNow (hora que avanza cada minuto)
-├── components/   Componentes compartidos (AgencyLogo, ConfirmAction, FilterInput, RoleGate, NotFound)
+├── components/   Componentes compartidos (AgencyLogo, ConfirmAction, FilterInput, FilterPanel,
+│                 RoleGate, NotFound, Wordmark: logo y nombre de la app)
 ├── layouts/      AuthLayout, DashboardLayout, el menú (dashboard-nav.js) y la barra superior:
 │                 HeaderSearch (buscador) y AlertBell (campanita de avisos)
 ├── pages/
 │   ├── auth/         Login, registro y reglas de usuario
-│   └── dashboard/    account/, agency/, archive/, user/, property/, people/, contract/, crm/ y DashboardRoutes.jsx
-└── context/      AuthContext: el usuario que inició sesión (`useAuth()`)
+│   └── dashboard/    account/, agency/, analytics/, archive/, user/, property/, people/, contract/,
+│                     crm/ y DashboardRoutes.jsx
+├── context/      AuthContext: el usuario que inició sesión (`useAuth()`)
+└── theme.js      Tema de Mantine: colores, bordes y tipografía (Archivo)
 ```
 
 ## Convenciones
@@ -115,6 +127,11 @@ src/
   del menú. Las acciones de las filas usan `useMutation`.
 - **Listados.** Página y filtros en la URL (`?page=2&active=false`). La página se muestra desde 1 y se
   pide desde 0. Mientras llega una página se muestra la anterior (`keepPreviousData`).
+- **Panel de filtros.** Propiedades, personas y contratos juntan sus filtros en un panel lateral
+  (`FilterPanel.jsx`): el botón "Filtros" dice cuántos hay aplicados y cada filtro activo queda
+  como un chip que se quita con un clic. Un rango inválido ("desde" mayor que "hasta") o un precio
+  sin moneda se marca en el campo y no se manda. Ordenar propiedades por precio pide operación y
+  moneda elegidas.
 - **Búsqueda.** Personas y contratos usan siempre `GET .../search` (todos los filtros son
   opcionales); propiedades pasa a `/search` en cuanto hay un filtro. El texto no distingue
   mayúsculas ni acentos. Los campos de texto (`FilterInput`) escriben en la URL 400 ms después de la
