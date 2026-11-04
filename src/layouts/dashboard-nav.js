@@ -5,7 +5,6 @@ import {
   IconBuildingSkyscraper,
   IconChartBar,
   IconFileText,
-  IconMap,
   IconMessages,
   IconSettings,
   IconUsers,
@@ -83,12 +82,6 @@ const sections = [
   {
     title: 'Herramientas',
     items: [
-      {
-        path: 'explorador',
-        label: 'Explorador & Mapa',
-        icon: IconMap,
-        description: 'Búsqueda de inmuebles sobre el mapa.',
-      },
       {
         path: 'consultas',
         label: 'Clientes & Leads',

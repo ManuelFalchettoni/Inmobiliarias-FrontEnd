@@ -31,6 +31,7 @@ import {
   IconEye,
   IconLayoutGrid,
   IconList,
+  IconMap,
   IconMapPin,
   IconPencil,
   IconPlus,
@@ -62,6 +63,7 @@ import {
   sortPrices,
 } from '../../../services/properties.js'
 import PropertyCards from './PropertyCards.jsx'
+import PropertyListMap from './PropertyListMap.jsx'
 import { activeFilterChips } from './property-filter-chips.js'
 import { ActiveFilters, FilterButton } from '../../../components/FilterPanel.jsx'
 import { FilterDrawer } from './PropertyFilters.jsx'
@@ -218,8 +220,16 @@ export default function PropertyList() {
   const primeraCarga = query.isPending
   // `isPlaceholderData`: se está mostrando la página anterior mientras llega la nueva.
   const cargando = query.isPlaceholderData
-  // Fichas es la vista de siempre; la tabla queda en la URL (`?vista=tabla`).
-  const vista = searchParams.get('vista') === 'tabla' ? 'tabla' : 'fichas'
+  // Fichas es la vista de siempre; tabla y mapa quedan en la URL (`?vista=tabla`).
+  // El mapa usa el buscador, que solo trae activas: con "Archivadas" no se ofrece.
+  const vistaPedida = searchParams.get('vista')
+  const vista =
+    vistaPedida === 'tabla' ? 'tabla' : vistaPedida === 'mapa' && !verArchivadas ? 'mapa' : 'fichas'
+  const vistaOptions = [
+    { value: 'fichas', label: <ViewLabel icon={IconLayoutGrid} text="Fichas" /> },
+    { value: 'tabla', label: <ViewLabel icon={IconList} text="Tabla" /> },
+    ...(verArchivadas ? [] : [{ value: 'mapa', label: <ViewLabel icon={IconMap} text="Mapa" /> }]),
+  ]
 
   /** Props comunes de un campo de filtro: valor de la URL y escritura sin llenar el historial. */
   const textFilter = (name) => ({
@@ -320,11 +330,8 @@ export default function PropertyList() {
           <SegmentedControl
             aria-label="Vista del listado"
             value={vista}
-            onChange={(valor) => setFilter('vista', valor === 'tabla' ? 'tabla' : null, { keepPage: true })}
-            data={[
-              { value: 'fichas', label: <ViewLabel icon={IconLayoutGrid} text="Fichas" /> },
-              { value: 'tabla', label: <ViewLabel icon={IconList} text="Tabla" /> },
-            ]}
+            onChange={(valor) => setFilter('vista', valor === 'fichas' ? null : valor, { keepPage: true })}
+            data={vistaOptions}
           />
         </Group>
       </Group>
@@ -423,7 +430,11 @@ export default function PropertyList() {
         </Alert>
       )}
 
-      {primeraCarga && (
+      {/* El mapa hace su propio pedido (con el recuadro visible) y muestra su
+          propio estado: no usa el cargando, el vacío ni el paginador de abajo. */}
+      {vista === 'mapa' && <PropertyListMap filters={filters} agencyId={agencyId} sort={sort} />}
+
+      {primeraCarga && vista !== 'mapa' && (
         <Stack gap="xs">
           {Array.from({ length: 6 }, (_, i) => (
             <Skeleton key={i} height={52} radius="md" />
@@ -437,7 +448,7 @@ export default function PropertyList() {
         </Alert>
       )}
 
-      {data?.content.length === 0 && (
+      {data?.content.length === 0 && vista !== 'mapa' && (
         <Card variant="empty" radius="lg" padding="xl">
           <Stack align="center" gap="xs" py="xl">
             <ThemeIcon variant="light" color="gray" size={56} radius="xl">
@@ -606,7 +617,7 @@ export default function PropertyList() {
         </Card>
       )}
 
-      {data?.totalPages > 1 && (
+      {data?.totalPages > 1 && vista !== 'mapa' && (
         <Group justify="center" mt="lg">
           <Pagination total={data.totalPages} value={page} onChange={goToPage} />
         </Group>

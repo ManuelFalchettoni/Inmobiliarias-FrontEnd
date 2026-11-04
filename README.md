@@ -56,7 +56,7 @@ manda sola.
 | `/registro`                         | Registro público (`POST /api/auth/register`)                        |
 | `/login`                            | Login (`POST /api/auth/login`); con sesión vigente, entra directo al panel |
 | `/propiedades/:id`                  | Ficha de la propiedad para mostrarle a un cliente: fotos, datos, precio, mapa y contacto. Fuera del panel y sin edición |
-| `/dashboard/propiedades`            | Listado de propiedades, activas o archivadas, en fichas o en tabla (`?vista=tabla`), con panel de filtros y orden |
+| `/dashboard/propiedades`            | Listado de propiedades, activas o archivadas, en fichas, tabla (`?vista=tabla`) o mapa (`?vista=mapa`), con panel de filtros y orden |
 | `/dashboard/propiedades/nueva`      | Alta de propiedad con precios y fotos                               |
 | `/dashboard/propiedades/:id/editar` | Edición de propiedad: datos, precios, dueños, fotos y archivar      |
 | `/dashboard/agencias`               | Listado de agencias: estado de verificación, baja y restauración (solo admin) |
@@ -80,9 +80,8 @@ manda sola.
 | `/dashboard/analitica`              | Analítica (`GET /api/analytics/summary`): propiedades, leads, ofertas, contratos y rendimiento por agente; el admin elige inmobiliaria |
 | `/dashboard/configuracion`          | Cuenta propia (`/api/users/me`): datos, contraseña e inmobiliaria. La única pantalla de un USER |
 
-Explorador & Mapa (`/dashboard/explorador`) muestra una pantalla "Próximamente". El mapa de la
-ficha (`PropertyMap.jsx`) es por ahora un plano dibujado con el pin y las coordenadas, listo para
-reemplazar por Leaflet o MapLibre.
+Los mapas usan Leaflet con OpenStreetMap: el de la ficha (`PropertyMap.jsx`) y la vista Mapa del
+listado (`PropertyListMap.jsx`), que busca lo que hay en la zona visible.
 
 Una dirección que no existe muestra la página 404 (`components/NotFound.jsx`): dentro del panel con
 el menú, y fuera de él a pantalla completa. Lo mismo un registro que el backend responde con 404
