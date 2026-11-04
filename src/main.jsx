@@ -15,6 +15,8 @@ import { QueryClientProvider } from '@tanstack/react-query'
 // para soltar fotos (Dropzone) y los propios de la app.
 import '@mantine/core/styles.css'
 import '@mantine/dropzone/styles.css'
+// Estilos de Leaflet: sin esto los mosaicos del mapa salen desordenados.
+import 'leaflet/dist/leaflet.css'
 // Archivo con eje de ancho: la fuente de toda la app (ver theme.js).
 import '@fontsource-variable/archivo/wdth.css'
 import './index.css'

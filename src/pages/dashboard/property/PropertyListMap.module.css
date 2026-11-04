@@ -1,0 +1,55 @@
+/* Marco del mapa del listado: alto fijo, porque Leaflet no se dibuja sin alto. */
+.frame {
+  position: relative;
+  height: 640px;
+  border-radius: var(--mantine-radius-lg);
+  border: 1px solid var(--mantine-color-default-border);
+  overflow: hidden;
+
+  @media (max-width: $mantine-breakpoint-sm) {
+    height: 70vh;
+  }
+}
+
+.map {
+  position: absolute;
+  inset: 0;
+}
+
+/* Arriba del mapa y no encima: adentro taparía los globos que se abren cerca del borde. */
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  margin-bottom: 8px;
+}
+
+.popup {
+  display: grid;
+  gap: 2px;
+  width: 220px;
+}
+
+/* Portada arriba del globo, en proporción 4:3. Sin foto, un ícono sobre gris. */
+.cover {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  margin-bottom: 6px;
+  border-radius: var(--mantine-radius-sm);
+  overflow: hidden;
+  background: var(--mantine-color-gray-1);
+  color: var(--mantine-color-gray-5);
+}
+
+.cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Leaflet les pone a los <p> del globo un margen grande; los Text de Mantine son <p>. */
+.popup p {
+  margin: 0;
+}

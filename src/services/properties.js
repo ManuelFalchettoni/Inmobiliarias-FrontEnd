@@ -189,7 +189,7 @@ export const listProperties = (params, options) =>
  *
  * El backend también acepta el recuadro de un mapa (`minLat`, `maxLat`,
  * `minLng`, `maxLng`; deja afuera las que no tienen coordenadas). No está acá
- * porque todavía no hay mapa: sería un filtro que viaja sin campo que lo muestre.
+ * porque no va en la URL: lo suma la vista Mapa (PropertyListMap) en cada pedido.
  */
 export const PROPERTY_SEARCH_FILTERS = [
   'type',

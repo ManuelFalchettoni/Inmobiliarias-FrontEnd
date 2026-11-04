@@ -64,6 +64,7 @@ import {
 } from '../../../services/properties.js'
 import PropertyPhotos from './PropertyPhotos.jsx'
 import PropertyOwners from './PropertyOwners.jsx'
+import PropertyLocationPicker from './PropertyLocationPicker.jsx'
 import PropertyPrices from './PropertyPrices.jsx'
 import { propertyDefaultValues, propertyValidation } from './property-form.js'
 
@@ -537,6 +538,10 @@ function PropertyEditor({ property }) {
                     {...form.getInputProps('longitude')}
                   />
                 </SimpleGrid>
+                {/* Carga latitud y longitud buscando la dirección o moviendo el pin. */}
+                <Box mt="md">
+                  <PropertyLocationPicker form={form} />
+                </Box>
               </SectionCard>
 
               <SectionCard

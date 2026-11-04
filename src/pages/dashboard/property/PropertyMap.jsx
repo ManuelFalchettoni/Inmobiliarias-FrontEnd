@@ -1,6 +1,8 @@
 import { Button } from '@mantine/core'
-import { IconExternalLink, IconMapPinFilled } from '@tabler/icons-react'
+import { IconExternalLink } from '@tabler/icons-react'
+import { MapContainer, Marker, TileLayer } from 'react-leaflet'
 
+import { pinIcon } from './map-pin.js'
 import classes from './PropertyMap.module.css'
 
 /** -32.9468 -> "32°56′48″"; el signo lo pone el hemisferio. */
@@ -21,13 +23,11 @@ function formatCoordinates(latitude, longitude) {
 }
 
 /**
- * Lugar reservado para el mapa de la propiedad.
+ * Mapa de la propiedad en la ficha.
  *
- * Hoy dibuja un papel cuadriculado con el pin en el centro y las coordenadas.
- * Para sumar una librería de mapas (Leaflet, MapLibre) alcanza con reemplazar
- * el contenido de `.frame` por el mapa: el contenedor ya tiene su tamaño y su
- * borde, y la ficha no necesita cambios. Sin coordenadas muestra el lugar en
- * texto (`place`).
+ * Con coordenadas muestra un mapa de OpenStreetMap (Leaflet) centrado en el
+ * punto, con el pin marcándolo. Sin coordenadas deja el papel cuadriculado
+ * con el lugar en texto (`place`).
  */
 export default function PropertyMap({ latitude, longitude, place }) {
   const hasPoint = latitude != null && longitude != null
@@ -48,9 +48,19 @@ export default function PropertyMap({ latitude, longitude, place }) {
 
   return (
     <div className={classes.frame}>
-      <div className={`${classes.grid} ${classes.crosshair}`} />
-      <span className={classes.pinDot} />
-      <IconMapPinFilled className={classes.pin} size={40} aria-hidden />
+      {/* scrollWheelZoom apagado: si no, al bajar por la ficha la rueda hace zoom en el mapa */}
+      <MapContainer
+        center={[latitude, longitude]}
+        zoom={16}
+        scrollWheelZoom={false}
+        className={classes.map}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <Marker position={[latitude, longitude]} icon={pinIcon} interactive={false} />
+      </MapContainer>
       <span className={classes.coords}>{formatCoordinates(latitude, longitude)}</span>
       <Button
         component="a"
