@@ -1,7 +1,9 @@
+import { Fragment } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useQueries, useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
   Alert,
+  Anchor,
   Badge,
   Box,
   Button,
@@ -9,7 +11,8 @@ import {
   Container,
   Group,
   Pagination,
-  Progress,
+  ScrollArea,
+  SegmentedControl,
   Select,
   Skeleton,
   Stack,
@@ -20,130 +23,205 @@ import {
   Title,
   Tooltip,
 } from '@mantine/core'
-import { IconAlertTriangle, IconBellRinging, IconChevronRight, IconClockHour4 } from '@tabler/icons-react'
+import { IconAlertTriangle, IconBellRinging, IconClockHour4 } from '@tabler/icons-react'
 
 import { useLookup } from '../../../hooks/useLookup.js'
 import { useNow } from '../../../hooks/useNow.js'
 import { useUserOptions } from '../../../hooks/useSelectOptions.js'
 import { useUrlFilters } from '../../../hooks/useUrlFilters.js'
-import { leadChildKey, queryKeys } from '../../../queries/keys.js'
+import { queryKeys } from '../../../queries/keys.js'
 import {
+  AGENDA_BUCKETS,
+  AGENDA_SORTS,
   CRM_STAGE_COLOR,
   CRM_STAGE_LABEL,
-  listAlerts,
-  listAllLeads,
-  overdueAlerts,
-  upcomingAlerts,
+  fetchAgendaSummary,
+  listAgenda,
 } from '../../../services/crm.js'
 import { formatDateTime, formatTimeLeft } from '../../../services/format.js'
-import { findPerson } from '../../../services/people.js'
-import { findProperty, formatPropertyPlace } from '../../../services/properties.js'
 import { findUser } from '../../../services/users.js'
 
 const PAGE_SIZE = 20
+// Columnas de la tabla: las filas de grupo ocupan todas.
+const COLUMN_COUNT = 6
 
-/** Orden de la agenda. Los leads sin aviso próximo van siempre al final. */
+/** Orden de la agenda. Los vencidos van siempre primero y los sin aviso, al final. */
 const SORT_OPTIONS = [
   { value: 'proximo', label: 'Menos tiempo para el aviso' },
   { value: 'lejano', label: 'Más tiempo para el aviso' },
 ]
-const DEFAULT_SORT = 'proximo'
-
-const HOUR = 60 * 60 * 1000
-
-/** Color del "falta" según la urgencia. Vencido o a menos de una hora: rojo. */
-function urgencyColor(ms) {
-  if (ms < HOUR) return 'danger'
-  if (ms < 24 * HOUR) return 'orange'
-  if (ms < 3 * 24 * HOUR) return 'yellow'
-  return 'blue'
-}
-
+const DEFAULT_SORT = AGENDA_SORTS[0]
 
 /**
- * Agenda de avisos (`/dashboard/avisos`): los leads ordenados por el tiempo que
- * falta para su próximo aviso.
+ * Los tramos de la agenda. El de cada fila lo manda el backend (`bucket`,
+ * calculado con su hora); el de los leads sin aviso es `null` y acá se llama
+ * `none`. No se pisan: "Próximas 24 horas" no incluye la próxima hora.
+ * `empty`: el texto cuando el tramo elegido en el selector no tiene nada.
+ */
+const BUCKETS = {
+  overdue: { label: 'Vencidos', empty: 'No hay avisos vencidos' },
+  hour: { label: 'En la próxima hora', empty: 'No hay avisos en la próxima hora' },
+  day: { label: 'Próximas 24 horas', empty: 'No hay avisos en las próximas 24 horas' },
+  week: { label: 'Próximos 7 días', empty: 'No hay avisos en los próximos 7 días' },
+  later: { label: 'Más adelante', empty: 'No hay avisos para más adelante' },
+  none: { label: 'Sin avisos pendientes' },
+}
+const bucketOf = (row) => row.bucket ?? 'none'
+
+/** El selector de tramo (`?cuando=`): "Todos" o uno de los tramos del backend. */
+const ALL = 'todos'
+
+/** Una opción del selector de tramo: el nombre y, al lado, cuántos leads tiene. */
+function TimeOption({ label, count }) {
+  return (
+    <Group gap={6} wrap="nowrap" justify="center">
+      <span>{label}</span>
+      {count != null && (
+        <Text component="span" size="xs" c="dimmed" fw={500} style={{ fontVariantNumeric: 'tabular-nums' }}>
+          {count}
+        </Text>
+      )}
+    </Group>
+  )
+}
+
+/** "1 lead" / "3 leads". */
+const leadsCount = (n) => `${n} ${n === 1 ? 'lead' : 'leads'}`
+
+/**
+ * Qué falta para el aviso (o cuánto hace que venció) y, debajo, la fecha. Si
+ * está vencido lo dice el backend (`overdue`); la hora del navegador solo se usa
+ * para el texto, que se actualiza solo con `useNow`.
+ */
+function WhenCell({ row, now }) {
+  const { nextAlert, overdue } = row
+  if (!nextAlert) {
+    return (
+      <Text size="sm" c="dimmed">
+        —
+      </Text>
+    )
+  }
+
+  const timeLeft = new Date(nextAlert.alertDate).getTime() - now
+  return (
+    <>
+      <Text
+        size="sm"
+        fw={600}
+        c={overdue ? 'danger' : undefined}
+        style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}
+      >
+        {overdue
+          ? // Al menos 1 ms: justo en el segundo del aviso dice "menos de 1 min".
+            `Vencido hace ${formatTimeLeft(Math.max(-timeLeft, 1))}`
+          : `En ${formatTimeLeft(Math.max(timeLeft, 1))}`}
+      </Text>
+      <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
+        {formatDateTime(nextAlert.alertDate)}
+      </Text>
+    </>
+  )
+}
+
+/**
+ * La fila que abre un grupo: el nombre y cuántos leads tiene en total (del
+ * summary, no solo de esta página). Los vencidos, en rojo.
+ */
+function GroupRow({ bucket, count }) {
+  return (
+    <Table.Tr style={{ backgroundColor: 'var(--app-raised)' }}>
+      <Table.Td colSpan={COLUMN_COUNT} py={8}>
+        <Group gap="xs">
+          <Text size="sm" fw={600} c={bucket === 'overdue' ? 'danger' : undefined}>
+            {BUCKETS[bucket].label}
+          </Text>
+          {count != null && (
+            <Text size="xs" c="dimmed">
+              {leadsCount(count)}
+            </Text>
+          )}
+        </Group>
+      </Table.Td>
+    </Table.Tr>
+  )
+}
+
+/**
+ * Agenda de avisos (`/dashboard/avisos`): una fila por lead con su próximo
+ * aviso, agrupadas por cuándo.
  *
- * El backend no tiene un endpoint con todos los avisos: se traen todos los
- * leads (de a 100) y los avisos de cada uno con `GET .../alerts`, y el orden se
- * arma acá. Las claves de caché son las mismas que usa el detalle del lead, así
- * que lo que se cambia allá se ve acá y viceversa.
+ * Todo lo arma el backend: `GET /api/crm_alerts/agenda` devuelve la página ya
+ * ordenada (vencidos primero, el más atrasado arriba; después el resto según el
+ * orden elegido; al final los sin aviso) y `.../agenda/summary` cuántos hay en
+ * cada tramo. Las claves cuelgan de ['leads']: completar, editar o borrar un
+ * aviso (en el detalle o en la campanita) las vuelve a pedir.
  *
- * Cuentan todos los avisos pendientes. Los vencidos van siempre primero, el
- * más atrasado arriba, porque son los que hay que atender ya; después, los que
- * faltan, en el orden elegido.
+ * Al entrar se ven los vencidos y no los leads sin avisos. Filtros en la URL:
+ * `?vencidos=0` oculta los vencidos, `?sinAvisos=1` suma los leads sin avisos,
+ * `?cuando=` elige un tramo, `?orden=lejano` invierte el orden y `?userId=` filtra
+ * por agente.
  */
 export default function AlertAgenda() {
   const navigate = useNavigate()
   const now = useNow()
   const { searchParams, page, setFilter, goToPage } = useUrlFilters()
   const userId = searchParams.get('userId') ?? null
-  const sort = SORT_OPTIONS.some((o) => o.value === searchParams.get('orden'))
-    ? searchParams.get('orden')
-    : DEFAULT_SORT
-  // `?sinAvisos=0` oculta los leads que no tienen ningún aviso por delante.
-  const showEmpty = searchParams.get('sinAvisos') !== '0'
+  const sort = AGENDA_SORTS.includes(searchParams.get('orden')) ? searchParams.get('orden') : DEFAULT_SORT
+  const showEmpty = searchParams.get('sinAvisos') === '1'
+  const showOverdue = searchParams.get('vencidos') !== '0'
+  // "Vencidos" no tiene sentido con los vencidos ocultos: ahí se vuelve a "Todos".
+  const requestedBucket = searchParams.get('cuando')
+  const bucket =
+    AGENDA_BUCKETS.includes(requestedBucket) && (requestedBucket !== 'overdue' || showOverdue)
+      ? requestedBucket
+      : null
 
   const agents = useUserOptions(userId)
 
-  // 1. Todos los leads. La clave cuelga de ['leads', 'list'], así que crear o
-  //    editar un lead (que invalida ['leads']) también refresca la agenda.
-  const leadsQuery = useQuery({
-    queryKey: [...queryKeys.leads.lists(), 'all', { userId }],
-    queryFn: ({ signal }) => listAllLeads({ userId }, { signal }),
-  })
-  const leads = leadsQuery.data ?? []
-
-  // 2. Los avisos de cada lead, en paralelo.
-  const alertQueries = useQueries({
-    queries: leads.map((lead) => ({
-      queryKey: leadChildKey(lead.id, 'alerts'),
-      queryFn: ({ signal }) => listAlerts(lead.id, { signal }),
-    })),
-  })
-  const loadedAlerts = alertQueries.filter((q) => !q.isPending).length
-  const failedAlerts = alertQueries.filter((q) => q.isError).length
-  const loadingAlerts = leads.length > 0 && loadedAlerts < leads.length
-
-  // 3. Cada lead con el aviso que muestra: el vencido más atrasado si tiene
-  //    alguno, si no el próximo. `timeLeft` es negativo en los vencidos.
-  const rows = leads.map((lead, index) => {
-    const alerts = alertQueries[index]?.data
-    const overdue = overdueAlerts(alerts, now)
-    const upcoming = upcomingAlerts(alerts, now)
-    const next = overdue[0] ?? upcoming[0] ?? null
-    return {
-      lead,
-      next,
-      overdue: overdue.length > 0,
-      pending: overdue.length + upcoming.length,
-      timeLeft: next ? new Date(next.alertDate).getTime() - now : null,
-      loading: alertQueries[index]?.isPending ?? true,
-    }
+  // La página de la agenda. Solo se mandan los parámetros que no son el default.
+  const params = {
+    page: page - 1,
+    size: PAGE_SIZE,
+    userId,
+    includeOverdue: showOverdue ? null : false,
+    includeWithoutAlerts: showEmpty ? true : null,
+    bucket,
+    sort: sort === DEFAULT_SORT ? null : sort,
+  }
+  const agendaQuery = useQuery({
+    queryKey: queryKeys.leads.agenda(params),
+    queryFn: ({ signal }) => listAgenda(params, { signal }),
+    placeholderData: keepPreviousData,
   })
 
-  const overdueRows = rows.filter((row) => row.overdue)
-  const upcomingRows = rows.filter((row) => row.next && !row.overdue)
-  const withoutAlert = rows.filter((row) => !row.next)
-  // Los vencidos siempre arriba (el más atrasado primero); el orden elegido
-  // solo reordena los que faltan.
-  overdueRows.sort((a, b) => a.timeLeft - b.timeLeft)
-  upcomingRows.sort((a, b) => (sort === 'proximo' ? a.timeLeft - b.timeLeft : b.timeLeft - a.timeLeft))
-  const withAlert = [...overdueRows, ...upcomingRows]
-  const sorted = showEmpty ? [...withAlert, ...withoutAlert] : withAlert
+  // Cuántos hay en cada tramo, con el mismo agente y los mismos vencidos.
+  const summaryParams = { userId, includeOverdue: showOverdue ? null : false }
+  const summaryQuery = useQuery({
+    queryKey: queryKeys.leads.agendaSummary(summaryParams),
+    queryFn: ({ signal }) => fetchAgendaSummary(summaryParams, { signal }),
+    placeholderData: keepPreviousData,
+  })
 
-  // Paginado en el navegador: el orden necesita todos los leads a la vez.
-  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
-  const currentPage = Math.min(page, totalPages)
-  const visible = sorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  const data = agendaQuery.data ?? null
+  const rows = data?.content ?? []
+  const summary = summaryQuery.data ?? null
 
-  // Nombres solo de las filas visibles.
-  const people = useLookup('people', visible.map((r) => r.lead.peopleId), findPerson)
-  const properties = useLookup('properties', visible.map((r) => r.lead.propertyId), findProperty)
-  const users = useLookup('users', visible.map((r) => r.lead.userId), findUser)
+  // Los números de cada grupo y de cada opción del selector.
+  const countOf = (key) => {
+    if (!summary) return null
+    if (key === 'none') return summary.withoutAlerts ?? 0
+    if (key === 'overdue' && !showOverdue) return 0
+    return summary[key] ?? 0
+  }
+  const withAlertTotal = summary ? AGENDA_BUCKETS.reduce((sum, key) => sum + countOf(key), 0) : null
+  const allTotal = summary ? withAlertTotal + (showEmpty ? countOf('none') : 0) : null
+  const overdueCount = showOverdue ? countOf('overdue') : null
 
-  const nextHour = upcomingRows.filter((r) => r.timeLeft < HOUR).length
-  const nextDay = upcomingRows.filter((r) => r.timeLeft < 24 * HOUR).length
+  // Nombre del agente de cada fila: es lo único que la agenda no trae.
+  const users = useLookup('users', rows.map((row) => row.userId), findUser)
+
+  const totalPages = data?.totalPages ?? 1
 
   return (
     <Container size="xl" py="xl">
@@ -151,22 +229,21 @@ export default function AlertAgenda() {
         <Title order={1} size="h2">
           Agenda de avisos
         </Title>
-        {leadsQuery.isSuccess && !loadingAlerts ? (
-          <Text c="dimmed">
-            {overdueRows.length > 0 && (
-              <Text span c="danger" fw={600}>
-                {overdueRows.length} {overdueRows.length === 1 ? 'lead con avisos vencidos' : 'leads con avisos vencidos'}
-                {' · '}
-              </Text>
-            )}
-            {`${upcomingRows.length} ${upcomingRows.length === 1 ? 'lead tiene' : 'leads tienen'} avisos por delante · ${nextDay} en las próximas 24 h · ${nextHour} en la próxima hora`}
-          </Text>
-        ) : (
-          <Text c="dimmed">Leads ordenados por el tiempo que falta para su próximo aviso.</Text>
-        )}
+        <Text c="dimmed">
+          {summary
+            ? summary.hour > 0
+              ? `${leadsCount(summary.hour)} con aviso en la próxima hora y ${summary.day} más en las próximas 24 horas.`
+              : `${leadsCount(summary.day)} con aviso en las próximas 24 horas.`
+            : 'Los leads ordenados por el tiempo que falta para su próximo aviso.'}
+          {overdueCount > 0 && (
+            <Text span c="danger" fw={600}>
+              {` ${leadsCount(overdueCount)} con avisos vencidos.`}
+            </Text>
+          )}
+        </Text>
       </Box>
 
-      <Group align="flex-end" gap="md" mb="md">
+      <Group align="flex-end" gap="md" mb="lg" wrap="wrap">
         <Select
           w={260}
           label="Ordenar por"
@@ -187,31 +264,50 @@ export default function AlertAgenda() {
           clearable
           nothingFoundMessage="Sin coincidencias"
         />
-        <Switch
-          mb={8}
-          label="Mostrar leads sin avisos pendientes"
-          checked={showEmpty}
-          onChange={(event) => setFilter('sinAvisos', event.currentTarget.checked ? null : '0')}
-        />
+        <Stack gap={8} mb={2}>
+          <Switch
+            label={overdueCount > 0 ? `Mostrar vencidos (${overdueCount})` : 'Mostrar vencidos'}
+            checked={showOverdue}
+            onChange={(event) => setFilter('vencidos', event.currentTarget.checked ? null : '0')}
+          />
+          <Switch
+            label={
+              summary && countOf('none') > 0
+                ? `Mostrar leads sin avisos pendientes (${countOf('none')})`
+                : 'Mostrar leads sin avisos pendientes'
+            }
+            checked={showEmpty}
+            onChange={(event) => setFilter('sinAvisos', event.currentTarget.checked ? '1' : null)}
+          />
+        </Stack>
       </Group>
 
-      {loadingAlerts && (
-        <Stack gap={4} mb="md">
-          <Text size="xs" c="dimmed">
-            Cargando avisos: {loadedAlerts} de {leads.length} leads
-          </Text>
-          <Progress value={(loadedAlerts / leads.length) * 100} size="sm" animated />
-        </Stack>
-      )}
+      {/* Tramo de tiempo. Los números salen del summary, de toda la agenda.
+          En pantallas angostas el selector se desplaza de costado en vez de cortarse. */}
+      <ScrollArea type="auto" scrollbarSize={6} offsetScrollbars="x" mb="md">
+        <SegmentedControl
+          value={bucket ?? ALL}
+          onChange={(value) => setFilter('cuando', value === ALL ? null : value)}
+          aria-label="Cuándo es el aviso"
+          data={[
+            { value: ALL, label: <TimeOption label="Todos" count={allTotal} /> },
+            ...AGENDA_BUCKETS.map((key) => ({
+              value: key,
+              // Con los vencidos ocultos, su opción queda deshabilitada.
+              disabled: key === 'overdue' && !showOverdue,
+              label: <TimeOption label={BUCKETS[key].label} count={countOf(key)} />,
+            })),
+          ]}
+        />
+      </ScrollArea>
 
-      {failedAlerts > 0 && !loadingAlerts && (
+      {summaryQuery.isError && (
         <Alert color="yellow" icon={<IconAlertTriangle />} mb="md">
-          No se pudieron cargar los avisos de {failedAlerts} {failedAlerts === 1 ? 'lead' : 'leads'}: aparecen
-          como sin avisos.
+          No se pudieron cargar los totales por tramo: {summaryQuery.error.message}
         </Alert>
       )}
 
-      {leadsQuery.isPending && (
+      {agendaQuery.isPending && (
         <Stack gap="xs">
           {Array.from({ length: 6 }, (_, i) => (
             <Skeleton key={i} height={56} radius="md" />
@@ -219,40 +315,61 @@ export default function AlertAgenda() {
         </Stack>
       )}
 
-      {leadsQuery.isError && (
+      {agendaQuery.isError && (
         <Alert color="danger" icon={<IconAlertTriangle />} title="No se pudo cargar la agenda">
-          {leadsQuery.error.message}
+          {agendaQuery.error.message}
         </Alert>
       )}
 
-      {leadsQuery.isSuccess && !loadingAlerts && sorted.length === 0 && (
+      {/* Un tramo elegido, sin nada. */}
+      {data && rows.length === 0 && bucket && (
+        <Card variant="empty" radius="lg" padding="xl">
+          <Stack align="center" gap="xs" py="lg">
+            <Text fw={600}>{BUCKETS[bucket].empty}</Text>
+            <Button variant="light" mt="xs" onClick={() => setFilter('cuando', null)}>
+              Ver todos
+            </Button>
+          </Stack>
+        </Card>
+      )}
+
+      {/* La agenda entera, sin nada. */}
+      {data && rows.length === 0 && !bucket && (
         <Card variant="empty" radius="lg" padding="xl">
           <Stack align="center" gap="xs" py="xl">
             <ThemeIcon variant="light" color="gray" size={56} radius="xl">
               <IconBellRinging size={28} />
             </ThemeIcon>
             <Text fw={600}>
-              {leads.length === 0
+              {summary && withAlertTotal === 0 && countOf('none') === 0
                 ? userId
                   ? 'Este agente no tiene leads'
                   : 'Todavía no hay leads'
                 : 'No hay avisos pendientes'}
             </Text>
             <Text size="sm" c="dimmed" ta="center" maw={420}>
-              Los avisos se agendan desde el detalle de cada lead.
+              {!showOverdue
+                ? 'Los vencidos están ocultos: activá "Mostrar vencidos" para verlos.'
+                : 'Los avisos se agendan desde el detalle de cada lead.'}
             </Text>
-            <Button component={Link} to="/dashboard/consultas" mt="md" variant="light">
-              Ir a Clientes & Leads
-            </Button>
+            {showOverdue && (
+              <Button component={Link} to="/dashboard/consultas" mt="md" variant="light">
+                Ir a Clientes & Leads
+              </Button>
+            )}
           </Stack>
         </Card>
       )}
 
-      {/* La tabla espera a tener todos los avisos: sin ellos el orden saltaría. */}
-      {!loadingAlerts && visible.length > 0 && (
+      {rows.length > 0 && (
         <>
-          <Card variant="table" radius="lg" padding={0}>
-            <Table.ScrollContainer minWidth={960}>
+          <Card
+            variant="table"
+            radius="lg"
+            padding={0}
+            style={{ opacity: agendaQuery.isPlaceholderData ? 0.55 : 1, transition: 'opacity 150ms' }}
+          >
+            <Table.ScrollContainer minWidth={900}>
               <Table verticalSpacing="sm" horizontalSpacing="md" highlightOnHover>
                 <Table.Thead>
                   <Table.Tr>
@@ -262,98 +379,82 @@ export default function AlertAgenda() {
                     <Table.Th>Propiedad</Table.Th>
                     <Table.Th>Agente</Table.Th>
                     <Table.Th>Etapa</Table.Th>
-                    <Table.Th w={1} />
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {visible.map(({ lead, next, overdue, pending, timeLeft, loading }) => {
-                    const person = people[lead.peopleId]
-                    const property = properties[lead.propertyId]
-                    const detalle = `/dashboard/consultas/${lead.id}`
+                  {rows.map((row, index) => {
+                    const { nextAlert, overdue, pendingCount } = row
+                    const detalle = `/dashboard/consultas/${row.id}`
+                    // Un encabezado cada vez que empieza un tramo (también arriba de
+                    // cada página). Con un tramo elegido, el selector ya lo nombra.
+                    const rowBucket = bucketOf(row)
+                    const startsGroup = !bucket && (index === 0 || bucketOf(rows[index - 1]) !== rowBucket)
 
                     return (
-                      <Table.Tr key={lead.id} style={{ cursor: 'pointer' }} onClick={() => navigate(detalle)}>
-                        {/* nowrap: el "falta" no se corta aunque la tabla se achique. */}
-                        <Table.Td style={{ whiteSpace: 'nowrap' }}>
-                          {loading ? (
-                            <Skeleton height={22} width={90} radius="xl" />
-                          ) : next ? (
-                            <Badge
-                              variant="light"
-                              size="lg"
-                              color={urgencyColor(timeLeft)}
-                              tt="none"
-                              styles={{ root: { overflow: 'visible' }, label: { overflow: 'visible' } }}
-                            >
-                              {overdue
-                                ? // Al menos 1 ms: justo en el segundo del aviso dice "menos de 1 min".
-                                  `Vencido hace ${formatTimeLeft(Math.max(-timeLeft, 1))}`
-                                : formatTimeLeft(timeLeft)}
-                            </Badge>
-                          ) : (
-                            <Text size="sm" c="dimmed">
-                              Sin avisos
-                            </Text>
-                          )}
-                        </Table.Td>
-                        <Table.Td maw={280}>
-                          {next && (
-                            <>
-                              <Text size="sm" fw={500}>
-                                {formatDateTime(next.alertDate)}
+                      <Fragment key={row.id}>
+                        {startsGroup && <GroupRow bucket={rowBucket} count={countOf(rowBucket)} />}
+                        <Table.Tr
+                          style={{
+                            cursor: 'pointer',
+                            // Una línea roja a la izquierda marca los vencidos.
+                            boxShadow: overdue ? 'inset 3px 0 0 var(--mantine-color-danger-6)' : undefined,
+                          }}
+                          onClick={() => navigate(detalle)}
+                        >
+                          <Table.Td>
+                            <WhenCell row={row} now={now} />
+                          </Table.Td>
+                          <Table.Td maw={300}>
+                            {nextAlert ? (
+                              <>
+                                <Tooltip label={nextAlert.message} multiline maw={320} openDelay={400}>
+                                  <Text size="sm" lineClamp={2}>
+                                    {nextAlert.message}
+                                  </Text>
+                                </Tooltip>
+                                {pendingCount > 1 && (
+                                  <Text size="xs" c="dimmed">
+                                    +{pendingCount - 1} {pendingCount === 2 ? 'aviso más' : 'avisos más'}
+                                  </Text>
+                                )}
+                              </>
+                            ) : (
+                              <Text size="sm" c="dimmed">
+                                Sin avisos pendientes
                               </Text>
-                              <Tooltip label={next.message} multiline maw={320} openDelay={400}>
-                                <Text size="xs" c="dimmed" truncate>
-                                  {next.message}
-                                </Text>
-                              </Tooltip>
-                              {pending > 1 && (
-                                <Text size="xs" c="dimmed">
-                                  +{pending - 1} {pending === 2 ? 'aviso más' : 'avisos más'}
-                                </Text>
-                              )}
-                            </>
-                          )}
-                        </Table.Td>
-                        <Table.Td>
-                          <Text size="sm" fw={500}>
-                            {person?.name ?? `Persona #${lead.peopleId}`}
-                          </Text>
-                          {person && (
-                            <Text size="xs" c="dimmed" ff="monospace">
-                              {person.phone}
-                            </Text>
-                          )}
-                        </Table.Td>
-                        <Table.Td>
-                          <Text size="sm">{property?.address ?? `Propiedad #${lead.propertyId}`}</Text>
-                          {property && (
-                            <Text size="xs" c="dimmed">
-                              {formatPropertyPlace(property)}
-                            </Text>
-                          )}
-                        </Table.Td>
-                        <Table.Td>
-                          <Text size="sm">{users[lead.userId]?.name ?? `#${lead.userId}`}</Text>
-                        </Table.Td>
-                        <Table.Td>
-                          <Badge variant="light" color={CRM_STAGE_COLOR[lead.stage]}>
-                            {CRM_STAGE_LABEL[lead.stage] ?? lead.stage}
-                          </Badge>
-                        </Table.Td>
-                        <Table.Td>
-                          <Button
-                            component={Link}
-                            to={detalle}
-                            variant="subtle"
-                            size="compact-sm"
-                            rightSection={<IconChevronRight size={14} />}
-                            onClick={(event) => event.stopPropagation()}
-                          >
-                            Abrir
-                          </Button>
-                        </Table.Td>
-                      </Table.Tr>
+                            )}
+                          </Table.Td>
+                          <Table.Td>
+                            {/* El link deja abrir el lead con el teclado; el clic en la fila hace lo mismo. */}
+                            <Anchor
+                              component={Link}
+                              to={detalle}
+                              size="sm"
+                              fw={600}
+                              c="var(--app-ink)"
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              {row.personName ?? `Persona #${row.peopleId}`}
+                            </Anchor>
+                            {row.personPhone && (
+                              <Text size="xs" c="dimmed" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                                {row.personPhone}
+                              </Text>
+                            )}
+                          </Table.Td>
+                          <Table.Td>
+                            <Text size="sm">{row.propertyAddress ?? `Propiedad #${row.propertyId}`}</Text>
+                          </Table.Td>
+                          <Table.Td>
+                            <Text size="sm">{users[row.userId]?.name ?? `#${row.userId}`}</Text>
+                          </Table.Td>
+                          <Table.Td>
+                            <Badge variant="light" color={CRM_STAGE_COLOR[row.stage]}>
+                              {CRM_STAGE_LABEL[row.stage] ?? row.stage}
+                            </Badge>
+                          </Table.Td>
+                        </Table.Tr>
+                      </Fragment>
                     )
                   })}
                 </Table.Tbody>
@@ -363,7 +464,7 @@ export default function AlertAgenda() {
 
           {totalPages > 1 && (
             <Group justify="center" mt="lg">
-              <Pagination total={totalPages} value={currentPage} onChange={goToPage} />
+              <Pagination total={totalPages} value={Math.min(page, totalPages)} onChange={goToPage} />
             </Group>
           )}
         </>

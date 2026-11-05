@@ -123,9 +123,21 @@ export const CONTRACT_SEARCH_FILTERS = [
 ]
 
 /**
- * GET /api/property_contracts/search -> `Page<PropertyContractResponse>`, el
- * que empieza más tarde primero. Cada inmobiliaria busca en los contratos de sus
- * propiedades; `agencyId` lo usa solo el admin, y sin él busca en todos.
+ * Órdenes que acepta la búsqueda (`orden`). Cualquier otro valor da 400.
+ * - `inicio` (el del backend si no se manda): el que empieza más tarde primero.
+ * - `vencimiento`: el que vence antes primero; las ventas sin fin, al final.
+ */
+export const CONTRACT_SORT_OPTIONS = [
+  { value: 'inicio', label: 'Inicio más reciente' },
+  { value: 'vencimiento', label: 'Vence antes' },
+]
+export const DEFAULT_CONTRACT_SORT = 'inicio'
+
+/**
+ * GET /api/property_contracts/search -> `Page<PropertyContractResponse>`, en el
+ * orden de `orden` (ver CONTRACT_SORT_OPTIONS). Cada inmobiliaria busca en los
+ * contratos de sus propiedades; `agencyId` lo usa solo el admin, y sin él busca
+ * en todos.
  */
 export const searchContracts = (params, options) =>
   get(`${CONTRACTS_ENDPOINT}/search?${pageQuery({ ...params, sort: null })}`, options)

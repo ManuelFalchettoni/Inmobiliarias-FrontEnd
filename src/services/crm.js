@@ -94,24 +94,6 @@ export const listLeads = (params, options) => get(`${LEADS_ENDPOINT}?${pageQuery
 
 export const findLead = (id, options) => get(`${LEADS_ENDPOINT}/${id}`, options)
 
-/** Tope de `size` que acepta el backend en los listados con orden. */
-const MAX_PAGE_SIZE = 100
-
-/**
- * Todos los leads (de un agente, si viene `userId`), recorriendo las páginas de
- * a 100. Devuelve un array común, no un `Page`. Lo usa la agenda de avisos, que
- * necesita ver todos los leads para ordenarlos por su próximo aviso.
- */
-export async function listAllLeads({ userId } = {}, options) {
-  const leads = []
-  for (let page = 0; ; page += 1) {
-    const result = await listLeads({ page, size: MAX_PAGE_SIZE, userId }, options)
-    leads.push(...result.content)
-    // `last` lo manda Spring en el Page; el `content.length` cubre una página vacía.
-    if (result.last || result.content.length === 0) return leads
-  }
-}
-
 /** POST -> 201. 404 si la propiedad, la persona o el agente no existen o están de baja. */
 export const createLead = (request, options) => post(LEADS_ENDPOINT, request, options)
 
@@ -163,33 +145,6 @@ export const completeAlert = (leadId, alertId, options) =>
 export const ALERT_STATUS = { PENDING: 'PENDING', DONE: 'DONE' }
 
 /**
- * Avisos que todavía faltan: pendientes y sin vencer, el más próximo primero.
- * `expired` lo calcula el backend; la comparación con `now` cubre los que
- * vencieron después de traerlos.
- */
-export function upcomingAlerts(alerts, now) {
-  return (alerts ?? [])
-    .filter(
-      (alert) =>
-        alert.status === ALERT_STATUS.PENDING && !alert.expired && new Date(alert.alertDate).getTime() > now,
-    )
-    .sort((a, b) => new Date(a.alertDate) - new Date(b.alertDate))
-}
-
-/**
- * Lo opuesto: avisos pendientes que ya vencieron, el más atrasado primero.
- * Entre las dos funciones cubren todos los `PENDING` de un lead.
- */
-export function overdueAlerts(alerts, now) {
-  return (alerts ?? [])
-    .filter(
-      (alert) =>
-        alert.status === ALERT_STATUS.PENDING && (alert.expired || new Date(alert.alertDate).getTime() <= now),
-    )
-    .sort((a, b) => new Date(a.alertDate) - new Date(b.alertDate))
-}
-
-/**
  * GET /api/crm_alerts/upcoming -> las alertas `PENDING` de todos los leads de la
  * inmobiliaria, la más próxima primero, vencidas incluidas. Un array sin paginar.
  * `days`: solo las que vencen dentro de esos días. `userId`: las de un agente.
@@ -200,6 +155,37 @@ export function listUpcomingAlerts({ days, userId } = {}, options) {
   if (userId != null) params.set('userId', String(userId))
   const query = params.toString()
   return get(`/api/crm_alerts/upcoming${query ? `?${query}` : ''}`, options)
+}
+
+/** Tramos de la agenda: los calcula el backend con su hora (`bucket` de cada fila). */
+export const AGENDA_BUCKETS = ['overdue', 'hour', 'day', 'week', 'later']
+/** Órdenes de la agenda. Los vencidos van siempre primero y los sin aviso, al final. */
+export const AGENDA_SORTS = ['proximo', 'lejano']
+
+/**
+ * GET /api/crm_alerts/agenda -> `Page<>` con una fila por lead, ya ordenada:
+ * `{ id (del lead), peopleId, propertyId, userId, stage, personName, personPhone,
+ * propertyAddress, nextAlert, pendingCount, overdue, bucket }`. Un lead sin
+ * avisos viene con `nextAlert` y `bucket` en null.
+ *
+ * Todos los filtros son opcionales: `userId`, `includeOverdue` (true),
+ * `includeWithoutAlerts` (false), `bucket` y `sort` ('proximo'). Con `bucket`
+ * nunca salen los leads sin aviso. Un `bucket` o `sort` inválido: 400.
+ */
+export const listAgenda = (params, options) =>
+  get(`/api/crm_alerts/agenda?${pageQuery({ ...params, sort: params.sort ?? null })}`, options)
+
+/**
+ * GET /api/crm_alerts/agenda/summary -> cuántos leads hay en cada tramo:
+ * `{ overdue, hour, day, week, later, withoutAlerts }`. Va con los mismos
+ * `userId` e `includeOverdue` que la agenda; `withoutAlerts` cuenta siempre.
+ */
+export function fetchAgendaSummary({ userId, includeOverdue } = {}, options) {
+  const params = new URLSearchParams()
+  if (userId != null) params.set('userId', String(userId))
+  if (includeOverdue != null) params.set('includeOverdue', String(includeOverdue))
+  const query = params.toString()
+  return get(`/api/crm_alerts/agenda/summary${query ? `?${query}` : ''}`, options)
 }
 
 /** `{ userId, message, alertDate }`: el estado no va en el body, se cambia con `completeAlert`. */

@@ -31,7 +31,14 @@ export const queryKeys = {
   // `upcomingAlerts`: la campanita (GET /api/crm_alerts/upcoming). Queda debajo
   // de ['leads'], así lo que invalida los leads (el detalle al tocar una alerta)
   // también la refresca.
-  leads: { ...resourceKeys('leads'), upcomingAlerts: (params) => ['leads', 'upcoming-alerts', params] },
+  // `agenda` y `agendaSummary` (Agenda de avisos) también cuelgan de ['leads']:
+  // completar, editar o borrar un aviso invalida los leads y las refresca.
+  leads: {
+    ...resourceKeys('leads'),
+    upcomingAlerts: (params) => ['leads', 'upcoming-alerts', params],
+    agenda: (params) => ['leads', 'agenda', params],
+    agendaSummary: (params) => ['leads', 'agenda-summary', params],
+  },
   contracts: resourceKeys('contracts'),
   // Partes y dueños se traen siempre completos (el backend no los filtra).
   contractParties: { all: ['contract-parties'] },

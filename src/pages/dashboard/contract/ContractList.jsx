@@ -17,7 +17,7 @@ import {
   ThemeIcon,
   Title,
 } from '@mantine/core'
-import { IconAlertTriangle, IconChevronRight, IconFileText, IconPlus } from '@tabler/icons-react'
+import { IconAlertTriangle, IconArrowsSort, IconChevronRight, IconFileText, IconPlus } from '@tabler/icons-react'
 
 import { ActiveFilters, FilterButton } from '../../../components/FilterPanel.jsx'
 import { useAuth } from '../../../context/auth-context.js'
@@ -29,7 +29,9 @@ import { queryKeys } from '../../../queries/keys.js'
 import {
   CONTRACT_ROLE_LABEL,
   CONTRACT_SEARCH_FILTERS,
+  CONTRACT_SORT_OPTIONS,
   CONTRACT_STATUS_COLOR,
+  DEFAULT_CONTRACT_SORT,
   CONTRACT_STATUS_LABEL,
   CONTRACT_STATUS_OPTIONS,
   CONTRACT_TYPE_LABEL,
@@ -51,7 +53,8 @@ const PAGE_SIZE = 20
  * pedirlas por contrato: se traen todas y se agrupan en el navegador.
  *
  * Como en personas, siempre se usa la búsqueda del backend: todos los filtros
- * son opcionales y ordena por inicio, más nuevo primero. AGENCY y AGENT ven los
+ * son opcionales. Ordena por inicio, más nuevo primero, o por vencimiento
+ * (`?orden=vencimiento`), el que vence antes primero. AGENCY y AGENT ven los
  * contratos de sus propiedades; el admin ve todos o elige una inmobiliaria.
  */
 export default function ContractList() {
@@ -62,8 +65,19 @@ export default function ContractList() {
   const agencyId = isAdmin ? (searchParams.get('agencyId') ?? null) : null
   const filters = pick(CONTRACT_SEARCH_FILTERS)
   const filtrando = Object.keys(filters).length > 0
+  // El orden no es un filtro: no cuenta en los chips ni se borra con "Limpiar".
+  // Solo viaja si no es el de siempre; cambiarlo vuelve a la página 1 (setFilter).
+  const orden = CONTRACT_SORT_OPTIONS.some((o) => o.value === searchParams.get('orden'))
+    ? searchParams.get('orden')
+    : DEFAULT_CONTRACT_SORT
 
-  const params = { page: page - 1, size: PAGE_SIZE, agencyId, ...filters }
+  const params = {
+    page: page - 1,
+    size: PAGE_SIZE,
+    agencyId,
+    ...filters,
+    orden: orden === DEFAULT_CONTRACT_SORT ? null : orden,
+  }
 
   // Dos consultas: la página de contratos y TODAS las partes. Las partes tienen
   // una sola clave (las comparte el detalle de cada contrato) y `select` las
@@ -177,6 +191,16 @@ export default function ContractList() {
           {...selectFilter('status')}
         />
         <FilterButton count={chips.length} onClick={() => setPanelAbierto(true)} />
+        <Select
+          w={{ base: '100%', sm: 200 }}
+          ml={{ sm: 'auto' }}
+          aria-label="Ordenar por"
+          data={CONTRACT_SORT_OPTIONS}
+          value={orden}
+          onChange={(valor) => setFilter('orden', valor === DEFAULT_CONTRACT_SORT ? null : valor)}
+          allowDeselect={false}
+          leftSection={<IconArrowsSort size={16} />}
+        />
       </Group>
 
       <ActiveFilters chips={chips} onRemove={clearFilters} onClear={limpiarFiltros} />
