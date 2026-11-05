@@ -21,12 +21,14 @@ import {
 } from '@mantine/core'
 import { IconAlertTriangle, IconBellRinging, IconChevronRight, IconClockHour4 } from '@tabler/icons-react'
 
+import AlertEmailBadge from '../../../components/AlertEmailBadge.jsx'
 import { useLookup } from '../../../hooks/useLookup.js'
 import { useNow } from '../../../hooks/useNow.js'
 import { useUserOptions } from '../../../hooks/useSelectOptions.js'
 import { useUrlFilters } from '../../../hooks/useUrlFilters.js'
 import { leadChildKey, queryKeys } from '../../../queries/keys.js'
 import {
+  ALERT_EMAIL_HOURS,
   CRM_STAGE_COLOR,
   CRM_STAGE_LABEL,
   listAlerts,
@@ -146,6 +148,9 @@ export default function AlertAgenda() {
             {leadsQuery.isSuccess && !loadingAlerts
               ? `${withAlert.length} ${withAlert.length === 1 ? 'lead tiene' : 'leads tienen'} avisos por delante · ${nextDay} en las próximas 24 h · ${nextHour} en la próxima hora`
               : 'Leads ordenados por el tiempo que falta para su próximo aviso.'}
+          </Text>
+          <Text size="sm" c="dimmed">
+            Cada agente recibe un mail {ALERT_EMAIL_HOURS} h antes de sus avisos.
           </Text>
         </div>
       </Group>
@@ -288,6 +293,7 @@ export default function AlertAgenda() {
                                   {next.message}
                                 </Text>
                               </Tooltip>
+                              <AlertEmailBadge alert={next} now={now} />
                               {pending > 1 && (
                                 <Text size="xs" c="dimmed">
                                   +{pending - 1} {pending === 2 ? 'aviso más' : 'avisos más'}

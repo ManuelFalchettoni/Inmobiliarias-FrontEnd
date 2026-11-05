@@ -3,12 +3,14 @@ import { ActionIcon, Badge, Button, Group, Paper, Select, Stack, Text, TextInput
 import { IconCircleCheck, IconTrash } from '@tabler/icons-react'
 
 import { useLookup } from '../../../hooks/useLookup.js'
-import { ALERT_STATUS, completeAlert, createAlert, deleteAlert } from '../../../services/crm.js'
+import { useNow } from '../../../hooks/useNow.js'
+import { ALERT_STATUS, completeAlert, createAlert, deleteAlert, newAlertEmailHint } from '../../../services/crm.js'
 import { formatDateTime, toLocalDateTime } from '../../../services/format.js'
 import { findUser } from '../../../services/users.js'
+import AlertEmailBadge from '../../../components/AlertEmailBadge.jsx'
 import ConfirmAction from '../../../components/ConfirmAction.jsx'
 
-function NewAlertForm({ lead, agents, onSaved }) {
+function NewAlertForm({ lead, agents, now, onSaved }) {
   const [message, setMessage] = useState('')
   // Texto del <input type="datetime-local">: "2026-10-10T10:00".
   const [alertDate, setAlertDate] = useState('')
@@ -69,6 +71,9 @@ function NewAlertForm({ lead, agents, onSaved }) {
             allowDeselect={false}
           />
         </Group>
+        <Text size="xs" c="dimmed">
+          {newAlertEmailHint(alertDate, now)}
+        </Text>
         <Group justify="space-between" align="center">
           <Text size="sm" c="red">
             {status.state === 'error' ? status.message : ''}
@@ -89,6 +94,7 @@ function NewAlertForm({ lead, agents, onSaved }) {
 export default function LeadAlerts({ lead, alerts, agents, onChanged }) {
   const [busyId, setBusyId] = useState(null)
   const [error, setError] = useState(null)
+  const now = useNow()
   const users = useLookup('users', alerts.map((alert) => alert.userId), findUser)
 
   const run = async (alert, action) => {
@@ -106,7 +112,7 @@ export default function LeadAlerts({ lead, alerts, agents, onChanged }) {
 
   return (
     <Stack gap="sm">
-      <NewAlertForm lead={lead} agents={agents} onSaved={onChanged} />
+      <NewAlertForm lead={lead} agents={agents} now={now} onSaved={onChanged} />
 
       {error && (
         <Text size="sm" c="red">
@@ -169,6 +175,7 @@ export default function LeadAlerts({ lead, alerts, agents, onChanged }) {
                       Vencida
                     </Badge>
                   )}
+                  <AlertEmailBadge alert={alert} now={now} />
                 </Group>
                 <Text size="xs" c="dimmed">
                   Para {users[alert.userId]?.name ?? `usuario #${alert.userId}`}

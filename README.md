@@ -130,6 +130,10 @@ src/
   campanita usa `GET /api/crm_alerts/upcoming`: un agente ve sus avisos; la inmobiliaria y el admin,
   los de todos. Se refresca cada minuto, se pone roja si hay vencidos y deja marcarlos como
   cumplidos. Un USER no ve ninguno de los dos.
+- **Recordatorios por mail.** Los manda el backend, una vez por alerta, al agente de la alerta. El
+  front no dispara nada: `alertEmailStatus` (`services/crm.js`) calcula el estado a partir de
+  `notifiedAt` y `AlertEmailBadge` lo muestra en el lead, la agenda y la campanita (programado, por
+  salir, enviado o no enviado).
 
 ## Limitaciones actuales
 
@@ -137,3 +141,7 @@ src/
   completos y se filtran en el cliente.
 - La agenda de avisos trae todos los leads (de a 100), hace un `GET .../alerts` por lead y ordena
   en el navegador. `GET /api/crm_alerts/upcoming` hoy lo usa solo la campanita.
+- La anticipación del mail no se puede configurar desde el panel y el backend no la expone:
+  `ALERT_EMAIL_HOURS` copia el default de `CRM_ALERT_REMINDER_HOURS` (24 h).
+- Hasta que `CrmAlertResponse` traiga `notifiedAt`, solo se ve cuándo se va a mandar el mail, no si
+  ya salió.
