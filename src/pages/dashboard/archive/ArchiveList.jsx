@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { Accordion, Box, Button, Container, Group, Text, Title } from '@mantine/core'
-import { IconBuildingEstate, IconBuildingSkyscraper, IconUsers } from '@tabler/icons-react'
+import { useQueries } from '@tanstack/react-query'
+import { Box, Card, Container, Group, SegmentedControl, Stack, Text, ThemeIcon, Title } from '@mantine/core'
+import { IconArchive, IconBuildingEstate, IconBuildingSkyscraper, IconUsers } from '@tabler/icons-react'
 
 import { useAuth } from '../../../context/auth-context.js'
+import { queryKeys } from '../../../queries/keys.js'
 import {
   AGENCY_STATUS_COLOR,
   AGENCY_STATUS_SHORT_LABEL,
@@ -18,6 +20,7 @@ import {
 } from '../../../services/properties.js'
 import { USER_ROL_COLOR, USER_ROL_LABEL, listUsers, restoreUser } from '../../../services/users.js'
 import ArchivedSection, { RowBadge } from './ArchivedSection.jsx'
+import { archivedParams } from './archived-params.js'
 
 /** Nombre y una segunda línea más chica, para la primera columna de cada tabla. */
 function TwoLines({ title, subtitle }) {
@@ -95,60 +98,113 @@ const SECTIONS = [
   },
 ]
 
+const ALL = 'all'
+
+/**
+ * Cuántos hay dados de baja en cada sección, para el selector. Pide la primera
+ * página con la misma clave que la tabla de cada sección: es un solo pedido.
+ * `null` mientras carga o si falló.
+ */
+function useArchivedCounts(sections) {
+  const results = useQueries({
+    queries: sections.map((section) => {
+      const params = archivedParams(0)
+      return {
+        queryKey: queryKeys[section.resource].list(params),
+        queryFn: ({ signal }) => section.list(params, { signal }),
+      }
+    }),
+  })
+  return Object.fromEntries(
+    sections.map((section, index) => [section.resource, results[index].data?.totalElements ?? null]),
+  )
+}
+
+/** Una opción del selector: el nombre y, al lado, cuántos hay. */
+function OptionLabel({ label, count }) {
+  return (
+    <Group gap={6} wrap="nowrap" justify="center">
+      <span>{label}</span>
+      {count != null && (
+        <Text component="span" size="xs" c="dimmed" fw={500} style={{ fontVariantNumeric: 'tabular-nums' }}>
+          {count}
+        </Text>
+      )}
+    </Group>
+  )
+}
+
 /**
  * `/dashboard/archivados`: todo lo dado de baja en un solo lugar, listo para
  * restaurar. Para AGENCY y AGENT el backend devuelve solo lo de su inmobiliaria.
+ *
+ * Las secciones se ven abiertas, una debajo de otra; el selector de arriba deja
+ * mirar una sola. Las que no tienen nada se achican a una línea.
  */
 export default function ArchiveList() {
   const { isAdmin } = useAuth()
   const sections = SECTIONS.filter((section) => isAdmin || !section.adminOnly)
-  // Qué cajones están abiertos: arrancan todos cerrados (los contadores de cada
-  // barra ya dicen qué hay) y cada uno se abre por separado. Es estado
-  // "controlado": el acordeón lo lee de acá y avisa cada cambio con `onChange`,
-  // así el botón "Abrir todo" también lo puede tocar.
-  const [open, setOpen] = useState([])
-  const allOpen = open.length === sections.length
+  const counts = useArchivedCounts(sections)
+  const [view, setView] = useState(ALL)
+
+  const known = sections.every((section) => counts[section.resource] != null)
+  const grandTotal = known ? sections.reduce((sum, section) => sum + counts[section.resource], 0) : null
+  // Nada archivado en ninguna sección: un solo aviso en vez de tres vacíos.
+  const nothingArchived = grandTotal === 0
 
   return (
     <Container size="xl" py="xl">
-      <Box mb="xl">
+      <Box mb="lg">
         <Title order={1} size="h2">
           Archivados
         </Title>
-        <Text c="dimmed" maw={760}>
-          Propiedades{isAdmin ? ', agencias' : ''} y usuarios dados de baja, listos para restaurar. Al
-          restaurarlos vuelven a sus listados como estaban.
+        <Text c="dimmed" maw={680}>
+          Lo que se dio de baja en {isAdmin ? 'propiedades, agencias y usuarios' : 'propiedades y usuarios'}. Al
+          restaurarlo vuelve a su listado como estaba.
         </Text>
       </Box>
 
-      <Group justify="flex-end" mb="sm">
-        <Button
-          variant="subtle"
-          color="gray"
-          size="compact-sm"
-          onClick={() => setOpen(allOpen ? [] : sections.map((section) => section.resource))}
-        >
-          {allOpen ? 'Cerrar todo' : 'Abrir todo'}
-        </Button>
-      </Group>
+      {nothingArchived ? (
+        <Card variant="empty" radius="lg" padding="xl">
+          <Stack align="center" gap="xs" py="xl">
+            <ThemeIcon variant="light" color="gray" size={56} radius="xl">
+              <IconArchive size={28} />
+            </ThemeIcon>
+            <Text fw={600}>No hay nada archivado</Text>
+            <Text size="sm" c="dimmed" ta="center" maw={420}>
+              Lo que se dé de baja desde cada listado aparece acá, listo para restaurar.
+            </Text>
+          </Stack>
+        </Card>
+      ) : (
+        <>
+          <SegmentedControl
+            mb="xl"
+            value={view}
+            onChange={setView}
+            aria-label="Qué archivados ver"
+            data={[
+              { value: ALL, label: <OptionLabel label="Todo" count={grandTotal} /> },
+              ...sections.map((section) => ({
+                value: section.resource,
+                label: <OptionLabel label={section.title} count={counts[section.resource]} />,
+              })),
+            ]}
+          />
 
-      {/* `multiple`: se pueden tener varios cajones abiertos a la vez (sin él,
-          abrir uno cierra el resto). `separated`: cada cajón es una tarjeta. */}
-      <Accordion
-        multiple
-        variant="separated"
-        radius="lg"
-        chevronPosition="right"
-        value={open}
-        onChange={setOpen}
-        styles={{ item: { backgroundColor: 'var(--mantine-color-body)' } }}
-      >
-        {/* `{...section}` pasa cada campo del objeto como una prop:
-            resource={section.resource}, title={section.title}, etc. */}
-        {sections.map((section) => (
-          <ArchivedSection key={section.resource} {...section} />
-        ))}
-      </Accordion>
+          {/* Las secciones quedan montadas aunque estén ocultas: cada una guarda
+              su página y no vuelve a pedir nada al cambiar de vista. */}
+          <Stack gap={40}>
+            {sections.map((section) => (
+              <Box key={section.resource} hidden={view !== ALL && view !== section.resource}>
+                {/* `{...section}` pasa cada campo del objeto como una prop:
+                    resource={section.resource}, title={section.title}, etc. */}
+                <ArchivedSection {...section} />
+              </Box>
+            ))}
+          </Stack>
+        </>
+      )}
     </Container>
   )
 }
