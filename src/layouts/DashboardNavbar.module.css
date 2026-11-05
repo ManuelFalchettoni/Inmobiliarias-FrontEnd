@@ -1,0 +1,207 @@
+/*
+ * Menú lateral del panel. Claro y callado: blanco, como el encabezado, con una
+ * línea fina que lo separa del papel del contenido. El ítem activo es el único
+ * lugar con color: una banda pino muy suave y el texto en pino.
+ */
+.navbar {
+  --nav-text: var(--app-ink);
+  --nav-soft: var(--app-muted);
+  --nav-line: var(--app-line);
+  --nav-hover: var(--app-paper);
+  --nav-active-bg: var(--mantine-color-pine-0);
+  --nav-active-text: var(--mantine-color-pine-8);
+
+  background-color: var(--mantine-color-white);
+  color: var(--nav-text);
+  border-right: 1px solid var(--nav-line);
+}
+
+/* -------------------------------------------------------------- Secciones */
+
+.scroll {
+  /* Que la barra de scroll no tape los ítems. */
+  margin-inline: calc(var(--mantine-spacing-md) * -1);
+  padding-inline: var(--mantine-spacing-md);
+}
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-block: 4px 16px;
+}
+
+.sectionTitle {
+  margin: 0 0 6px;
+  padding-inline: 12px;
+  font-family: var(--mantine-font-family);
+  font-size: 12px;
+  font-weight: 500;
+  font-stretch: 100%;
+  line-height: 1.2;
+  color: var(--nav-soft);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 38px;
+  padding: 8px 12px;
+  border-radius: var(--mantine-radius-md);
+  color: var(--nav-text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-decoration: none;
+  transition: background-color 120ms;
+
+  &:hover {
+    background-color: var(--nav-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mantine-color-pine-6);
+    outline-offset: -2px;
+  }
+
+  &[data-active] {
+    background-color: var(--nav-active-bg);
+    color: var(--nav-active-text);
+    font-weight: 600;
+  }
+}
+
+.icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: var(--nav-soft);
+
+  .item[data-active] & {
+    color: var(--mantine-color-pine-6);
+  }
+}
+
+/* ---------------------------------------------------------------- Totales */
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--nav-line);
+}
+
+.totals {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 12px;
+  border-radius: var(--mantine-radius-md);
+  color: var(--nav-soft);
+  font-size: 13px;
+  text-decoration: none;
+
+  &:hover {
+    background-color: var(--nav-hover);
+    color: var(--nav-text);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mantine-color-pine-6);
+    outline-offset: -2px;
+  }
+}
+
+.totalValue {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--nav-text);
+
+  &[data-empty] {
+    color: var(--nav-soft);
+  }
+}
+
+/* ---------------------------------------------------------------- Cuenta */
+
+.account {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px;
+  border-radius: var(--mantine-radius-md);
+  color: var(--nav-text);
+  text-decoration: none;
+
+  &:hover {
+    background-color: var(--nav-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mantine-color-pine-6);
+    outline-offset: 0;
+  }
+}
+
+.avatar {
+  flex: none;
+}
+
+.name {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.role {
+  font-size: 12px;
+  line-height: 1.25;
+  color: var(--nav-soft);
+}
+
+.logout {
+  flex: none;
+  color: var(--nav-soft);
+
+  &:hover {
+    background-color: var(--nav-hover);
+    color: var(--nav-text);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .item {
+    transition: none;
+  }
+}

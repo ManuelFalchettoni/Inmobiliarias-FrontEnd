@@ -1,49 +1,22 @@
 import { useEffect } from 'react'
-import { Link, NavLink as RouterNavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { AppShell, Avatar, Burger, Button, Group, NavLink, Stack, Text, UnstyledButton } from '@mantine/core'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { AppShell, Avatar, Burger, Group, Text, UnstyledButton } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-import { IconLogout } from '@tabler/icons-react'
 
-import { useQueries, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 
 import { useAuth } from '../context/auth-context.js'
 import { queryKeys } from '../queries/keys.js'
 import { findAgency } from '../services/agencies.js'
 import { PANEL_ROLES, USER_ROL_COLOR, USER_ROL_LABEL, findMe, hasRole } from '../services/users.js'
-import { WORKSPACE_TOTALS, fetchWorkspaceTotal } from '../services/workspace.js'
 import AgencyLogo from '../components/AgencyLogo.jsx'
 import Wordmark from '../components/Wordmark.jsx'
 import AlertBell from './AlertBell.jsx'
+import DashboardNavbar from './DashboardNavbar.jsx'
 import HeaderSearch from './HeaderSearch.jsx'
-import { SETTINGS_PATH, getActiveNavPath, homeFor, sectionsFor } from './dashboard-nav.js'
+import { SETTINGS_PATH, getActiveNavPath, homeFor } from './dashboard-nav.js'
 
 const HEADER_HEIGHT = 72
-// Formatea números al estilo argentino: 1234 -> "1.234".
-const NUMBER_FORMAT = new Intl.NumberFormat('es-AR')
-
-/**
- * Totales reales de los listados paginados: una consulta por total.
- *
- * Cada una usa la clave [recurso, 'total']. Como está debajo de la clave del
- * recurso, cuando una pantalla invalida ['properties'] (por ejemplo, al
- * publicar una propiedad), el total del menú se actualiza solo.
- * Si una falla, ese total queda en `null` y se muestra un guion. Solo se piden
- * los que el rol puede ver: un USER no ve ninguno.
- */
-function useWorkspaceTotals(user) {
-  const entries = WORKSPACE_TOTALS.filter((entry) => hasRole(user, entry.roles))
-  const results = useQueries({
-    queries: entries.map((entry) => ({
-      queryKey: queryKeys[entry.resource].total(),
-      queryFn: ({ signal }) => fetchWorkspaceTotal(entry.endpoint, { signal }),
-    })),
-  })
-
-  return entries.map((entry, index) => {
-    const total = results[index].data
-    return { ...entry, total: Number.isFinite(total) ? total : null }
-  })
-}
 
 /**
  * La inmobiliaria del usuario logueado, en el encabezado: su logo (o las
@@ -90,8 +63,6 @@ export default function DashboardLayout() {
   const { pathname } = useLocation()
   // RequireAuth (App.jsx) no deja llegar acá sin sesión: `user` siempre está.
   const { user, logout } = useAuth()
-  const totals = useWorkspaceTotals(user)
-  const sections = sectionsFor(user)
   // Un USER solo tiene su cuenta: sin buscador ni avisos.
   const inPanel = hasRole(user, PANEL_ROLES)
   const navigate = useNavigate()
@@ -158,80 +129,8 @@ export default function DashboardLayout() {
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="md">
-        <AppShell.Section grow component="nav" aria-label="Navegación principal">
-          {/* El menú se dibuja recorriendo los datos de dashboard-nav.js: una
-              sección por grupo y un NavLink por ítem. */}
-          <Stack gap="lg">
-            {sections.map((section) => (
-              <div key={section.title}>
-                <Text size="xs" fw={600} c="dimmed" mb="xs">
-                  {section.title}
-                </Text>
-
-                <Stack gap={2}>
-                  {section.items.map((item) => {
-                    const active = item.to === activePath
-                    return (
-                      // `component={RouterNavLink}`: el NavLink de Mantine (el estilo)
-                      // se comporta como el link de React Router (cambia de pantalla
-                      // sin recargar). `<item.icon />` dibuja el ícono guardado en el dato.
-                      // `end`: React Router marca `aria-current` por prefijo (en
-                      // /propiedades/nueva marcaría también /propiedades) y Mantine
-                      // pinta ese atributo. Con `end` lo pone solo en la ruta exacta,
-                      // y el ítem activo lo decide `active` (la coincidencia más larga).
-                      <NavLink
-                        key={item.to}
-                        component={RouterNavLink}
-                        to={item.to}
-                        end
-                        label={item.label}
-                        active={active}
-                        leftSection={<item.icon size={18} stroke={active ? 2 : 1.6} />}
-                        style={{ borderRadius: 'var(--mantine-radius-md)' }}
-                        styles={{ label: { fontWeight: active ? 600 : 500 } }}
-                      />
-                    )
-                  })}
-                </Stack>
-              </div>
-            ))}
-          </Stack>
-        </AppShell.Section>
-
-        <AppShell.Section>
-          {totals.length > 0 && (
-            <>
-              <Text size="xs" fw={600} c="dimmed" mb="xs">
-                Espacio de trabajo
-              </Text>
-              <Stack gap={4} mb="md">
-                {totals.map((stat) => (
-                  <Group key={stat.key} justify="space-between" wrap="nowrap">
-                    <Text size="sm" c="dimmed">
-                      {stat.label}
-                    </Text>
-                    <Text size="sm" fw={600} c={stat.total == null ? 'dimmed' : undefined}>
-                      {stat.total == null ? '—' : NUMBER_FORMAT.format(stat.total)}
-                    </Text>
-                  </Group>
-                ))}
-              </Stack>
-            </>
-          )}
-
-          <Button
-            variant="subtle"
-            color="gray"
-            fullWidth
-            justify="flex-start"
-            leftSection={<IconLogout size={18} />}
-            onClick={handleLogout}
-          >
-            Cerrar sesión
-          </Button>
-        </AppShell.Section>
-      </AppShell.Navbar>
+      {/* Menú lateral: secciones, cifras activas y la cuenta (DashboardNavbar.jsx). */}
+      <DashboardNavbar user={user} activePath={activePath} onLogout={handleLogout} />
 
       <AppShell.Main bg="var(--app-paper)">
         {/* El "hueco" donde React Router pone la pantalla de la ruta actual. */}

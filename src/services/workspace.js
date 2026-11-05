@@ -13,10 +13,11 @@ import { PANEL_ROLES, USER_ROL } from './users.js'
 // después de dar de alta una propiedad) actualiza también su total.
 // `roles`: quién lo puede pedir. Para AGENCY y AGENT el backend cuenta solo lo
 // de su inmobiliaria; el listado de agencias es solo del admin (403 al resto).
+// `path`: el listado al que lleva la cifra en el menú (relativo a /dashboard).
 export const WORKSPACE_TOTALS = [
-  { key: 'properties', resource: 'properties', label: 'Propiedades activas', endpoint: '/api/properties', roles: PANEL_ROLES },
-  { key: 'agencies', resource: 'agencies', label: 'Agencias activas', endpoint: '/api/agencies', roles: [USER_ROL.ADMIN] },
-  { key: 'users', resource: 'users', label: 'Usuarios activos', endpoint: '/api/users', roles: PANEL_ROLES },
+  { key: 'properties', resource: 'properties', label: 'Propiedades', path: 'propiedades', endpoint: '/api/properties', roles: PANEL_ROLES },
+  { key: 'agencies', resource: 'agencies', label: 'Agencias', path: 'agencias', endpoint: '/api/agencies', roles: [USER_ROL.ADMIN] },
+  { key: 'users', resource: 'users', label: 'Usuarios', path: 'usuarios', endpoint: '/api/users', roles: PANEL_ROLES },
 ]
 
 /** Pide una sola fila (`size=1`): solo interesa `totalElements`. */
