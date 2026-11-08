@@ -3,13 +3,102 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Alert, Anchor, Button, Checkbox, Group, Modal, PasswordInput, Text, TextInput } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { useDisclosure } from '@mantine/hooks'
-import { IconAlertTriangle, IconCircleCheck, IconClockExclamation, IconKey } from '@tabler/icons-react'
+import { IconAlertTriangle, IconCircleCheck, IconClockExclamation, IconKey, IconMailCheck } from '@tabler/icons-react'
 
 import AuthLayout from '../../layouts/AuthLayout.jsx'
 import { useAuth } from '../../context/auth-context.js'
 import { ApiError } from '../../services/api.js'
+import { requestPasswordReset } from '../../services/auth.js'
 import { USER_LIMITS } from '../../services/users.js'
 import { userValidation } from './user-form.js'
+
+/**
+ * "¿Olvidaste tu contraseña?": pide el email y el backend manda el link para
+ * elegir una nueva. Se monta recién al abrir el modal, así arranca limpio cada vez.
+ */
+function ForgotPasswordForm({ initialEmail, onClose }) {
+  // 'idle', 'submitting', 'sent' o 'error'.
+  const [status, setStatus] = useState({ state: 'idle' })
+  const abortRef = useRef(null)
+
+  const form = useForm({
+    mode: 'uncontrolled',
+    initialValues: { email: initialEmail },
+    validateInputOnBlur: true,
+    validate: { email: userValidation.email },
+  })
+
+  useEffect(() => () => abortRef.current?.abort(), [])
+
+  const handleSubmit = async ({ email }) => {
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+    setStatus({ state: 'submitting' })
+
+    try {
+      await requestPasswordReset(email, { signal: controller.signal })
+      setStatus({ state: 'sent', email: email.trim().toLowerCase() })
+    } catch (error) {
+      if (controller.signal.aborted) return
+      setStatus({
+        state: 'error',
+        message: error.message ?? 'Ocurrió un error inesperado al pedir el link.',
+      })
+    }
+  }
+
+  const onSubmit = (event) => form.onSubmit(handleSubmit)(event)
+
+  // El backend responde igual exista o no la cuenta: el mensaje tampoco lo afirma.
+  if (status.state === 'sent') {
+    return (
+      <>
+        <Alert color="teal" icon={<IconMailCheck />} title="Revisá tu correo">
+          Si {status.email} tiene una cuenta, te llega un mail con un link para elegir una contraseña
+          nueva. El link dura una hora y sirve una sola vez. Si no lo ves, buscalo en spam.
+        </Alert>
+        <Group justify="flex-end" mt="lg">
+          <Button onClick={onClose}>Entendido</Button>
+        </Group>
+      </>
+    )
+  }
+
+  return (
+    <form onSubmit={onSubmit} noValidate>
+      <Text size="sm" mb="md">
+        Escribí el email de tu cuenta y te mandamos un link para elegir una contraseña nueva.
+      </Text>
+
+      {status.state === 'error' && (
+        <Alert color="red" icon={<IconAlertTriangle />} mb="md">
+          {status.message}
+        </Alert>
+      )}
+
+      <TextInput
+        label="Email"
+        type="email"
+        placeholder="hola@inmobiliaria.com"
+        autoComplete="email"
+        radius="md"
+        maxLength={USER_LIMITS.email.max}
+        data-autofocus
+        key={form.key('email')}
+        {...form.getInputProps('email')}
+      />
+      <Group justify="flex-end" mt="lg">
+        <Button variant="default" onClick={onClose}>
+          Cancelar
+        </Button>
+        <Button type="submit" loading={status.state === 'submitting'}>
+          Enviar link
+        </Button>
+      </Group>
+    </form>
+  )
+}
 
 /** A dónde va después de entrar si no venía de otra pantalla del panel. */
 const AFTER_LOGIN = '/dashboard'
@@ -26,11 +115,19 @@ export default function Login() {
   const registered = location.state?.registered
   // Lo deja RequireAuth (App.jsx): la pantalla del panel a la que se quería entrar.
   const from = location.state?.from
+  // Lo deja ResetPassword al cambiar la contraseña con el link del mail.
+  const passwordReset = location.state?.passwordReset
 
   const [status, setStatus] = useState({ state: 'idle' })
   const abortRef = useRef(null)
-  // El backend todavía no tiene recuperación de contraseña: el link solo explica a quién pedírsela.
-  const [forgotOpened, forgot] = useDisclosure(false)
+  // ResetPassword manda `forgot: true` cuando el link venció, para pedir otro de una.
+  const [forgotOpened, forgot] = useDisclosure(Boolean(location.state?.forgot))
+  // Si ya escribió el email en el login, el modal arranca con ese.
+  const [forgotEmail, setForgotEmail] = useState('')
+  const openForgot = () => {
+    setForgotEmail(form.getValues().email)
+    forgot.open()
+  }
 
   const form = useForm({
     mode: 'uncontrolled',
@@ -87,6 +184,12 @@ export default function Login() {
         </Alert>
       )}
 
+      {passwordReset && status.state !== 'error' && (
+        <Alert color="teal" icon={<IconCircleCheck />} title="Contraseña cambiada" mb="md">
+          Ya podés iniciar sesión con tu contraseña nueva.
+        </Alert>
+      )}
+
       {status.state === 'error' && (
         <Alert
           color="red"
@@ -130,7 +233,7 @@ export default function Login() {
             key={form.key('remember')}
             {...form.getInputProps('remember', { type: 'checkbox' })}
           />
-          <Anchor component="button" type="button" size="sm" c="dimmed" onClick={forgot.open}>
+          <Anchor component="button" type="button" size="sm" c="dimmed" onClick={openForgot}>
             ¿Olvidaste tu contraseña?
           </Anchor>
         </Group>
@@ -152,13 +255,7 @@ export default function Login() {
         centered
         radius="md"
       >
-        <Text size="sm">
-          Pedile a tu inmobiliaria o al administrador que te restablezca la contraseña. Después vas a
-          poder cambiarla desde Configuración.
-        </Text>
-        <Group justify="flex-end" mt="lg">
-          <Button onClick={forgot.close}>Entendido</Button>
-        </Group>
+        <ForgotPasswordForm initialEmail={forgotEmail} onClose={forgot.close} />
       </Modal>
 
       <Text ta="center" mt="md">

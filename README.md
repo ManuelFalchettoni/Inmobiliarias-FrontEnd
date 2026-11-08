@@ -37,6 +37,10 @@ manda sola.
 - **Login.** `POST /api/auth/login` trae `id`, `name`, `email` y `rol`; enseguida se pide `/me`
   para sumar el `agencyId`. Después vuelve a la pantalla a la que se quería entrar.
 - **Logout.** `POST /api/auth/logout` borra la cookie; después se limpian el usuario y la caché.
+- **Olvidé mi contraseña.** El modal del login pide el email (`POST /api/auth/password/forgot`,
+  siempre 204, exista la cuenta o no) y el backend manda un mail con un link a
+  `/restablecer-contrasena?token=...`. Ahí se elige la nueva (`POST /api/auth/password/reset`) y se
+  vuelve al login. El link dura una hora y sirve una vez; vencido o usado, da 400 y se ofrece pedir otro.
 - **401.** Cualquier pedido con sesión que responde 401 limpia la sesión y la caché, y manda al
   login con el aviso "Tu sesión venció".
 - **403.** El error dice "No tenés permiso..." y queda en la pantalla. Las rutas de otro rol ni se
@@ -54,6 +58,7 @@ manda sola.
 | ----------------------------------- | ------------------------------------------------------------------- |
 | `/registro`                         | Registro público (`POST /api/auth/register`)                        |
 | `/login`                            | Login (`POST /api/auth/login`); con sesión vigente, entra directo al panel |
+| `/restablecer-contrasena`           | Contraseña nueva con el token del mail de recuperación (`POST /api/auth/password/reset`) |
 | `/propiedades/:id`                  | Ficha de la propiedad para mostrarle a un cliente: fotos, datos, precio, mapa y contacto. Fuera del panel y sin edición |
 | `/dashboard/propiedades`            | Listado de propiedades, activas o dadas de baja, con búsqueda por filtros |
 | `/dashboard/propiedades/nueva`      | Alta de propiedad con precios y fotos                               |
