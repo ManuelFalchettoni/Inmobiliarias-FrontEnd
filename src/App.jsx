@@ -28,14 +28,16 @@ function RouteFallback() {
  * Toda la API pide login: sin sesión, el panel manda al login y guarda en
  * `state.from` adónde quería ir, para volver ahí después de entrar. Mientras
  * llega el `/me` del arranque se muestra el spinner, no el login.
+ * Después de "Cerrar sesión" no se guarda: el que entre puede ser otra cuenta.
  */
 function RequireAuth({ children }) {
-  const { status, user } = useAuth()
+  const { status, user, loggedOut } = useAuth()
   const location = useLocation()
 
   if (status === 'checking') return <RouteFallback />
   if (!user) {
-    return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />
+    const state = loggedOut ? undefined : { from: `${location.pathname}${location.search}` }
+    return <Navigate to="/login" replace state={state} />
   }
   return children
 }

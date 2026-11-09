@@ -15,6 +15,8 @@
  *
  * `expired` queda en true cuando un pedido con sesión respondió 401 (la cookie
  * venció o el usuario se dio de baja): el login lo usa para avisar.
+ *
+ * `loggedOut` queda en true cuando el usuario cerró la sesión con el botón.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -91,7 +93,9 @@ export function AuthProvider({ children }) {
       // Sin respuesta la cookie queda hasta que venza; el front se limpia igual.
     }
     queryClient.clear()
-    setSession(SIGNED_OUT)
+    // `loggedOut`: salió a propósito. El login no tiene que volver a la página
+    // donde estaba, porque el que entre después puede ser otra cuenta.
+    setSession({ ...SIGNED_OUT, loggedOut: true })
   }, [queryClient])
 
   /** Refresca los datos de la sesión después de editar la cuenta (nombre o email). */
