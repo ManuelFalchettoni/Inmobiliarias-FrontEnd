@@ -268,9 +268,26 @@ export const updateProperty = (id, request, options) =>
  *
  * Una archivada no se trae por id (404), no aparece en /search y no acepta
  * fotos, precios, leads ni PUT hasta que se restaure.
+ *
+ * 409 si tiene contratos vigentes o leads abiertos (ver `archiveConflictMessage`).
  */
 export const archiveProperty = (id, options) =>
   patch(`${PROPERTIES_ENDPOINT}/${id}/archive`, undefined, options)
+
+/**
+ * Traduce el 409 de `PropertyArchiveService`. Los mensajes son
+ * "... has active contracts ..." y "... has open leads ...".
+ */
+export function archiveConflictMessage(message) {
+  const normalized = String(message ?? '').toLowerCase()
+  if (normalized.includes('active contracts')) {
+    return 'Tiene contratos vigentes. Cancelalos o finalizalos antes de archivar.'
+  }
+  if (normalized.includes('open leads')) {
+    return 'Tiene leads abiertos. Cerralos o descartalos antes de archivar.'
+  }
+  return message
+}
 
 /** Revierte el archivo: 200 con `active = true`. Se llega listando con `active: false`. */
 export const restoreProperty = (id, options) =>

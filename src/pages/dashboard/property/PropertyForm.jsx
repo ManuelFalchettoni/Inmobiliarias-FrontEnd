@@ -50,6 +50,7 @@ import {
   PROPERTY_LIMITS,
   PROPERTY_OCCUPANCY_OPTIONS,
   PROPERTY_TYPE_OPTIONS,
+  archiveConflictMessage,
   archiveProperty,
   createProperty,
   deletePropertyPhoto,
@@ -393,11 +394,12 @@ function PropertyEditor({ property }) {
       await archiveProperty(property.id, { signal })
     } catch (error) {
       if (signal.aborted) return
-      setStatus({
-        state: 'error',
-        title: 'No se pudo archivar',
-        message: error instanceof ApiError ? error.message : 'Ocurrió un error inesperado.',
-      })
+      // 409: tiene contratos vigentes o leads abiertos; el resto, el mensaje tal cual.
+      let message = 'Ocurrió un error inesperado.'
+      if (error instanceof ApiError) {
+        message = error.status === 409 ? archiveConflictMessage(error.message) : error.message
+      }
+      setStatus({ state: 'error', title: 'No se pudo archivar', message })
       window.scrollTo({ top: 0, behavior: 'smooth' })
       return
     }
