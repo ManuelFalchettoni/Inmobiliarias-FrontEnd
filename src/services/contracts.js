@@ -28,6 +28,17 @@ export const CONTRACT_STATUS_OPTIONS = [
 export const CONTRACT_STATUS_LABEL = toLabelMap(CONTRACT_STATUS_OPTIONS)
 export const CONTRACT_STATUS_COLOR = { ACTIVE: 'success', FINISHED: 'gray', CANCELLED: 'danger' }
 
+/**
+ * Filtro de estado del listado. Sin `?status=` muestra solo los vigentes;
+ * `ALL` no es un estado del backend: es "todos", y no se manda.
+ */
+export const DEFAULT_CONTRACT_STATUS = 'ACTIVE'
+export const ALL_CONTRACT_STATUSES = 'ALL'
+export const CONTRACT_STATUS_FILTER_OPTIONS = [
+  ...CONTRACT_STATUS_OPTIONS,
+  { value: ALL_CONTRACT_STATUSES, label: 'Todos los estados' },
+]
+
 /** Refleja `ContractRole`. */
 export const CONTRACT_ROLE_OPTIONS = [
   { value: 'OWNER', label: 'Propietario' },

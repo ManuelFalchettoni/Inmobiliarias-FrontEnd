@@ -26,13 +26,15 @@ import { usePropertyOptions } from '../../../hooks/useSelectOptions.js'
 import { useUrlFilters } from '../../../hooks/useUrlFilters.js'
 import { queryKeys } from '../../../queries/keys.js'
 import {
+  ALL_CONTRACT_STATUSES,
   CONTRACT_ROLE_LABEL,
   CONTRACT_SEARCH_FILTERS,
   CONTRACT_SORT_OPTIONS,
   CONTRACT_STATUS_COLOR,
+  CONTRACT_STATUS_FILTER_OPTIONS,
   DEFAULT_CONTRACT_SORT,
+  DEFAULT_CONTRACT_STATUS,
   CONTRACT_STATUS_LABEL,
-  CONTRACT_STATUS_OPTIONS,
   CONTRACT_TYPE_LABEL,
   formatContractTerm,
   isContractOverdue,
@@ -66,12 +68,17 @@ export default function ContractList() {
   const orden = CONTRACT_SORT_OPTIONS.some((o) => o.value === searchParams.get('orden'))
     ? searchParams.get('orden')
     : DEFAULT_CONTRACT_SORT
+  // Sin estado elegido se ven solo los vigentes; finalizados, cancelados o
+  // todos hay que pedirlos. "Todos" no filtra: no se manda `status`.
+  const status = searchParams.get('status') ?? DEFAULT_CONTRACT_STATUS
+  const soloVigentes = status === DEFAULT_CONTRACT_STATUS
 
   const params = {
     page: page - 1,
     size: PAGE_SIZE,
     agencyId,
     ...filters,
+    status: status === ALL_CONTRACT_STATUSES ? null : status,
     orden: orden === DEFAULT_CONTRACT_SORT ? null : orden,
   }
 
@@ -91,6 +98,13 @@ export default function ContractList() {
     onChange: (valor) => setFilter(name, valor),
     clearable: true,
   })
+  // El estado siempre tiene un valor (por defecto, vigentes): no se puede vaciar.
+  const statusSelect = {
+    data: CONTRACT_STATUS_FILTER_OPTIONS,
+    value: status,
+    onChange: (valor) => setFilter('status', valor === DEFAULT_CONTRACT_STATUS ? null : valor),
+    allowDeselect: false,
+  }
   // El input nativo de fecha entrega "yyyy-MM-dd", el formato que pide el backend.
   const dateFilter = (name) => ({
     type: 'date',
@@ -124,7 +138,9 @@ export default function ContractList() {
           </Title>
           <Text c="dimmed">
             {data
-              ? `${data.totalElements} ${data.totalElements === 1 ? 'contrato' : 'contratos'} de venta y alquiler`
+              ? soloVigentes
+                ? `${data.totalElements} ${data.totalElements === 1 ? 'contrato vigente' : 'contratos vigentes'}`
+                : `${data.totalElements} ${data.totalElements === 1 ? 'contrato' : 'contratos'} de venta y alquiler`
               : error
                 ? 'Sin datos'
                 : 'Cargando el listado...'}
@@ -164,9 +180,7 @@ export default function ContractList() {
         <Select
           w={{ base: '100%', sm: 160 }}
           aria-label="Estado"
-          placeholder="Estado"
-          data={CONTRACT_STATUS_OPTIONS}
-          {...selectFilter('status')}
+          {...statusSelect}
         />
         <FilterButton count={chips.length} onClick={() => setPanelAbierto(true)} />
         <Select
@@ -186,7 +200,7 @@ export default function ContractList() {
       <ContractFilterPanel
         opened={panelAbierto}
         onClose={() => setPanelAbierto(false)}
-        fields={{ selectFilter, dateFilter, amountFilter }}
+        fields={{ selectFilter, dateFilter, amountFilter, statusSelect }}
         propertyOptions={propertyOptions}
         total={data?.totalElements}
         hayFiltros={filtrando}
@@ -216,13 +230,19 @@ export default function ContractList() {
             <Text fw={600}>
               {filtrando
                 ? 'Ningún contrato coincide con los filtros'
-                : agencyId
-                  ? 'Esta inmobiliaria no tiene contratos'
-                  : 'Todavía no hay contratos'}
+                : soloVigentes
+                  ? 'No hay contratos vigentes'
+                  : agencyId
+                    ? 'Esta inmobiliaria no tiene contratos'
+                    : 'Todavía no hay contratos'}
             </Text>
             {filtrando ? (
               <Button mt="md" variant="light" onClick={() => clearFilters(CONTRACT_SEARCH_FILTERS)}>
                 Limpiar filtros
+              </Button>
+            ) : soloVigentes ? (
+              <Button mt="md" variant="light" onClick={() => setFilter('status', ALL_CONTRACT_STATUSES)}>
+                Ver todos los estados
               </Button>
             ) : (
               <Button component={Link} to="/dashboard/contratos/nuevo" mt="md" variant="light">

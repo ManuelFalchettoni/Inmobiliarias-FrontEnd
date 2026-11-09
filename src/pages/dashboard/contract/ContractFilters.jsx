@@ -2,12 +2,12 @@ import { Divider, Select, SimpleGrid, TextInput } from '@mantine/core'
 
 import FilterInput from '../../../components/FilterInput.jsx'
 import { FilterPanel, FilterSection as Section, RangeRow } from '../../../components/FilterPanel.jsx'
-import { CONTRACT_STATUS_OPTIONS, CONTRACT_TYPE_OPTIONS } from '../../../services/contracts.js'
+import { CONTRACT_TYPE_OPTIONS } from '../../../services/contracts.js'
 import { CURRENCY_OPTIONS } from '../../../services/properties.js'
 
 /** Panel lateral con todos los filtros de contratos. Los rangos son inclusivos. */
 export function ContractFilterPanel({ opened, onClose, fields, propertyOptions, total, hayFiltros, onClear }) {
-  const { selectFilter, dateFilter, amountFilter } = fields
+  const { selectFilter, dateFilter, amountFilter, statusSelect } = fields
 
   return (
     <FilterPanel
@@ -28,7 +28,8 @@ export function ContractFilterPanel({ opened, onClose, fields, propertyOptions, 
           {...selectFilter('propertyId')}
         />
         <SimpleGrid cols={2}>
-          <Select label="Estado" placeholder="Todos" data={CONTRACT_STATUS_OPTIONS} {...selectFilter('status')} />
+          {/* Siempre con valor: por defecto, vigentes (ver ContractList). */}
+          <Select label="Estado" {...statusSelect} />
           <Select label="Tipo" placeholder="Todos" data={CONTRACT_TYPE_OPTIONS} {...selectFilter('type')} />
         </SimpleGrid>
       </Section>

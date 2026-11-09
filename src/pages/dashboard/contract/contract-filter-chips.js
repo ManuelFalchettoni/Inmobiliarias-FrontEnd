@@ -1,4 +1,4 @@
-import { CONTRACT_STATUS_LABEL, CONTRACT_TYPE_LABEL } from '../../../services/contracts.js'
+import { ALL_CONTRACT_STATUSES, CONTRACT_STATUS_LABEL, CONTRACT_TYPE_LABEL } from '../../../services/contracts.js'
 import { formatDate } from '../../../services/format.js'
 
 // "yyyy-MM-dd" solo lo leería `new Date` como medianoche UTC (el día anterior
@@ -24,8 +24,12 @@ export function contractFilterChips(filters, propertyOptions) {
     const option = propertyOptions.find((o) => o.value === filters.propertyId)
     chips.push({ key: 'propertyId', label: option?.label ?? `Propiedad #${filters.propertyId}`, names: ['propertyId'] })
   }
+  // Los vigentes son el estado por defecto y no están en la URL: no tienen chip.
+  // Quitar el chip vuelve a los vigentes.
   if (filters.status) {
-    chips.push({ key: 'status', label: CONTRACT_STATUS_LABEL[filters.status] ?? filters.status, names: ['status'] })
+    const label =
+      filters.status === ALL_CONTRACT_STATUSES ? 'Todos los estados' : (CONTRACT_STATUS_LABEL[filters.status] ?? filters.status)
+    chips.push({ key: 'status', label, names: ['status'] })
   }
   if (filters.type) {
     chips.push({ key: 'type', label: CONTRACT_TYPE_LABEL[filters.type] ?? filters.type, names: ['type'] })
