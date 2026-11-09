@@ -41,7 +41,6 @@ import {
   findContract,
   formatContractTerm,
   isContractOverdue,
-  listAllParties,
 } from '../../../services/contracts.js'
 import { formatDateTime } from '../../../services/format.js'
 import { formatPrice, formatPropertyPlace } from '../../../services/properties.js'
@@ -88,26 +87,19 @@ function useContractData(id) {
     queryKey: queryKeys.contracts.detail(id),
     queryFn: ({ signal }) => findContract(id, { signal }),
   })
-  // Todas las partes (misma clave que el listado) y `select` deja las de este contrato.
-  const parties = useQuery({
-    queryKey: queryKeys.contractParties.all,
-    queryFn: ({ signal }) => listAllParties({ signal }),
-    select: (all) => all.filter((party) => party.contractId === Number(id)),
-  })
-
-  const failed = contract.error ?? parties.error
-  const errorMessage = failed ? failed.message : null
+  const errorMessage = contract.error ? contract.error.message : null
 
   // { contract, parties, error } con lo que haya; si falla una recarga se
-  // siguen mostrando los datos anteriores junto con el aviso.
+  // siguen mostrando los datos anteriores junto con el aviso. Las partes
+  // vienen dentro del contrato, cada una con su persona.
   let data = null
-  if (contract.data && parties.data) data = { contract: contract.data, parties: parties.data, error: errorMessage }
+  if (contract.data) data = { contract: contract.data, parties: contract.data.parties ?? [], error: errorMessage }
   else if (errorMessage) data = { error: errorMessage, notFound: isNotFound(contract.error) }
 
-  // Cancelar el contrato o tocar sus partes cambia el listado también.
+  // Cancelar el contrato o tocar sus partes cambia el detalle y el listado:
+  // los dos cuelgan de ['contracts'].
   const reload = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.contracts.all })
-    queryClient.invalidateQueries({ queryKey: queryKeys.contractParties.all })
   }
   return { data, reload }
 }

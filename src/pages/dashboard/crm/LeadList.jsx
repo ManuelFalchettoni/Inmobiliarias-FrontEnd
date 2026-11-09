@@ -18,21 +18,18 @@ import {
 } from '@mantine/core'
 import { IconAlertTriangle, IconChevronRight, IconMessages, IconPlus } from '@tabler/icons-react'
 
-import { useLookup } from '../../../hooks/useLookup.js'
 import { useUserOptions } from '../../../hooks/useSelectOptions.js'
 import { queryKeys } from '../../../queries/keys.js'
 import { CRM_STAGE_COLOR, CRM_STAGE_LABEL, listLeads } from '../../../services/crm.js'
 import { formatDate } from '../../../services/format.js'
-import { findPerson } from '../../../services/people.js'
 import { formatPropertyPlace } from '../../../services/properties.js'
-import { findUser } from '../../../services/users.js'
 
 const PAGE_SIZE = 20
 
 /**
  * Listado de leads (`/dashboard/consultas`), filtrable por agente. Cada lead
- * trae la propiedad resumida (también si está archivada) y solo los ids de persona
- * y agente: esos nombres se buscan con useLookup.
+ * llega con su propiedad (también si está archivada), su persona y su agente,
+ * así la página entera es un solo pedido.
  */
 export default function LeadList() {
   const navigate = useNavigate()
@@ -54,10 +51,6 @@ export default function LeadList() {
   const cargando = query.isPlaceholderData
   const leads = data?.content ?? []
 
-  // Dos búsquedas con caché: si varios leads son de la misma persona o del
-  // mismo agente, se pide una sola vez.
-  const people = useLookup('people', leads.map((l) => l.peopleId), findPerson)
-  const users = useLookup('users', leads.map((l) => l.userId), findUser)
   // Opciones del filtro por agente.
   const agents = useUserOptions(userId)
 
@@ -155,11 +148,11 @@ export default function LeadList() {
                 </Table.Thead>
                 <Table.Tbody>
                   {leads.map((lead) => {
-                    const person = people[lead.peopleId]
+                    const person = lead.person
                     const property = lead.property
                     const detalle = `/dashboard/consultas/${lead.id}`
 
-                    // Toda la fila lleva al detalle. Mientras llegan los nombres
+                    // Toda la fila lleva al detalle. Si la persona ya no existe
                     // se muestra el id ("Persona #3") en vez de dejar el lugar vacío.
                     return (
                       <Table.Tr key={lead.id} style={{ cursor: 'pointer' }} onClick={() => navigate(detalle)}>
@@ -182,7 +175,7 @@ export default function LeadList() {
                           )}
                         </Table.Td>
                         <Table.Td>
-                          <Text size="sm">{users[lead.userId]?.name ?? `#${lead.userId}`}</Text>
+                          <Text size="sm">{lead.agent?.name ?? `#${lead.userId}`}</Text>
                         </Table.Td>
                         <Table.Td>
                           <Badge variant="light" color={CRM_STAGE_COLOR[lead.stage]}>

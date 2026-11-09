@@ -22,7 +22,6 @@ import { IconAlertTriangle, IconArrowsSort, IconChevronRight, IconFileText, Icon
 import { ActiveFilters, FilterButton } from '../../../components/FilterPanel.jsx'
 import { useAuth } from '../../../context/auth-context.js'
 import { useAgencyOptions } from '../../../hooks/useAgencyOptions.js'
-import { useLookup } from '../../../hooks/useLookup.js'
 import { usePropertyOptions } from '../../../hooks/useSelectOptions.js'
 import { useUrlFilters } from '../../../hooks/useUrlFilters.js'
 import { queryKeys } from '../../../queries/keys.js'
@@ -36,12 +35,9 @@ import {
   CONTRACT_STATUS_OPTIONS,
   CONTRACT_TYPE_LABEL,
   formatContractTerm,
-  groupPartiesByContract,
   isContractOverdue,
-  listAllParties,
   searchContracts,
 } from '../../../services/contracts.js'
-import { findPerson } from '../../../services/people.js'
 import { formatPrice, formatPropertyPlace } from '../../../services/properties.js'
 import { contractFilterChips } from './contract-filter-chips.js'
 import { ContractFilterPanel } from './ContractFilters.jsx'
@@ -49,8 +45,8 @@ import { ContractFilterPanel } from './ContractFilters.jsx'
 const PAGE_SIZE = 20
 
 /**
- * Listado de contratos. Muestra las partes de cada uno, pero el backend no deja
- * pedirlas por contrato: se traen todas y se agrupan en el navegador.
+ * Listado de contratos. Cada contrato llega con su propiedad y sus partes (con
+ * la persona de cada una), así la página entera es un solo pedido.
  *
  * Como en personas, siempre se usa la búsqueda del backend: todos los filtros
  * son opcionales. Ordena por inicio, más nuevo primero, o por vencimiento
@@ -79,9 +75,8 @@ export default function ContractList() {
     orden: orden === DEFAULT_CONTRACT_SORT ? null : orden,
   }
 
-  // Dos consultas: la página de contratos y TODAS las partes. Las partes tienen
-  // una sola clave (las comparte el detalle de cada contrato) y `select` las
-  // agrupa: { [contractId]: partes[] }, para buscar las de cada fila por su id.
+  // Una sola consulta: cada contrato ya trae su propiedad y sus partes, cada
+  // parte con su persona.
   const contractsQuery = useQuery({
     queryKey: queryKeys.contracts.list(params),
     queryFn: ({ signal }) => searchContracts(params, { signal }),
@@ -115,26 +110,10 @@ export default function ContractList() {
   const chips = contractFilterChips(filters, propertyOptions.options)
   const limpiarFiltros = () => clearFilters(CONTRACT_SEARCH_FILTERS)
 
-  const partiesQuery = useQuery({
-    queryKey: queryKeys.contractParties.all,
-    queryFn: ({ signal }) => listAllParties({ signal }),
-    select: groupPartiesByContract,
-  })
-
   const data = contractsQuery.data ?? null
-  const failed = contractsQuery.error ?? partiesQuery.error
-  const error = failed ? failed.message : null
+  const error = contractsQuery.error ? contractsQuery.error.message : null
   const cargando = contractsQuery.isPlaceholderData
   const contracts = data?.content ?? []
-  const partiesByContract = partiesQuery.data ?? {}
-
-  // Todos los peopleId de las partes de los contratos de esta página.
-  // `flatMap` junta las listas de cada contrato en una sola.
-  const people = useLookup(
-    'people',
-    contracts.flatMap((c) => (partiesByContract[c.id] ?? []).map((p) => p.peopleId)),
-    findPerson,
-  )
 
   return (
     <Container size="xl" py="xl">
@@ -279,7 +258,7 @@ export default function ContractList() {
                   {contracts.map((contract) => {
                     // Viene dentro del contrato, también si la propiedad está archivada
                     const property = contract.property
-                    const parties = partiesByContract[contract.id] ?? []
+                    const parties = contract.parties ?? []
                     const detalle = `/dashboard/contratos/${contract.id}`
 
                     return (
@@ -306,7 +285,7 @@ export default function ContractList() {
                                 <Text span size="xs" c="dimmed">
                                   {CONTRACT_ROLE_LABEL[party.role] ?? party.role}
                                 </Text>{' '}
-                                {people[party.peopleId]?.name ?? `#${party.peopleId}`}
+                                {party.person?.name ?? `#${party.peopleId}`}
                               </Text>
                             ))
                           )}

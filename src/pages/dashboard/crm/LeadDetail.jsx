@@ -31,7 +31,6 @@ import {
 } from '@tabler/icons-react'
 
 import { useAuth } from '../../../context/auth-context.js'
-import { useLookup } from '../../../hooks/useLookup.js'
 import { useUserOptions } from '../../../hooks/useSelectOptions.js'
 import { leadChildKey, queryKeys } from '../../../queries/keys.js'
 import { NotFound } from '../../../components/NotFound.jsx'
@@ -51,9 +50,7 @@ import {
   updateLead,
 } from '../../../services/crm.js'
 import { formatDate } from '../../../services/format.js'
-import { findPerson } from '../../../services/people.js'
 import { formatPropertyPlace } from '../../../services/properties.js'
-import { findUser } from '../../../services/users.js'
 import LeadAlerts from './LeadAlerts.jsx'
 import LeadOffers from './LeadOffers.jsx'
 import LeadTimeline from './LeadTimeline.jsx'
@@ -139,11 +136,11 @@ export default function LeadDetail() {
   const lead = data?.lead
   // Los hooks van ANTES del `if (!lead) return` de abajo: React exige que se
   // llamen siempre, en el mismo orden, en cada render.
-  const person = useLookup('people', [lead?.peopleId], findPerson)[lead?.peopleId]
-  // La propiedad viene dentro del lead, también si está archivada:
-  // GET /api/properties/{id} responde 404 para las archivadas.
+  // Persona, propiedad y agente vienen dentro del lead. La propiedad llega
+  // también si está archivada (GET /api/properties/{id} responde 404 para esas).
+  const person = lead?.person
   const property = lead?.property
-  const agent = useLookup('users', [lead?.userId], findUser)[lead?.userId]
+  const agent = lead?.agent
   const agents = useUserOptions(lead ? String(lead.userId) : null)
 
   if (data?.notFound) {

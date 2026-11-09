@@ -197,32 +197,8 @@ export const partyToRequest = (party, changes = {}) => ({
   ...changes,
 })
 
-const ALL_PAGE_SIZE = 500
-
-/**
- * Todas las partes de todos los contratos. El backend no filtra por contrato,
- * así que se recorren las páginas y se agrupa del lado del cliente. Cuando
- * exista `?contractId=` en el backend, esto pasa a ser un solo pedido.
- */
-export async function listAllParties(options) {
-  const parties = []
-  // Mismo recorrido de páginas que listAllOwners (owners.js): pide hasta que
-  // Spring marca `last` en la respuesta.
-  for (let page = 0; ; page += 1) {
-    const result = await get(`${PARTIES_ENDPOINT}?page=${page}&size=${ALL_PAGE_SIZE}`, options)
-    parties.push(...result.content)
-    if (result.last || result.content.length === 0) return parties
-  }
-}
-
-/** Agrupa partes por contrato: `{ [contractId]: party[] }`. */
-export function groupPartiesByContract(parties) {
-  const groups = {}
-  // `??=` asigna solo si no hay valor: la primera parte de cada contrato crea su
-  // lista vacía y las siguientes reutilizan la que ya existe.
-  for (const party of parties) (groups[party.contractId] ??= []).push(party)
-  return groups
-}
+// Las partes de un contrato no se piden aparte: vienen dentro del contrato
+// (`contract.parties`), cada una con su persona (`party.person`).
 
 /** POST -> 201. 404 si el contrato o la persona no existen. */
 export const createParty = (request, options) => post(PARTIES_ENDPOINT, request, options)

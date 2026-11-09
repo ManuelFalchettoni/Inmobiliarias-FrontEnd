@@ -3,9 +3,10 @@ import { useQueries } from '@tanstack/react-query'
 import { queryKeys } from '../queries/keys.js'
 
 /**
- * De ids a registros. Las respuestas del CRM, de contratos y de personas traen
- * solo ids (`peopleId`, `propertyId`, `userId`, `agencyId`), así que para
- * mostrar nombres hay que pedir cada registro.
+ * De ids a registros, para las respuestas que traen solo ids (`userId`,
+ * `agencyId`...): para mostrar nombres hay que pedir cada registro. Los
+ * listados de contratos y leads no lo usan: ya traen propiedad, personas y
+ * agente adentro.
  *
  * `useQueries` lanza una consulta por id, todas en paralelo. La clave de cada
  * una es la misma que usa la pantalla de detalle ([recurso, 'detail', id]):

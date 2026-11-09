@@ -4,7 +4,6 @@ import { ActionIcon, Alert, Button, Group, Paper, Select, Stack, Text, TextInput
 import { IconAlertTriangle, IconTrash, IconUserPlus } from '@tabler/icons-react'
 
 import ConfirmAction from '../../../components/ConfirmAction.jsx'
-import { useLookup } from '../../../hooks/useLookup.js'
 import { usePeopleOptions } from '../../../hooks/useSelectOptions.js'
 import {
   CONTRACT_ROLE_LABEL,
@@ -16,7 +15,6 @@ import {
   toPartyRequest,
   updateParty,
 } from '../../../services/contracts.js'
-import { findPerson } from '../../../services/people.js'
 
 /** Roles que no pueden faltar para que el contrato esté completo. */
 const REQUIRED_ROLES = { RENT: ['OWNER', 'TENANT'], SALE: ['OWNER', 'BUYER'] }
@@ -109,7 +107,6 @@ function NewPartyForm({ contract, initialPeopleId, onSaved }) {
 export default function ContractParties({ contract, parties, initialPeopleId, onChanged }) {
   const [busyId, setBusyId] = useState(null)
   const [error, setError] = useState(null)
-  const people = useLookup('people', parties.map((p) => p.peopleId), findPerson)
 
   const run = async (party, work) => {
     setBusyId(party.id)
@@ -144,7 +141,8 @@ export default function ContractParties({ contract, parties, initialPeopleId, on
       )}
 
       {parties.map((party) => {
-        const person = people[party.peopleId]
+        // Cada parte llega con su persona: no hace falta pedirla aparte
+        const person = party.person
         return (
           <Paper key={party.id} withBorder radius="md" p="sm" style={{ opacity: busyId === party.id ? 0.6 : 1 }}>
             <Group justify="space-between" wrap="nowrap" align="flex-start">
