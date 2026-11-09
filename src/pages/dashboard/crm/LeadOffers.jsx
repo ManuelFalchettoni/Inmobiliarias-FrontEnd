@@ -142,16 +142,24 @@ export default function LeadOffers({ lead, offers, onChanged }) {
             {/* Solo una oferta pendiente se puede aceptar o rechazar. */}
             {offer.status === 'PENDING' && (
               <>
-                <Button
-                  size="compact-sm"
-                  variant="light"
-                  color="success"
-                  leftSection={<IconCheck size={14} />}
+                {/* Aceptar cierra el lead: pide un segundo clic, como archivar o borrar. */}
+                <ConfirmAction
+                  label="¿Aceptar y cerrar?"
                   disabled={busyId != null}
-                  onClick={() => run(offer, async () => (await acceptOffer(lead, offer, user.id)).lead)}
+                  onConfirm={() => run(offer, async () => (await acceptOffer(lead, offer, user.id)).lead)}
                 >
-                  Aceptar
-                </Button>
+                  {(props) => (
+                    <Button
+                      size="compact-sm"
+                      variant="light"
+                      color="success"
+                      leftSection={<IconCheck size={14} />}
+                      {...props}
+                    >
+                      Aceptar
+                    </Button>
+                  )}
+                </ConfirmAction>
                 <Button
                   size="compact-sm"
                   variant="light"
