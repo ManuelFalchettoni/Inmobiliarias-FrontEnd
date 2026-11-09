@@ -58,7 +58,7 @@ export const hasRole = (user, roles) => Boolean(user) && roles.includes(user.rol
 
 /** Refleja las anotaciones `@Size` del `UserRequest`. */
 export const USER_LIMITS = {
-  name: { min: 3, max: 20 },
+  name: { min: 3, max: 100 },
   email: { max: 100 },
   password: { min: 8, max: 20 },
   phoneNumber: { min: 8, max: 15 },
