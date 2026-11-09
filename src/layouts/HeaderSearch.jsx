@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Combobox, Loader, Text, TextInput, useCombobox } from '@mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
@@ -16,12 +16,13 @@ const RESULTS = 5
 
 /**
  * Buscador del encabezado. Con lo que se tipea busca a la vez personas por
- * nombre (`/api/people/search?name=`) y propiedades por ciudad
- * (`/api/properties/search?city=`): el backend no busca propiedades por
- * dirección. Los dos son parciales y sin acentos. Cada resultado lleva a su
- * ficha, y "Ver todas" al listado con el filtro puesto.
+ * nombre (`/api/people/search?name=`) y propiedades por dirección y por ciudad
+ * (`/api/properties/search?address=` y `?city=`, dos pedidos: el backend junta
+ * los filtros con AND). Todos son parciales y sin acentos. Cada resultado lleva
+ * a su ficha, y "Ver todas" al listado con el filtro puesto.
  *
  * Es un Combobox de Mantine: se navega con las flechas y se elige con Enter.
+ * Cuando llegan los resultados queda marcado el primero, así Enter lo abre.
  */
 export default function HeaderSearch(props) {
   const navigate = useNavigate()
@@ -37,6 +38,12 @@ export default function HeaderSearch(props) {
     queryFn: ({ signal }) => searchPeople(peopleParams, { signal }),
     enabled,
   })
+  const addressParams = { page: 0, size: RESULTS, address: term }
+  const byAddress = useQuery({
+    queryKey: queryKeys.properties.list(addressParams),
+    queryFn: ({ signal }) => searchProperties(addressParams, { signal }),
+    enabled,
+  })
   const propertyParams = { page: 0, size: RESULTS, city: term }
   const properties = useQuery({
     queryKey: queryKeys.properties.list(propertyParams),
@@ -45,9 +52,21 @@ export default function HeaderSearch(props) {
   })
 
   const typing = text.trim() !== term
-  const loading = enabled && (typing || people.isFetching || properties.isFetching)
+  const loading = enabled && (typing || people.isFetching || byAddress.isFetching || properties.isFetching)
   const foundPeople = people.data?.content ?? []
-  const foundProperties = properties.data?.content ?? []
+  const foundByAddress = byAddress.data?.content ?? []
+  // Una propiedad que ya salió por dirección no se repite en la de ciudad.
+  const foundProperties = (properties.data?.content ?? []).filter(
+    (property) => !foundByAddress.some((other) => other.id === property.id),
+  )
+
+  // Al llegar resultados nuevos se marca el primero: Enter lo abre sin tener
+  // que bajar con las flechas.
+  useEffect(() => {
+    combobox.selectFirstOption()
+    // `combobox` es un objeto nuevo en cada render: alcanza con los datos.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [people.data, byAddress.data, properties.data])
 
   // Cada opción lleva en el value adónde ir: "person:3", "property:7", "people-all"...
   const go = (value) => {
@@ -57,6 +76,7 @@ export default function HeaderSearch(props) {
       person: `/dashboard/personas/${id}/editar`,
       property: `/dashboard/propiedades/${id}/editar`,
       'people-all': `/dashboard/personas?name=${q}`,
+      'address-all': `/dashboard/propiedades?address=${q}`,
       'properties-all': `/dashboard/propiedades?city=${q}`,
     }
     navigate(paths[kind])
@@ -74,7 +94,7 @@ export default function HeaderSearch(props) {
           {...props}
           type="search"
           aria-label="Buscar en el panel"
-          placeholder="Buscar personas por nombre o propiedades por ciudad..."
+          placeholder="Buscar personas, calles o ciudades..."
           leftSection={<IconSearch size={16} />}
           rightSection={loading ? <Loader size={14} /> : null}
           radius="md"
@@ -115,6 +135,29 @@ export default function HeaderSearch(props) {
                   <Combobox.Option value="people-all">
                     <Text size="sm" c="var(--mantine-primary-color-filled)">
                       Ver las {people.data.totalElements} personas
+                    </Text>
+                  </Combobox.Option>
+                )}
+              </Combobox.Group>
+
+              <Combobox.Group label={groupLabel('Propiedades en esa dirección', byAddress.data)}>
+                {foundByAddress.map((property) => (
+                  <Combobox.Option key={property.id} value={`property:${property.id}`}>
+                    <Text size="sm">{property.address}</Text>
+                    <Text size="xs" c="dimmed">
+                      {formatPropertyPlace(property)}
+                    </Text>
+                  </Combobox.Option>
+                ))}
+                {byAddress.isSuccess && foundByAddress.length === 0 && (
+                  <Text size="xs" c="dimmed" px="sm" py={4}>
+                    Ninguna dirección coincide.
+                  </Text>
+                )}
+                {byAddress.data?.totalElements > RESULTS && (
+                  <Combobox.Option value="address-all">
+                    <Text size="sm" c="var(--mantine-primary-color-filled)">
+                      Ver las {byAddress.data.totalElements} propiedades
                     </Text>
                   </Combobox.Option>
                 )}
