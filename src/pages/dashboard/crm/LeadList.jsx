@@ -24,14 +24,15 @@ import { queryKeys } from '../../../queries/keys.js'
 import { CRM_STAGE_COLOR, CRM_STAGE_LABEL, listLeads } from '../../../services/crm.js'
 import { formatDate } from '../../../services/format.js'
 import { findPerson } from '../../../services/people.js'
-import { findProperty, formatPropertyPlace } from '../../../services/properties.js'
+import { formatPropertyPlace } from '../../../services/properties.js'
 import { findUser } from '../../../services/users.js'
 
 const PAGE_SIZE = 20
 
 /**
  * Listado de leads (`/dashboard/consultas`), filtrable por agente. Cada lead
- * trae solo ids (persona, propiedad, agente): los nombres se buscan con useLookup.
+ * trae la propiedad resumida (también si está archivada) y solo los ids de persona
+ * y agente: esos nombres se buscan con useLookup.
  */
 export default function LeadList() {
   const navigate = useNavigate()
@@ -53,10 +54,9 @@ export default function LeadList() {
   const cargando = query.isPlaceholderData
   const leads = data?.content ?? []
 
-  // Tres búsquedas con caché: si varios leads son de la misma persona o del
+  // Dos búsquedas con caché: si varios leads son de la misma persona o del
   // mismo agente, se pide una sola vez.
   const people = useLookup('people', leads.map((l) => l.peopleId), findPerson)
-  const properties = useLookup('properties', leads.map((l) => l.propertyId), findProperty)
   const users = useLookup('users', leads.map((l) => l.userId), findUser)
   // Opciones del filtro por agente.
   const agents = useUserOptions(userId)
@@ -156,7 +156,7 @@ export default function LeadList() {
                 <Table.Tbody>
                   {leads.map((lead) => {
                     const person = people[lead.peopleId]
-                    const property = properties[lead.propertyId]
+                    const property = lead.property
                     const detalle = `/dashboard/consultas/${lead.id}`
 
                     // Toda la fila lleva al detalle. Mientras llegan los nombres

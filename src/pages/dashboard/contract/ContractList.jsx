@@ -42,7 +42,7 @@ import {
   searchContracts,
 } from '../../../services/contracts.js'
 import { findPerson } from '../../../services/people.js'
-import { findProperty, formatPrice, formatPropertyPlace } from '../../../services/properties.js'
+import { formatPrice, formatPropertyPlace } from '../../../services/properties.js'
 import { contractFilterChips } from './contract-filter-chips.js'
 import { ContractFilterPanel } from './ContractFilters.jsx'
 
@@ -128,7 +128,6 @@ export default function ContractList() {
   const contracts = data?.content ?? []
   const partiesByContract = partiesQuery.data ?? {}
 
-  const properties = useLookup('properties', contracts.map((c) => c.propertyId), findProperty)
   // Todos los peopleId de las partes de los contratos de esta página.
   // `flatMap` junta las listas de cada contrato en una sola.
   const people = useLookup(
@@ -278,7 +277,8 @@ export default function ContractList() {
                 </Table.Thead>
                 <Table.Tbody>
                   {contracts.map((contract) => {
-                    const property = properties[contract.propertyId]
+                    // Viene dentro del contrato, también si la propiedad está archivada
+                    const property = contract.property
                     const parties = partiesByContract[contract.id] ?? []
                     const detalle = `/dashboard/contratos/${contract.id}`
 

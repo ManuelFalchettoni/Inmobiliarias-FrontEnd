@@ -30,7 +30,6 @@ import {
 } from '@tabler/icons-react'
 
 import ConfirmAction from '../../../components/ConfirmAction.jsx'
-import { useLookup } from '../../../hooks/useLookup.js'
 import { queryKeys } from '../../../queries/keys.js'
 import { NotFound } from '../../../components/NotFound.jsx'
 import { isNotFound } from '../../../services/api.js'
@@ -45,7 +44,7 @@ import {
   listAllParties,
 } from '../../../services/contracts.js'
 import { formatDateTime } from '../../../services/format.js'
-import { findProperty, formatPrice, formatPropertyPlace } from '../../../services/properties.js'
+import { formatPrice, formatPropertyPlace } from '../../../services/properties.js'
 import ContractParties from './ContractParties.jsx'
 
 const LIST_PATH = '/dashboard/contratos'
@@ -123,7 +122,9 @@ export default function ContractDetail() {
   const [action, setAction] = useState({ state: 'idle' })
 
   const contract = data?.contract
-  const property = useLookup('properties', [contract?.propertyId], findProperty)[contract?.propertyId]
+  // La propiedad viene dentro del contrato, también si está archivada:
+  // GET /api/properties/{id} responde 404 para las archivadas.
+  const property = contract?.property
 
   if (data?.notFound) {
     return (
@@ -279,12 +280,17 @@ export default function ContractDetail() {
                   {property ? (
                     <>
                       {property.address}, {formatPropertyPlace(property)}{' '}
-                      <Anchor component={Link} to={`/dashboard/propiedades/${property.id}/editar`} size="sm">
-                        Ver
-                      </Anchor>
+                      {/* La edición de una archivada da 404: en vez del link se avisa que está archivada */}
+                      {property.active ? (
+                        <Anchor component={Link} to={`/dashboard/propiedades/${property.id}/editar`} size="sm">
+                          Ver
+                        </Anchor>
+                      ) : (
+                        '(archivada)'
+                      )}
                     </>
                   ) : (
-                    `Propiedad #${contract.propertyId} (dada de baja o inexistente)`
+                    `Propiedad #${contract.propertyId} (inexistente)`
                   )}
                 </InfoRow>
                 <InfoRow label="Tipo">{CONTRACT_TYPE_LABEL[contract.type] ?? contract.type}</InfoRow>

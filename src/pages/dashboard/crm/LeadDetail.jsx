@@ -52,7 +52,7 @@ import {
 } from '../../../services/crm.js'
 import { formatDate } from '../../../services/format.js'
 import { findPerson } from '../../../services/people.js'
-import { findProperty, formatPropertyPlace } from '../../../services/properties.js'
+import { formatPropertyPlace } from '../../../services/properties.js'
 import { findUser } from '../../../services/users.js'
 import LeadAlerts from './LeadAlerts.jsx'
 import LeadOffers from './LeadOffers.jsx'
@@ -140,7 +140,9 @@ export default function LeadDetail() {
   // Los hooks van ANTES del `if (!lead) return` de abajo: React exige que se
   // llamen siempre, en el mismo orden, en cada render.
   const person = useLookup('people', [lead?.peopleId], findPerson)[lead?.peopleId]
-  const property = useLookup('properties', [lead?.propertyId], findProperty)[lead?.propertyId]
+  // La propiedad viene dentro del lead, también si está archivada:
+  // GET /api/properties/{id} responde 404 para las archivadas.
+  const property = lead?.property
   const agent = useLookup('users', [lead?.userId], findUser)[lead?.userId]
   const agents = useUserOptions(lead ? String(lead.userId) : null)
 
@@ -321,12 +323,17 @@ export default function LeadDetail() {
                     {property ? (
                       <>
                         {property.address}, {formatPropertyPlace(property)}{' '}
-                        <Anchor component={Link} to={`/dashboard/propiedades/${property.id}/editar`} size="sm">
-                          Ver
-                        </Anchor>
+                        {/* La edición de una archivada da 404: en vez del link se avisa que está archivada */}
+                        {property.active ? (
+                          <Anchor component={Link} to={`/dashboard/propiedades/${property.id}/editar`} size="sm">
+                            Ver
+                          </Anchor>
+                        ) : (
+                          '(archivada)'
+                        )}
                       </>
                     ) : (
-                      `Propiedad #${lead.propertyId} (dada de baja o inexistente)`
+                      `Propiedad #${lead.propertyId} (inexistente)`
                     )}
                   </InfoRow>
                   <Select
