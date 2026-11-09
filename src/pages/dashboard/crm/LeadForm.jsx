@@ -165,6 +165,7 @@ export default function LeadForm() {
               <Select
                 label="Interesado"
                 {...optionProps(people, 'personas')}
+                {...people.searchProps}
                 key={form.key('peopleId')}
                 {...form.getInputProps('peopleId')}
               />

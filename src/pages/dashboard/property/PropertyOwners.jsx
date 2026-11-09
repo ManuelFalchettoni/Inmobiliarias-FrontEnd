@@ -76,6 +76,7 @@ function NewOwnerForm({ propertyId, initialPeopleId, onSaved }) {
           value={peopleId}
           onChange={setPeopleId}
           searchable
+          {...people.searchProps}
           nothingFoundMessage="Sin coincidencias"
           disabled={people.state === 'loading'}
         />
