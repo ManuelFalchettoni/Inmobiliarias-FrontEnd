@@ -1,10 +1,15 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { ActionIcon, Alert, Button, Group, Paper, Select, Stack, Text, TextInput } from '@mantine/core'
 import { IconAlertTriangle, IconTrash, IconUserPlus } from '@tabler/icons-react'
 
 import ConfirmAction from '../../../components/ConfirmAction.jsx'
+import { useLookup } from '../../../hooks/useLookup.js'
 import { usePeopleOptions } from '../../../hooks/useSelectOptions.js'
+import { queryKeys } from '../../../queries/keys.js'
+import { listAllOwners } from '../../../services/owners.js'
+import { findPerson } from '../../../services/people.js'
 import {
   CONTRACT_ROLE_LABEL,
   CONTRACT_ROLE_OPTIONS,
@@ -20,19 +25,62 @@ import {
 const REQUIRED_ROLES = { RENT: ['OWNER', 'TENANT'], SALE: ['OWNER', 'BUYER'] }
 
 // Opciones de rol para el Select según el tipo de contrato (alquiler o venta).
-function roleOptionsFor(type, current) {
+// `canBeOwner` en false deshabilita "Propietario": la persona no es dueña de la propiedad.
+function roleOptionsFor(type, current, canBeOwner = true) {
   const allowed = ROLES_BY_TYPE[type] ?? CONTRACT_ROLE_OPTIONS.map((o) => o.value)
   // Una parte cargada antes con otro rol igual tiene que mostrarlo.
-  return CONTRACT_ROLE_OPTIONS.filter((o) => allowed.includes(o.value) || o.value === current)
+  return CONTRACT_ROLE_OPTIONS.filter((o) => allowed.includes(o.value) || o.value === current).map((o) =>
+    o.value === 'OWNER' && !canBeOwner && current !== 'OWNER' ? { ...o, disabled: true } : o,
+  )
 }
 
-function NewPartyForm({ contract, initialPeopleId, onSaved }) {
+/**
+ * Los dueños de la propiedad del contrato: solo ellos pueden ser Propietario
+ * (el backend responde 400 con cualquier otra persona). Mismo pedido que la
+ * edición de la propiedad (PropertyOwners): la lista entera, filtrada acá.
+ */
+function usePropertyOwners(propertyId) {
+  const query = useQuery({
+    queryKey: queryKeys.propertyOwners.all,
+    queryFn: ({ signal }) => listAllOwners({ signal }),
+    select: (owners) => owners.filter((owner) => owner.propertyId === Number(propertyId)),
+  })
+  const owners = query.data ?? []
+  const people = useLookup('people', owners.map((o) => o.peopleId), findPerson)
+
+  const options = owners.map((owner) => {
+    const person = people[owner.peopleId]
+    const label = person ? `${person.name} · ${person.phone}` : `Persona #${owner.peopleId}`
+    return { value: String(owner.peopleId), label }
+  })
+
+  return {
+    loaded: query.isSuccess,
+    options,
+    // ¿Esta persona es dueña? Mientras no se sabe, se deja pasar: el backend controla igual.
+    isOwner: (peopleId) => !query.isSuccess || owners.some((o) => o.peopleId === Number(peopleId)),
+  }
+}
+
+function NewPartyForm({ contract, owners, initialPeopleId, onSaved }) {
   const navigate = useNavigate()
   const people = usePeopleOptions(initialPeopleId)
   const [peopleId, setPeopleId] = useState(initialPeopleId)
   const [role, setRole] = useState(null)
   const [comments, setComments] = useState('')
   const [status, setStatus] = useState({ state: 'idle' })
+
+  const ownerRole = role === 'OWNER'
+
+  // Propietario usa otro Select (solo los dueños): al entrar o salir de ese rol
+  // se empieza de cero, sin persona elegida ni texto de búsqueda.
+  const changeRole = (newRole) => {
+    if ((newRole === 'OWNER') !== ownerRole) {
+      setPeopleId(null)
+      people.searchProps.onSearchChange('')
+    }
+    setRole(newRole)
+  }
 
   const submit = async (event) => {
     event.preventDefault()
@@ -61,25 +109,52 @@ function NewPartyForm({ contract, initialPeopleId, onSaved }) {
     <form onSubmit={submit}>
       <Stack gap="xs">
         <Group gap="xs" align="flex-start" grow>
-          <Select
-            label="Persona"
-            placeholder={people.state === 'loading' ? 'Cargando personas...' : 'Elegir'}
-            data={people.options}
-            value={peopleId}
-            onChange={setPeopleId}
-            searchable
-            {...people.searchProps}
-            nothingFoundMessage="Sin coincidencias"
-            disabled={people.state === 'loading'}
-          />
+          {ownerRole ? (
+            // Propietario: solo los dueños cargados en la propiedad.
+            <Select
+              label="Persona"
+              description="Solo los dueños de la propiedad"
+              placeholder={
+                !owners.loaded
+                  ? 'Cargando dueños...'
+                  : owners.options.length === 0
+                    ? 'La propiedad no tiene dueños cargados'
+                    : 'Elegir'
+              }
+              data={owners.options}
+              value={peopleId}
+              onChange={setPeopleId}
+              searchable
+              nothingFoundMessage="Sin coincidencias"
+              disabled={owners.options.length === 0}
+            />
+          ) : (
+            <Select
+              label="Persona"
+              placeholder={people.state === 'loading' ? 'Cargando personas...' : 'Elegir'}
+              data={people.options}
+              value={peopleId}
+              onChange={setPeopleId}
+              searchable
+              {...people.searchProps}
+              nothingFoundMessage="Sin coincidencias"
+              disabled={people.state === 'loading'}
+            />
+          )}
           <Select
             label="Rol"
             placeholder="Elegir"
             data={roleOptionsFor(contract.type)}
             value={role}
-            onChange={setRole}
+            onChange={changeRole}
           />
         </Group>
+        {ownerRole && owners.loaded && owners.options.length === 0 && (
+          <Text size="sm" c="dimmed">
+            Cargue los dueños en la{' '}
+            <Link to={`/dashboard/propiedades/${contract.propertyId}/editar`}>edición de la propiedad</Link>.
+          </Text>
+        )}
         <TextInput
           label="Comentario"
           placeholder="Opcional: titular, 50%, garantía propietaria..."
@@ -108,6 +183,7 @@ function NewPartyForm({ contract, initialPeopleId, onSaved }) {
 export default function ContractParties({ contract, parties, initialPeopleId, onChanged }) {
   const [busyId, setBusyId] = useState(null)
   const [error, setError] = useState(null)
+  const owners = usePropertyOwners(contract.propertyId)
 
   const run = async (party, work) => {
     setBusyId(party.id)
@@ -171,7 +247,7 @@ export default function ContractParties({ contract, parties, initialPeopleId, on
               <Group gap="xs" wrap="nowrap">
                 <Select
                   aria-label="Rol"
-                  data={roleOptionsFor(contract.type, party.role)}
+                  data={roleOptionsFor(contract.type, party.role, owners.isOwner(party.peopleId))}
                   value={party.role}
                   allowDeselect={false}
                   disabled={busyId != null}
@@ -200,7 +276,7 @@ export default function ContractParties({ contract, parties, initialPeopleId, on
       })}
 
       <Paper withBorder radius="md" p="md" bg="gray.0">
-        <NewPartyForm contract={contract} initialPeopleId={initialPeopleId} onSaved={onChanged} />
+        <NewPartyForm contract={contract} owners={owners} initialPeopleId={initialPeopleId} onSaved={onChanged} />
       </Paper>
     </Stack>
   )
