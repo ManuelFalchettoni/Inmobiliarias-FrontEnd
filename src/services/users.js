@@ -56,6 +56,12 @@ export const PANEL_ROLES = [USER_ROL.ADMIN, USER_ROL.AGENCY, USER_ROL.AGENT]
 /** ¿El usuario tiene alguno de esos roles? Sin sesión, no. */
 export const hasRole = (user, roles) => Boolean(user) && roles.includes(user.rol)
 
+/**
+ * Roles que pueden dar de alta, editar, dar de baja y restaurar usuarios.
+ * Refleja `SecurityConfig`: un AGENT ve la lista pero recibe 403 en el resto.
+ */
+export const USER_MANAGER_ROLES = [USER_ROL.ADMIN, USER_ROL.AGENCY]
+
 /** Refleja las anotaciones `@Size` del `UserRequest`. */
 export const USER_LIMITS = {
   name: { min: 3, max: 100 },

@@ -39,6 +39,8 @@ export default function ArchivedSection({
   nameOf,
   linkAfterRestore,
   allPath,
+  // false oculta el botón Restaurar: el rol no puede restaurar este recurso.
+  canRestore = true,
 }) {
   // La página de esta sección vive en un estado propio y no en la URL: en la
   // misma pantalla hay tres paginadores, y con uno solo en la URL se pisarían.
@@ -151,7 +153,7 @@ export default function ArchivedSection({
                         <Table.Th key={column.label}>{column.label}</Table.Th>
                       ))}
                       <Table.Th>De baja desde</Table.Th>
-                      <Table.Th w={1} />
+                      {canRestore && <Table.Th w={1} />}
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
@@ -167,19 +169,21 @@ export default function ArchivedSection({
                             {row.updatedAt ? formatDate(row.updatedAt) : '—'}
                           </Text>
                         </Table.Td>
-                        <Table.Td ta="right">
-                          <Button
-                            size="compact-sm"
-                            variant="default"
-                            leftSection={<IconArrowBackUp size={14} />}
-                            loading={busyId === row.id}
-                            disabled={action.isPending && busyId !== row.id}
-                            onClick={() => action.mutate(row)}
-                            aria-label={`Restaurar ${nameOf(row)}`}
-                          >
-                            Restaurar
-                          </Button>
-                        </Table.Td>
+                        {canRestore && (
+                          <Table.Td ta="right">
+                            <Button
+                              size="compact-sm"
+                              variant="default"
+                              leftSection={<IconArrowBackUp size={14} />}
+                              loading={busyId === row.id}
+                              disabled={action.isPending && busyId !== row.id}
+                              onClick={() => action.mutate(row)}
+                              aria-label={`Restaurar ${nameOf(row)}`}
+                            >
+                              Restaurar
+                            </Button>
+                          </Table.Td>
+                        )}
                       </Table.Tr>
                     ))}
                   </Table.Tbody>

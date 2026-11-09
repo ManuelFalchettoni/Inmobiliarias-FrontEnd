@@ -18,7 +18,14 @@ import {
   listProperties,
   restoreProperty,
 } from '../../../services/properties.js'
-import { USER_ROL_COLOR, USER_ROL_LABEL, listUsers, restoreUser } from '../../../services/users.js'
+import {
+  USER_MANAGER_ROLES,
+  USER_ROL_COLOR,
+  USER_ROL_LABEL,
+  hasRole,
+  listUsers,
+  restoreUser,
+} from '../../../services/users.js'
 import ArchivedSection, { RowBadge } from './ArchivedSection.jsx'
 import { archivedParams } from './archived-params.js'
 
@@ -88,6 +95,8 @@ const SECTIONS = [
     emptyText: 'No hay usuarios dados de baja.',
     list: listUsers,
     restore: restoreUser,
+    // Un AGENT ve los dados de baja, pero restaurar usuarios le da 403.
+    restoreRoles: USER_MANAGER_ROLES,
     nameOf: (u) => u.name,
     columns: [
       { label: 'Usuario', render: (u) => <TwoLines title={u.name} subtitle={u.email} /> },
@@ -142,7 +151,7 @@ function OptionLabel({ label, count }) {
  * mirar una sola. Las que no tienen nada se achican a una línea.
  */
 export default function ArchiveList() {
-  const { isAdmin } = useAuth()
+  const { isAdmin, user } = useAuth()
   const sections = SECTIONS.filter((section) => isAdmin || !section.adminOnly)
   const counts = useArchivedCounts(sections)
   const [view, setView] = useState(ALL)
@@ -199,7 +208,10 @@ export default function ArchiveList() {
               <Box key={section.resource} hidden={view !== ALL && view !== section.resource}>
                 {/* `{...section}` pasa cada campo del objeto como una prop:
                     resource={section.resource}, title={section.title}, etc. */}
-                <ArchivedSection {...section} />
+                <ArchivedSection
+                  {...section}
+                  canRestore={!section.restoreRoles || hasRole(user, section.restoreRoles)}
+                />
               </Box>
             ))}
           </Stack>

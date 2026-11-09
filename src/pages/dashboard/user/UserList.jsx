@@ -36,9 +36,11 @@ import { findAgency } from '../../../services/agencies.js'
 import { formatDate } from '../../../services/format.js'
 import { queryKeys } from '../../../queries/keys.js'
 import {
+  USER_MANAGER_ROLES,
   USER_ROL_COLOR,
   USER_ROL_LABEL,
   deleteUser,
+  hasRole,
   listUsers,
   restoreUser,
 } from '../../../services/users.js'
@@ -100,8 +102,10 @@ export default function UserList() {
   const page = Number(searchParams.get('page') ?? 1)
   const active = searchParams.get('active') ?? 'true'
   // Elegir inmobiliaria es solo del admin: AGENCY y AGENT ven siempre su equipo.
-  const { isAdmin } = useAuth()
+  const { isAdmin, user: currentUser } = useAuth()
   const agencyId = isAdmin ? (searchParams.get('agencyId') ?? null) : null
+  // Un AGENT solo mira: crear, editar, dar de baja y restaurar le dan 403.
+  const canManage = hasRole(currentUser, USER_MANAGER_ROLES)
 
   const queryClient = useQueryClient()
   const params = { page: page - 1, size: PAGE_SIZE, active, agencyId }
@@ -164,9 +168,11 @@ export default function UserList() {
           </Text>
         </div>
 
-        <Button component={Link} to="/dashboard/usuarios/nuevo" leftSection={<IconPlus size={16} />}>
-          Nuevo usuario
-        </Button>
+        {canManage && (
+          <Button component={Link} to="/dashboard/usuarios/nuevo" leftSection={<IconPlus size={16} />}>
+            Nuevo usuario
+          </Button>
+        )}
       </Group>
 
       <Group mb="md" align="flex-end" gap="md">
@@ -255,7 +261,7 @@ export default function UserList() {
                     <Table.Th>Inmobiliaria</Table.Th>
                     <Table.Th>CUIT y matrícula</Table.Th>
                     <Table.Th>Alta</Table.Th>
-                    <Table.Th w={1} />
+                    {canManage && <Table.Th w={1} />}
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -310,9 +316,11 @@ export default function UserList() {
                       <Table.Td>
                         <Text size="sm">{formatDate(user.createdAt)}</Text>
                       </Table.Td>
-                      <Table.Td>
-                        <UserActions user={user} onAction={runAction} disabled={action.isPending} />
-                      </Table.Td>
+                      {canManage && (
+                        <Table.Td>
+                          <UserActions user={user} onAction={runAction} disabled={action.isPending} />
+                        </Table.Td>
+                      )}
                     </Table.Tr>
                   ))}
                 </Table.Tbody>

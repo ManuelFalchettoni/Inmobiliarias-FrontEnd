@@ -4,7 +4,7 @@ import { NotFound } from '../../components/NotFound.jsx'
 import RoleGate from '../../components/RoleGate.jsx'
 import { useAuth } from '../../context/auth-context.js'
 import DashboardLayout from '../../layouts/DashboardLayout.jsx'
-import { PANEL_ROLES, USER_ROL } from '../../services/users.js'
+import { PANEL_ROLES, USER_MANAGER_ROLES, USER_ROL } from '../../services/users.js'
 import AccountSettings from './account/AccountSettings.jsx'
 import { dashboardNav, homeFor } from '../../layouts/dashboard-nav.js'
 import AgencyForm from './agency/AgencyForm.jsx'
@@ -81,8 +81,11 @@ export default function DashboardRoutes() {
           {/* Editar: el admin, cualquiera; los demás, solo la suya (otra da 404). */}
           <Route path="agencias/:id/editar" element={<AgencyForm />} />
           <Route path="usuarios" element={<UserList />} />
-          <Route path="usuarios/nuevo" element={<UserForm />} />
-          <Route path="usuarios/:id/editar" element={<UserEdit />} />
+          {/* Un AGENT ve la lista, pero crear y editar usuarios le da 403. */}
+          <Route element={<RoleGate roles={USER_MANAGER_ROLES} />}>
+            <Route path="usuarios/nuevo" element={<UserForm />} />
+            <Route path="usuarios/:id/editar" element={<UserEdit />} />
+          </Route>
           <Route path="personas" element={<PeopleList />} />
           <Route path="personas/nueva" element={<PeopleForm />} />
           <Route path="personas/:id/editar" element={<PeopleForm />} />
