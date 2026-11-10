@@ -86,8 +86,10 @@ manda sola.
 | `/dashboard/analitica`              | Analítica (`GET /api/analytics/summary`): propiedades, leads, ofertas, contratos y rendimiento por agente; el admin elige inmobiliaria |
 | `/dashboard/configuracion`          | Cuenta propia (`/api/users/me`): datos, contraseña e inmobiliaria. La única pantalla de un USER |
 
-Los mapas usan Leaflet con OpenStreetMap: el de la ficha (`PropertyMap.jsx`) y la vista Mapa del
-listado (`PropertyListMap.jsx`), que busca lo que hay en la zona visible.
+Los mapas usan Leaflet con OpenStreetMap: el de la ficha (`PropertyMap.jsx`), la vista Mapa del
+listado (`PropertyListMap.jsx`), que busca lo que hay en la zona visible, y el del formulario
+(`PropertyLocationPicker.jsx`), donde se ubica la propiedad moviendo el pin o buscando la dirección
+con Nominatim (`services/geocoding.js`, directo desde el navegador, sin pasar por el backend).
 
 Una dirección que no existe muestra la página 404 (`components/NotFound.jsx`): dentro del panel con
 el menú, y fuera de él a pantalla completa. Lo mismo un registro que el backend responde con 404
@@ -101,12 +103,14 @@ src/
 ├── services/     Un módulo por recurso del backend. Única capa que hace pedidos HTTP.
 │   ├── api.js        fetch, timeout, cancelación y errores (ApiError)
 │   ├── format.js     Fechas
+│   ├── geocoding.js  Dirección a coordenadas con Nominatim (no es del backend)
 │   └── auth, agencies, users, properties, people, owners, contracts, crm, analytics, workspace
-├── queries/      React Query: cliente (client.js) y claves de caché (keys.js)
+├── queries/      React Query: cliente (client.js), claves de caché (keys.js) y estado de una
+│                 consulta para los Select (status.js)
 ├── hooks/        useAgencyOptions, useSelectOptions (opciones de Select), useLookup (ids a registros),
 │                 useUrlFilters (página y filtros en la URL), useNow (hora que avanza cada minuto)
-├── components/   Componentes compartidos (AgencyLogo, ConfirmAction, FilterInput, FilterPanel,
-│                 RoleGate, NotFound, Wordmark: logo y nombre de la app)
+├── components/   Componentes compartidos (AgencyLogo, AlertEmailBadge, ConfirmAction, FilterInput,
+│                 FilterPanel, RoleGate, NotFound, Wordmark: logo y nombre de la app)
 ├── layouts/      AuthLayout, DashboardLayout, el menú lateral (DashboardNavbar, con los ítems en
 │                 dashboard-nav.js) y la barra superior:
 │                 HeaderSearch (buscador) y AlertBell (campanita de avisos)
@@ -151,9 +155,10 @@ src/
 - **`agencyId`.** Solo lo manda el admin, en listados y búsquedas (sin él ve todas). Para AGENCY y
   AGENT el backend usa el de la sesión, así que el front ni lo manda; en las altas va el suyo porque
   la validación lo pide. Algo de otra inmobiliaria responde 404, como si no existiera.
-- **Ids a nombres.** Contratos y leads traen embebidas sus partes, personas y agente. Lo que todavía
-  llega como id (dueños, usuarios del historial y de los avisos, agencias) lo resuelve `useLookup`
-  con la misma clave que el detalle, así cada registro se pide una sola vez.
+- **Ids a nombres.** Contratos y leads traen embebidas su propiedad, sus partes, personas y agente.
+  La propiedad viene aunque esté archivada, así que se sigue mostrando. Lo que todavía llega como
+  id (dueños, usuarios del historial y de los avisos, agencias) lo resuelve `useLookup` con la
+  misma clave que el detalle, así cada registro se pide una sola vez.
 - **Barra superior.** El buscador busca a la vez personas por nombre y propiedades por dirección y
   por ciudad, y lleva a la ficha o al listado filtrado. Al llegar los resultados queda marcado el
   primero: Enter lo abre, y con las flechas se elige otro. La
