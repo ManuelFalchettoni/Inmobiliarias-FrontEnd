@@ -4,7 +4,6 @@ import {
   ActionIcon,
   Alert,
   Anchor,
-  Avatar,
   Badge,
   Button,
   Card,
@@ -40,20 +39,11 @@ import {
   restoreAgency,
   updateAgency,
 } from '../../../services/agencies.js'
+import AgencyLogo from '../../../components/AgencyLogo.jsx'
 import { formatDate } from '../../../services/format.js'
 import { queryKeys } from '../../../queries/keys.js'
 
 const PAGE_SIZE = 20
-
-function getInitials(name) {
-  const initials = String(name ?? '')
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((word) => word[0]?.toUpperCase())
-    .join('')
-  return initials || 'AG'
-}
 
 /** Acciones de una fila: cambiar el estado de verificación, dar de baja o restaurar. */
 function AgencyActions({ agency, onAction, disabled }) {
@@ -264,9 +254,7 @@ export default function AgencyList() {
                     <Table.Tr key={agency.id}>
                       <Table.Td>
                         <Group gap="sm" wrap="nowrap">
-                          <Avatar color="dark" variant="filled" radius="md" size={36}>
-                            {getInitials(agency.publicName)}
-                          </Avatar>
+                          <AgencyLogo src={agency.iconUrl} name={agency.publicName} size={36} />
                           <div>
                             <Text size="sm" fw={500}>
                               {agency.publicName}
