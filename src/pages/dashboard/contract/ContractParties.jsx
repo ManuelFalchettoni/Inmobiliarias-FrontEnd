@@ -1,15 +1,11 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { ActionIcon, Alert, Button, Group, Paper, Select, Stack, Text, TextInput } from '@mantine/core'
-import { IconAlertTriangle, IconTrash, IconUserPlus } from '@tabler/icons-react'
+import { ActionIcon, Alert, Badge, Button, Group, Paper, Select, Stack, Text, TextInput } from '@mantine/core'
+import { IconAlertTriangle, IconLock, IconTrash, IconUserPlus } from '@tabler/icons-react'
 
 import ConfirmAction from '../../../components/ConfirmAction.jsx'
-import { useLookup } from '../../../hooks/useLookup.js'
 import { usePeopleOptions } from '../../../hooks/useSelectOptions.js'
-import { queryKeys } from '../../../queries/keys.js'
-import { listAllOwners } from '../../../services/owners.js'
-import { findPerson } from '../../../services/people.js'
+import { usePropertyOwners } from '../../../hooks/usePropertyOwners.js'
 import {
   CONTRACT_ROLE_LABEL,
   CONTRACT_ROLE_OPTIONS,
@@ -34,34 +30,10 @@ function roleOptionsFor(type, current, canBeOwner = true) {
   )
 }
 
-/**
- * Los dueños de la propiedad del contrato: solo ellos pueden ser Propietario
- * (el backend responde 400 con cualquier otra persona). Mismo pedido que la
- * edición de la propiedad (PropertyOwners): la lista entera, filtrada acá.
- */
-function usePropertyOwners(propertyId) {
-  const query = useQuery({
-    queryKey: queryKeys.propertyOwners.all,
-    queryFn: ({ signal }) => listAllOwners({ signal }),
-    select: (owners) => owners.filter((owner) => owner.propertyId === Number(propertyId)),
-  })
-  const owners = query.data ?? []
-  const people = useLookup('people', owners.map((o) => o.peopleId), findPerson)
-
-  const options = owners.map((owner) => {
-    const person = people[owner.peopleId]
-    const label = person ? `${person.name} · ${person.phone}` : `Persona #${owner.peopleId}`
-    return { value: String(owner.peopleId), label }
-  })
-
-  return {
-    loaded: query.isSuccess,
-    options,
-    // ¿Esta persona es dueña? Mientras no se sabe, se deja pasar: el backend controla igual.
-    isOwner: (peopleId) => !query.isSuccess || owners.some((o) => o.peopleId === Number(peopleId)),
-  }
-}
-
+// Los propietarios se cargan solos al crear el contrato (los dueños de la
+// propiedad) y no se pueden cambiar ni quitar. Acá solo se ofrece agregar como
+// Propietario a un dueño que todavía no esté en el contrato (contratos viejos,
+// o un dueño cargado en la propiedad después).
 function NewPartyForm({ contract, owners, initialPeopleId, onSaved }) {
   const navigate = useNavigate()
   const people = usePeopleOptions(initialPeopleId)
@@ -144,7 +116,7 @@ function NewPartyForm({ contract, owners, initialPeopleId, onSaved }) {
           <Select
             label="Rol"
             placeholder="Elegir"
-            data={roleOptionsFor(contract.type)}
+            data={roleOptionsFor(contract.type, null, owners.options.length > 0)}
             value={role}
             onChange={changeRole}
           />
@@ -183,7 +155,13 @@ function NewPartyForm({ contract, owners, initialPeopleId, onSaved }) {
 export default function ContractParties({ contract, parties, initialPeopleId, onChanged }) {
   const [busyId, setBusyId] = useState(null)
   const [error, setError] = useState(null)
-  const owners = usePropertyOwners(contract.propertyId)
+  const propertyOwners = usePropertyOwners(contract.propertyId)
+  // Dueños de la propiedad que todavía no están como Propietario en el contrato.
+  const ownerIds = new Set(parties.filter((p) => p.role === 'OWNER').map((p) => String(p.peopleId)))
+  const missingOwners = {
+    ...propertyOwners,
+    options: propertyOwners.options.filter((o) => !ownerIds.has(o.value)),
+  }
 
   const run = async (party, work) => {
     setBusyId(party.id)
@@ -244,10 +222,22 @@ export default function ContractParties({ contract, parties, initialPeopleId, on
                   </Text>
                 )}
               </div>
+              {party.role === 'OWNER' ? (
+                // El propietario viene de la propiedad: no se cambia ni se quita.
+                <Badge
+                  variant="light"
+                  color="gray"
+                  size="lg"
+                  leftSection={<IconLock size={12} />}
+                  title="Los propietarios salen de los dueños de la propiedad y no se pueden cambiar"
+                >
+                  {CONTRACT_ROLE_LABEL.OWNER}
+                </Badge>
+              ) : (
               <Group gap="xs" wrap="nowrap">
                 <Select
                   aria-label="Rol"
-                  data={roleOptionsFor(contract.type, party.role, owners.isOwner(party.peopleId))}
+                  data={roleOptionsFor(contract.type, party.role, false)}
                   value={party.role}
                   allowDeselect={false}
                   disabled={busyId != null}
@@ -270,13 +260,14 @@ export default function ContractParties({ contract, parties, initialPeopleId, on
                   )}
                 </ConfirmAction>
               </Group>
+              )}
             </Group>
           </Paper>
         )
       })}
 
       <Paper withBorder radius="md" p="md" bg="gray.0">
-        <NewPartyForm contract={contract} owners={owners} initialPeopleId={initialPeopleId} onSaved={onChanged} />
+        <NewPartyForm contract={contract} owners={missingOwners}initialPeopleId={initialPeopleId} onSaved={onChanged} />
       </Paper>
     </Stack>
   )

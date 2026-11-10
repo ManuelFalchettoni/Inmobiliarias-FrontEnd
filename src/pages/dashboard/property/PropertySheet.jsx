@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Alert, Anchor, Box, Button, Container, Image, ScrollArea, Skeleton, Stack, UnstyledButton } from '@mantine/core'
 import { Carousel } from '@mantine/carousel'
 import '@mantine/carousel/styles.css'
-import { IconAlertTriangle, IconArrowLeft, IconMail, IconMapPin, IconPhone, IconWorld } from '@tabler/icons-react'
+import { IconAlertTriangle, IconArrowLeft, IconMapPin, IconWorld } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
 
 import { queryKeys } from '../../../queries/keys.js'
@@ -136,8 +136,8 @@ function Rotulo({ property }) {
 }
 
 /**
- * Precios en grande y, debajo, la inmobiliaria con botones para llamar o
- * escribir. En la venta suma el valor por m². Sin precio: "Consultar".
+ * Precios en grande y, debajo, la inmobiliaria que publica. En la venta suma
+ * el valor por m². Sin precio: "Consultar".
  */
 function PriceBox({ prices, size, agency }) {
   return (
@@ -176,32 +176,6 @@ function PriceBox({ prices, size, agency }) {
         <div className={classes.agency}>
           <span className={classes.priceOperation}>Publica</span>
           <p className={classes.agencyName}>{agency.publicName}</p>
-          <Stack gap="xs">
-            {agency.phoneNumber && (
-              <Button
-                component="a"
-                href={`tel:${agency.phoneNumber}`}
-                variant="white"
-                color="dark"
-                leftSection={<IconPhone size={18} />}
-                fullWidth
-              >
-                Llamar al {agency.phoneNumber}
-              </Button>
-            )}
-            {agency.email && (
-              <Button
-                component="a"
-                href={`mailto:${agency.email}`}
-                variant="outline"
-                color="gray.3"
-                leftSection={<IconMail size={18} />}
-                fullWidth
-              >
-                Escribir por email
-              </Button>
-            )}
-          </Stack>
           {agency.webURL && (
             <a href={agency.webURL} target="_blank" rel="noreferrer" className={classes.agencyWeb}>
               <IconWorld size={16} />

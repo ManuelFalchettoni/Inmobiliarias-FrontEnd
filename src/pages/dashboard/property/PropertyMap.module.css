@@ -4,6 +4,8 @@
  */
 .frame {
   position: relative;
+  /* Encierra los z-index de Leaflet: sin esto el mapa tapa lo que flota sobre la página. */
+  isolation: isolate;
   aspect-ratio: 16 / 7;
   border: 1.5px solid var(--sheet-ink, #17262a);
   border-radius: 6px;

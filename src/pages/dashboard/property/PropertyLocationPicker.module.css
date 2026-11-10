@@ -1,6 +1,8 @@
 /* Alto fijo: Leaflet no se dibuja sin alto. */
 .frame {
   position: relative;
+  /* Encierra los z-index de Leaflet: sin esto el mapa tapa la barra fija del formulario. */
+  isolation: isolate;
   height: 320px;
   border-radius: var(--mantine-radius-md);
   border: 1px solid var(--mantine-color-default-border);

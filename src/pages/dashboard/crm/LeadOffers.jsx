@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { ActionIcon, Badge, Button, Group, NumberInput, Paper, Select, Stack, Text } from '@mantine/core'
-import { IconCheck, IconTrash, IconX } from '@tabler/icons-react'
+import { Link } from 'react-router-dom'
+import { ActionIcon, Badge, Button, Group, NumberInput, Paper, Select, Stack, Text, Tooltip } from '@mantine/core'
+import { IconCheck, IconFilePlus, IconTrash, IconX } from '@tabler/icons-react'
 
 import {
   OFFER_LIMITS,
@@ -15,6 +16,20 @@ import { formatDate } from '../../../services/format.js'
 import { CURRENCY_OPTIONS, formatPrice } from '../../../services/properties.js'
 import ConfirmAction from '../../../components/ConfirmAction.jsx'
 import { useAuth } from '../../../context/auth-context.js'
+
+/**
+ * Alta de contrato precargada con la propiedad del lead, el monto de la oferta
+ * y el interesado como comprador o inquilino.
+ */
+function newContractPath(lead, offer) {
+  const params = new URLSearchParams({
+    propertyId: String(lead.propertyId),
+    peopleId: String(lead.peopleId),
+    amount: String(offer.amount),
+    currency: offer.currency,
+  })
+  return `/dashboard/contratos/nuevo?${params}`
+}
 
 function NewOfferForm({ lead, onSaved }) {
   const { user } = useAuth()
@@ -175,6 +190,22 @@ export default function LeadOffers({ lead, offers, onChanged }) {
                   Rechazar
                 </Button>
               </>
+            )}
+            {/* Una oferta aceptada se pasa a contrato: el alta llega con la
+                propiedad del lead y el monto y la moneda de la oferta. */}
+            {offer.status === 'ACCEPTED' && (
+              <Tooltip label="Abre el alta de contrato con el monto de esta oferta y el interesado">
+                <Button
+                  component={Link}
+                  to={newContractPath(lead, offer)}
+                  size="compact-sm"
+                  variant="light"
+                  color="success"
+                  leftSection={<IconFilePlus size={14} />}
+                >
+                  Crear contrato
+                </Button>
+              </Tooltip>
             )}
             <ConfirmAction
               label="¿Borrar?"

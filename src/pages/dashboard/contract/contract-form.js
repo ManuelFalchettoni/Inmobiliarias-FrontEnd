@@ -28,36 +28,61 @@ function isUrl(value) {
   }
 }
 
-export const contractValidation = {
-  propertyId: required('Elija la propiedad.'),
-  type: required('Elija el tipo.'),
-  status: required('Elija el estado.'),
-  currency: required('Elija la moneda.'),
+/** Hoy en hora local como "yyyy-MM-dd", el formato del input de fecha. */
+export function todayISO() {
+  const now = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
 
-  amount: (value) => {
-    if (value === '' || value == null) return 'Indique el monto.'
-    const amount = Number(value)
-    if (!Number.isFinite(amount)) return 'Debe ser un número.'
-    if (amount < CONTRACT_LIMITS.amount.min) return 'Debe ser mayor a 0.'
-    if (amount > CONTRACT_LIMITS.amount.max) return 'El monto es demasiado grande.'
-    return null
-  },
+/**
+ * Reglas del formulario. En un alta el estado solo puede ser "Vigente" y las
+ * fechas no pueden ser anteriores a hoy. En una edición una fecha ya guardada
+ * en el pasado se acepta mientras no se cambie (un contrato vigente empezó
+ * antes de hoy); si se cambia, tampoco puede quedar en el pasado.
+ */
+export function contractValidation({ isEdit = false, initialValues = {} } = {}) {
+  const notInPast = (field, value) => {
+    if (!value) return null
+    if (isEdit && value === initialValues[field]) return null
+    return value < todayISO() ? 'No puede ser anterior a hoy.' : null
+  }
 
-  startDate: required('Indique la fecha de inicio.'),
+  return {
+    propertyId: required('Elija la propiedad.'),
+    type: required('Elija el tipo.'),
+    status: (value) => {
+      if (!value) return 'Elija el estado.'
+      if (!isEdit && value !== 'ACTIVE') return 'Un contrato nuevo tiene que estar vigente.'
+      return null
+    },
+    currency: required('Elija la moneda.'),
 
-  // Opcional en el DTO; en un alquiler conviene cargarla, pero no se exige.
-  endDate: (value, values) => {
-    if (values.type === 'SALE' || !value) return null
-    // Las fechas son texto "yyyy-MM-dd": compararlas con `<` da el orden
-    // cronológico, porque van de año a día.
-    if (values.startDate && value < values.startDate) return 'No puede ser anterior al inicio.'
-    return null
-  },
+    amount: (value) => {
+      if (value === '' || value == null) return 'Indique el monto.'
+      const amount = Number(value)
+      if (!Number.isFinite(amount)) return 'Debe ser un número.'
+      if (amount < CONTRACT_LIMITS.amount.min) return 'Debe ser mayor a 0.'
+      if (amount > CONTRACT_LIMITS.amount.max) return 'El monto es demasiado grande.'
+      return null
+    },
 
-  documentURL: (value) => {
-    const text = String(value ?? '').trim()
-    if (!text) return 'Indique el link al documento del contrato.'
-    if (!isUrl(text)) return 'Tiene que ser un link completo (https://...).'
-    return null
-  },
+    startDate: (value) => (value ? notInPast('startDate', value) : 'Indique la fecha de inicio.'),
+
+    // Opcional en el DTO; en un alquiler conviene cargarla, pero no se exige.
+    endDate: (value, values) => {
+      if (values.type === 'SALE' || !value) return null
+      // Las fechas son texto "yyyy-MM-dd": compararlas con `<` da el orden
+      // cronológico, porque van de año a día.
+      if (values.startDate && value <= values.startDate) return 'Tiene que ser posterior al inicio.'
+      return notInPast('endDate', value)
+    },
+
+    documentURL: (value) => {
+      const text = String(value ?? '').trim()
+      if (!text) return 'Indique el link al documento del contrato.'
+      if (!isUrl(text)) return 'Tiene que ser un link completo (https://...).'
+      return null
+    },
+  }
 }

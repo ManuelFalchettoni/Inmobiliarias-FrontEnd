@@ -19,6 +19,7 @@ import { IconAlertTriangle, IconChevronRight, IconCircleCheck, IconUserPlus } fr
 
 import { useQueryClient } from '@tanstack/react-query'
 
+import { useAuth } from '../../../context/auth-context.js'
 import { queryKeys } from '../../../queries/keys.js'
 import { usePeopleOptions, usePropertyOptions, useUserOptions } from '../../../hooks/useSelectOptions.js'
 import { ApiError } from '../../../services/api.js'
@@ -52,14 +53,16 @@ export default function LeadForm() {
   const [searchParams] = useSearchParams()
   const [status, setStatus] = useState({ state: 'idle' })
   const abortRef = useRef(null)
+  const { user } = useAuth()
 
   // Al volver del alta de persona llega `peopleId`; desde una propiedad, `propertyId`.
+  // El agente arranca elegido con el usuario logueado, pero se puede cambiar.
   const form = useForm({
     mode: 'uncontrolled',
     initialValues: {
       propertyId: searchParams.get('propertyId'),
       peopleId: searchParams.get('peopleId'),
-      userId: null,
+      userId: user ? String(user.id) : null,
       stage: 'NEW',
     },
     validate: {
@@ -75,7 +78,7 @@ export default function LeadForm() {
   const initial = form.getInitialValues()
   const properties = usePropertyOptions(initial.propertyId)
   const people = usePeopleOptions(initial.peopleId)
-  const users = useUserOptions(null)
+  const users = useUserOptions(initial.userId)
 
   useEffect(() => () => abortRef.current?.abort(), [])
 

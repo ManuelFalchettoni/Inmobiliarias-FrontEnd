@@ -320,9 +320,9 @@ export default function LeadDetail() {
                     {property ? (
                       <>
                         {property.address}, {formatPropertyPlace(property)}{' '}
-                        {/* La edición de una archivada da 404: en vez del link se avisa que está archivada */}
+                        {/* La ficha de una archivada da 404: en vez del link se avisa que está archivada */}
                         {property.active ? (
-                          <Anchor component={Link} to={`/dashboard/propiedades/${property.id}/editar`} size="sm">
+                          <Anchor component={Link} to={`/propiedades/${property.id}`} size="sm">
                             Ver
                           </Anchor>
                         ) : (

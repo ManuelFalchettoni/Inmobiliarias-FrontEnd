@@ -1,6 +1,9 @@
-/* Marco del mapa del listado: alto fijo, porque Leaflet no se dibuja sin alto. */
+/* Marco del mapa del listado: alto fijo, porque Leaflet no se dibuja sin alto.
+   `isolation` encierra los z-index de Leaflet (hasta 1000): sin eso el mapa tapa
+   el panel de filtros, los desplegables y el encabezado de la página. */
 .frame {
   position: relative;
+  isolation: isolate;
   height: 640px;
   border-radius: var(--mantine-radius-lg);
   border: 1px solid var(--mantine-color-default-border);

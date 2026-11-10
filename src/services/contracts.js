@@ -158,6 +158,20 @@ export const findContract =(id, options) => get(`${CONTRACTS_ENDPOINT}/${id}`, o
 /** POST -> 201. El backend no valida que la propiedad exista. */
 export const createContract = (request, options) => post(CONTRACTS_ENDPOINT, request, options)
 
+/**
+ * Traduce el 409 del alta/edición de contratos. El backend responde
+ * "Property with id: N already has an active contract of the same type in that period."
+ * cuando las fechas se superponen con otro contrato vigente del mismo tipo.
+ */
+export function contractConflictMessage(message) {
+  const normalized = String(message ?? '').toLowerCase()
+  if (normalized.includes('already has an active contract')) {
+    return 'La propiedad ya tiene un contrato vigente del mismo tipo en esas fechas. ' +
+      'Cambiá el período, o finalizá o cancelá el contrato anterior antes de crear este.'
+  }
+  return message
+}
+
 /** En el `PUT` el `propertyId` se ignora: un contrato no cambia de propiedad. */
 export const updateContract = (id, request, options) => put(`${CONTRACTS_ENDPOINT}/${id}`, request, options)
 
