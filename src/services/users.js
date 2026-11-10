@@ -138,6 +138,34 @@ export function toRegisterRequest(values) {
   }
 }
 
+// ------------------------------------------------- Sumar a una inmobiliaria
+
+export const JOIN_AGENCY_ENDPOINT = `${USERS_ENDPOINT}/join-agency`
+
+/** Roles que acepta `UserJoinAgencyService`: USER y ADMIN dan 403. */
+export const JOIN_AGENCY_ROL_OPTIONS = USER_ROL_OPTIONS.filter(
+  (o) => o.value === USER_ROL.AGENT || o.value === USER_ROL.AGENCY,
+)
+
+/**
+ * Valores del formulario -> `UserJoinAgencyRequest`. `agencyId` solo lo usa el
+ * admin: a una inmobiliaria el backend la suma siempre a la suya.
+ */
+export function toJoinAgencyRequest(values) {
+  return {
+    email: cleanEmail(values.email),
+    rol: values.rol,
+    agencyId: values.agencyId ? Number(values.agencyId) : null,
+  }
+}
+
+/**
+ * POST /api/users/join-agency -> 200 con el `UserResponse` actualizado.
+ * 404 si no hay cuenta activa con ese email (o la agencia no existe), 409 si la
+ * cuenta ya es de una inmobiliaria y 403 si el rol no es AGENT ni AGENCY.
+ */
+export const joinAgency = (request, options) => post(JOIN_AGENCY_ENDPOINT, request, options)
+
 /** POST /api/auth/register -> 201 con el `UserResponse` creado. */
 export const registerUser = (request, options) => post(REGISTER_ENDPOINT, request, options)
 

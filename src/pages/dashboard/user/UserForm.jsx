@@ -10,6 +10,7 @@ import {
   Container,
   Group,
   PasswordInput,
+  SegmentedControl,
   Select,
   SimpleGrid,
   Text,
@@ -37,6 +38,7 @@ import {
   userDefaultValues,
   userValidation,
 } from '../../auth/user-form.js'
+import JoinAgencyForm from './JoinAgencyForm.jsx'
 
 /** Desde el panel no hay términos que aceptar: los acepta quien se registra. */
 // Objeto -> lista de pares [clave, valor] -> sin 'acceptTerms' -> objeto otra vez.
@@ -50,6 +52,7 @@ const defaultValues = { ...withoutTerms(userDefaultValues), ...panelUserDefaultV
 
 /** Alta de usuario desde el panel (`/dashboard/usuarios/nuevo`), con rol e inmobiliaria. */
 export default function UserForm() {
+  const [mode, setMode] = useState('create')
   const [status, setStatus] = useState({ state: 'idle' })
   const abortRef = useRef(null)
   const { user: me, isAdmin } = useAuth()
@@ -101,7 +104,7 @@ export default function UserForm() {
   const isSubmitting = status.state === 'submitting'
 
   return (
-    <form onSubmit={onSubmit} noValidate>
+    <>
       <Box bg="white" style={{ borderBottom: '1px solid var(--mantine-color-gray-2)' }}>
         <Container size="md" py="xl">
           <Breadcrumbs separator={<IconChevronRight size={14} />} mb="xs">
@@ -116,12 +119,29 @@ export default function UserForm() {
             Alta de usuario
           </Title>
           <Text c="dimmed">
-            Cree una cuenta con su rol y su inmobiliaria. Ninguno de los dos se puede cambiar
-            después. La contraseña se guarda hasheada y el usuario puede cambiarla.
+            {mode === 'create'
+              ? 'Cree una cuenta con su rol y su inmobiliaria. Ninguno de los dos se puede cambiar después. La contraseña se guarda hasheada y el usuario puede cambiarla.'
+              : 'Sume a la inmobiliaria a alguien que ya se registró en la página, buscándolo por su email.'}
           </Text>
+          {/* El que se registra solo queda como USER sin inmobiliaria: se lo suma con join-agency. */}
+          <SegmentedControl
+            mt="md"
+            value={mode}
+            onChange={setMode}
+            data={[
+              { value: 'create', label: 'Crear cuenta nueva' },
+              { value: 'join', label: 'Sumar cuenta registrada' },
+            ]}
+          />
         </Container>
       </Box>
 
+      {mode === 'join' ? (
+        <Container size="md" py="xl">
+          <JoinAgencyForm />
+        </Container>
+      ) : (
+      <form onSubmit={onSubmit} noValidate>
       <Container size="md" py="xl">
         {status.state === 'created' && (
           <Alert
@@ -263,6 +283,8 @@ export default function UserForm() {
           </Group>
         </Card>
       </Container>
-    </form>
+      </form>
+      )}
+    </>
   )
 }
