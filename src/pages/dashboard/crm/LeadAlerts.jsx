@@ -3,16 +3,19 @@ import { ActionIcon, Badge, Button, Group, Paper, Select, Stack, Text, TextInput
 import { IconCalendarEvent, IconCheck, IconCircleCheckFilled, IconTrash } from '@tabler/icons-react'
 
 import { useLookup } from '../../../hooks/useLookup.js'
+import { useNow } from '../../../hooks/useNow.js'
 import {
   ALERT_STATUS,
   alertToRequest,
   completeAlert,
   createAlert,
   deleteAlert,
+  newAlertEmailHint,
   updateAlert,
 } from '../../../services/crm.js'
 import { formatDateTime, toDateTimeInput, toLocalDateTime } from '../../../services/format.js'
 import { findUser } from '../../../services/users.js'
+import AlertEmailBadge from '../../../components/AlertEmailBadge.jsx'
 import ConfirmAction from '../../../components/ConfirmAction.jsx'
 
 /**
@@ -20,7 +23,7 @@ import ConfirmAction from '../../../components/ConfirmAction.jsx'
  * "Reprogramar" (uno que ya existe): cambia de dónde salen los valores
  * iniciales y qué se hace al guardar (`onSubmit`, que recibe el body listo).
  */
-function AlertForm({ initial, agents, submitLabel, onSubmit, onCancel }) {
+function AlertForm({ initial, agents, now, submitLabel, onSubmit, onCancel }) {
   const [message, setMessage] = useState(initial.message)
   // Texto del <input type="datetime-local">: "2026-10-10T10:00".
   const [alertDate, setAlertDate] = useState(initial.alertDate)
@@ -82,6 +85,10 @@ function AlertForm({ initial, agents, submitLabel, onSubmit, onCancel }) {
             allowDeselect={false}
           />
         </Group>
+        {/* Cambiar la fecha o el agente vuelve a programar el mail. */}
+        <Text size="xs" c="dimmed">
+          {newAlertEmailHint(alertDate, now)}
+        </Text>
         <Group justify="space-between" align="center" wrap="nowrap">
           <Text size="sm" c="danger">
             {status.state === 'error' ? status.message : ''}
@@ -103,7 +110,7 @@ function AlertForm({ initial, agents, submitLabel, onSubmit, onCancel }) {
 }
 
 /** Un recordatorio nuevo: por defecto, para el agente del lead. Al guardar se vacía. */
-function NewAlertForm({ lead, agents, onSaved }) {
+function NewAlertForm({ lead, agents, now, onSaved }) {
   // `key` cambia después de cada alta: React arma el formulario de cero, vacío.
   const [formKey, setFormKey] = useState(0)
 
@@ -112,6 +119,7 @@ function NewAlertForm({ lead, agents, onSaved }) {
       key={formKey}
       initial={{ message: '', alertDate: '', userId: String(lead.userId) }}
       agents={agents}
+      now={now}
       submitLabel="Agendar"
       onSubmit={async (request) => {
         // Sin estado: el backend la crea siempre en `PENDING`.
@@ -133,6 +141,7 @@ export default function LeadAlerts({ lead, alerts, agents, onChanged }) {
   // El recordatorio que se está reprogramando: uno a la vez.
   const [editingId, setEditingId] = useState(null)
   const [error, setError] = useState(null)
+  const now = useNow()
   const users = useLookup('users', alerts.map((alert) => alert.userId), findUser)
 
   const run = async (alert, action) => {
@@ -150,7 +159,7 @@ export default function LeadAlerts({ lead, alerts, agents, onChanged }) {
 
   return (
     <Stack gap="sm">
-      <NewAlertForm lead={lead} agents={agents} onSaved={onChanged} />
+      <NewAlertForm lead={lead} agents={agents} now={now} onSaved={onChanged} />
 
       {error && (
         <Text size="sm" c="danger">
@@ -190,6 +199,7 @@ export default function LeadAlerts({ lead, alerts, agents, onChanged }) {
                   userId: String(alert.userId),
                 }}
                 agents={agents}
+                now={now}
                 submitLabel="Guardar"
                 onCancel={() => setEditingId(null)}
                 onSubmit={async (request) => {
@@ -220,6 +230,7 @@ export default function LeadAlerts({ lead, alerts, agents, onChanged }) {
                           Vencida
                         </Badge>
                       )}
+                      <AlertEmailBadge alert={alert} now={now} />
                     </Group>
                     <Text size="xs" c="dimmed">
                       Para {users[alert.userId]?.name ?? `usuario #${alert.userId}`}

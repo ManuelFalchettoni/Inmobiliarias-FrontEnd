@@ -35,8 +35,13 @@ manda sola.
   `agencyId`) solo en memoria. Al abrir o recargar la app pregunta `GET /api/users/me`: con 200
   sigue la sesión, con 401 se entra por el login. Mientras tanto, el panel muestra un spinner.
 - **Login.** `POST /api/auth/login` trae `id`, `name`, `email` y `rol`; enseguida se pide `/me`
-  para sumar el `agencyId`. Después vuelve a la pantalla a la que se quería entrar.
+  para sumar el `agencyId`. Después vuelve a la pantalla a la que se quería entrar; si se viene de
+  un logout, al inicio, no a la última pantalla del usuario anterior.
 - **Logout.** `POST /api/auth/logout` borra la cookie; después se limpian el usuario y la caché.
+- **Olvidé mi contraseña.** El modal del login pide el email (`POST /api/auth/password/forgot`,
+  siempre 204, exista la cuenta o no) y el backend manda un mail con un link a
+  `/restablecer-contrasena?token=...`. Ahí se elige la nueva (`POST /api/auth/password/reset`) y se
+  vuelve al login. El link dura una hora y sirve una vez; vencido o usado, da 400 y se ofrece pedir otro.
 - **401.** Cualquier pedido con sesión que responde 401 limpia la sesión y la caché, y manda al
   login con el aviso "Tu sesión venció".
 - **403.** El error dice "No tenés permiso..." y queda en la pantalla. Las rutas de otro rol ni se
@@ -45,7 +50,7 @@ manda sola.
 | Rol | Ve |
 | --- | --- |
 | `ADMIN` | Todo. Es el único con Agencias (listar, crear, dar de baja, restaurar) y con el selector de inmobiliaria en los listados. |
-| `AGENCY`, `AGENT` | Solo lo de su inmobiliaria. Las altas cargan su `agencyId` con el Select bloqueado. Pueden editar los datos de su inmobiliaria desde Configuración, salvo el estado de verificación. |
+| `AGENCY`, `AGENT` | Solo lo de su inmobiliaria. Las altas cargan su `agencyId` con el Select bloqueado. Pueden editar los datos de su inmobiliaria desde Configuración, salvo el estado de verificación. Un `AGENT` ve los usuarios pero no los crea, edita ni restaura. |
 | `USER` | Solo Configuración (el que se registra solo, hasta que una inmobiliaria lo sume). |
 
 ## Pantallas
@@ -55,6 +60,7 @@ manda sola.
 | `/`, `/dashboard`                   | Redirigen al inicio: Propiedades, o Configuración para un USER      |
 | `/registro`                         | Registro público (`POST /api/auth/register`)                        |
 | `/login`                            | Login (`POST /api/auth/login`); con sesión vigente, entra directo al panel |
+| `/restablecer-contrasena`           | Contraseña nueva con el token del mail de recuperación (`POST /api/auth/password/reset`) |
 | `/propiedades/:id`                  | Ficha de la propiedad para mostrarle a un cliente: fotos, datos, precio, mapa y contacto. Fuera del panel y sin edición |
 | `/dashboard/propiedades`            | Listado de propiedades, activas o archivadas, en fichas, tabla (`?vista=tabla`) o mapa (`?vista=mapa`), con panel de filtros y orden |
 | `/dashboard/propiedades/nueva`      | Alta de propiedad con precios y fotos                               |
@@ -63,20 +69,20 @@ manda sola.
 | `/dashboard/agencias/nueva`         | Alta de agencia, con borrador local (solo admin)                    |
 | `/dashboard/agencias/:id/editar`    | Edición de agencia (los demás roles, solo la suya), con subir, cambiar o quitar el logo |
 | `/dashboard/usuarios`               | Listado de usuarios, filtrable por agencia (el admin)               |
-| `/dashboard/usuarios/nuevo`         | Alta de usuario con rol, agencia, CUIT y matrícula                  |
-| `/dashboard/usuarios/:id/editar`    | Edición de usuario y cambio de contraseña                           |
+| `/dashboard/usuarios/nuevo`         | Alta de usuario con rol, agencia, CUIT y matrícula (admin e inmobiliaria) |
+| `/dashboard/usuarios/:id/editar`    | Edición de usuario y cambio de contraseña (admin e inmobiliaria)    |
 | `/dashboard/personas`               | Personas (clientes y propietarios), con búsqueda por nombre, DNI, CUIT y contacto |
 | `/dashboard/personas/nueva`         | Alta de persona                                                     |
 | `/dashboard/personas/:id/editar`    | Edición de persona                                                  |
-| `/dashboard/contratos`              | Contratos de venta y alquiler, filtrables por propiedad, estado, fechas y monto |
+| `/dashboard/contratos`              | Contratos de venta y alquiler, filtrables por propiedad, estado, fechas y monto. Sin elegir estado, solo los vigentes |
 | `/dashboard/contratos/nuevo`        | Alta de contrato                                                    |
-| `/dashboard/contratos/:id`          | Detalle del contrato y sus partes                                   |
+| `/dashboard/contratos/:id`          | Detalle del contrato y sus partes; como Propietario solo se ofrecen los dueños de la propiedad |
 | `/dashboard/contratos/:id/editar`   | Edición de contrato                                                 |
 | `/dashboard/consultas`              | Leads del CRM, filtrables por agente                                |
 | `/dashboard/consultas/nuevo`        | Alta de lead                                                        |
-| `/dashboard/consultas/:id`          | Lead: etapa, historial, ofertas y recordatorios                     |
-| `/dashboard/avisos`                 | Agenda: leads ordenados por el tiempo que falta para su próximo aviso pendiente |
-| `/dashboard/archivados`             | Propiedades, agencias (solo admin) y usuarios dados de baja, cada uno con Restaurar |
+| `/dashboard/consultas/:id`          | Lead: etapa, historial, ofertas (aceptar pide confirmación y cierra el lead) y recordatorios |
+| `/dashboard/avisos`                 | Agenda (`GET /api/crm_alerts/agenda`): leads agrupados por el tramo de su próximo aviso, vencidos primero |
+| `/dashboard/archivados`             | Propiedades, agencias (solo admin) y usuarios dados de baja, con Restaurar (usuarios: admin e inmobiliaria) |
 | `/dashboard/analitica`              | Analítica (`GET /api/analytics/summary`): propiedades, leads, ofertas, contratos y rendimiento por agente; el admin elige inmobiliaria |
 | `/dashboard/configuracion`          | Cuenta propia (`/api/users/me`): datos, contraseña e inmobiliaria. La única pantalla de un USER |
 
@@ -101,10 +107,11 @@ src/
 │                 useUrlFilters (página y filtros en la URL), useNow (hora que avanza cada minuto)
 ├── components/   Componentes compartidos (AgencyLogo, ConfirmAction, FilterInput, FilterPanel,
 │                 RoleGate, NotFound, Wordmark: logo y nombre de la app)
-├── layouts/      AuthLayout, DashboardLayout, el menú (dashboard-nav.js) y la barra superior:
+├── layouts/      AuthLayout, DashboardLayout, el menú lateral (DashboardNavbar, con los ítems en
+│                 dashboard-nav.js) y la barra superior:
 │                 HeaderSearch (buscador) y AlertBell (campanita de avisos)
 ├── pages/
-│   ├── auth/         Login, registro y reglas de usuario
+│   ├── auth/         Login, registro, restablecer contraseña y reglas de usuario
 │   └── dashboard/    account/, agency/, analytics/, archive/, user/, property/, people/, contract/,
 │                     crm/ y DashboardRoutes.jsx
 ├── context/      AuthContext: el usuario que inició sesión (`useAuth()`)
@@ -136,15 +143,20 @@ src/
   mayúsculas ni acentos. Los campos de texto (`FilterInput`) escriben en la URL 400 ms después de la
   última tecla, así no se pide una vez por letra. La búsqueda de propiedades solo trae activas:
   con "Archivadas" no se filtra. Archivar (`PATCH /archive`) se hace solo desde la edición, que
-  vuelve al listado con un aviso para deshacer; restaurar se hace desde la pestaña Archivadas. Una
+  vuelve al listado con un aviso para deshacer; restaurar se hace desde la pestaña Archivadas. Con
+  contratos vigentes o leads abiertos el backend responde 409 y se explica por qué no se puede. Una
   archivada no se abre por id (404), así que se muestra con los datos del listado.
+- **Selects de personas.** No traen a todas: buscan por nombre en `/api/people/search` mientras se
+  escribe y muestran las primeras 20.
 - **`agencyId`.** Solo lo manda el admin, en listados y búsquedas (sin él ve todas). Para AGENCY y
   AGENT el backend usa el de la sesión, así que el front ni lo manda; en las altas va el suyo porque
   la validación lo pide. Algo de otra inmobiliaria responde 404, como si no existiera.
-- **Ids a nombres.** Las respuestas del CRM, contratos y dueños traen solo ids; `useLookup` los
-  resuelve con la misma clave que el detalle, así cada registro se pide una sola vez.
-- **Barra superior.** El buscador busca a la vez personas por nombre y propiedades por ciudad
-  (el backend no busca propiedades por dirección) y lleva a la ficha o al listado filtrado. La
+- **Ids a nombres.** Contratos y leads traen embebidas sus partes, personas y agente. Lo que todavía
+  llega como id (dueños, usuarios del historial y de los avisos, agencias) lo resuelve `useLookup`
+  con la misma clave que el detalle, así cada registro se pide una sola vez.
+- **Barra superior.** El buscador busca a la vez personas por nombre y propiedades por dirección y
+  por ciudad, y lleva a la ficha o al listado filtrado. Al llegar los resultados queda marcado el
+  primero: Enter lo abre, y con las flechas se elige otro. La
   campanita usa `GET /api/crm_alerts/upcoming`: un agente ve sus avisos; la inmobiliaria y el admin,
   los de todos. Se refresca cada minuto, se pone roja si hay vencidos y deja marcarlos como
   cumplidos. Un USER no ve ninguno de los dos. AGENCY y AGENT ven además el logo y el nombre de su
@@ -154,10 +166,14 @@ src/
   Antes de subir se valida formato (JPG, PNG o WEBP; SVG no) y tamaño (5 MB), y mientras sube se
   muestra la imagen elegida con `URL.createObjectURL`. Después se actualizan la agencia en caché y
   `users.me()`, así el encabezado cambia sin recargar.
+- **Recordatorios por mail.** Los manda el backend, una vez por alerta, al agente de la alerta. El
+  front no dispara nada: `alertEmailStatus` (`services/crm.js`) calcula el estado a partir de
+  `notifiedAt` y `AlertEmailBadge` lo muestra en el lead, la agenda y la campanita (programado, por
+  salir, enviado o no enviado).
 
 ## Limitaciones actuales
 
-- `/api/contract_parties` y `/api/property_owners` no filtran ni ordenan: partes y dueños se traen
-  completos y se filtran en el cliente.
-- La agenda de avisos trae todos los leads (de a 100), hace un `GET .../alerts` por lead y ordena
-  en el navegador. `GET /api/crm_alerts/upcoming` hoy lo usa solo la campanita.
+- `/api/property_owners` no filtra ni ordena: los dueños se traen completos y se filtran en el
+  cliente.
+- La anticipación del mail no se puede configurar desde el panel y el backend no la expone:
+  `ALERT_EMAIL_HOURS` copia el default de `CRM_ALERT_REMINDER_HOURS` (24 h).

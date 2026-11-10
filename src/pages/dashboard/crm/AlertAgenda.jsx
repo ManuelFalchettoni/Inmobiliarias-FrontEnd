@@ -25,6 +25,7 @@ import {
 } from '@mantine/core'
 import { IconAlertTriangle, IconBellRinging, IconClockHour4 } from '@tabler/icons-react'
 
+import AlertEmailBadge from '../../../components/AlertEmailBadge.jsx'
 import { useLookup } from '../../../hooks/useLookup.js'
 import { useNow } from '../../../hooks/useNow.js'
 import { useUserOptions } from '../../../hooks/useSelectOptions.js'
@@ -33,6 +34,7 @@ import { queryKeys } from '../../../queries/keys.js'
 import {
   AGENDA_BUCKETS,
   AGENDA_SORTS,
+  ALERT_EMAIL_HOURS,
   CRM_STAGE_COLOR,
   CRM_STAGE_LABEL,
   fetchAgendaSummary,
@@ -241,6 +243,9 @@ export default function AlertAgenda() {
             </Text>
           )}
         </Text>
+        <Text size="sm" c="dimmed">
+          Cada agente recibe un mail {ALERT_EMAIL_HOURS} h antes de sus avisos.
+        </Text>
       </Box>
 
       <Group align="flex-end" gap="md" mb="lg" wrap="wrap">
@@ -412,6 +417,7 @@ export default function AlertAgenda() {
                                     {nextAlert.message}
                                   </Text>
                                 </Tooltip>
+                                <AlertEmailBadge alert={nextAlert} now={now} />
                                 {pendingCount > 1 && (
                                   <Text size="xs" c="dimmed">
                                     +{pendingCount - 1} {pendingCount === 2 ? 'aviso más' : 'avisos más'}

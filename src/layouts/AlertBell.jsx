@@ -18,6 +18,7 @@ import { useDisclosure } from '@mantine/hooks'
 import { IconBell, IconCheck } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import AlertEmailBadge from '../components/AlertEmailBadge.jsx'
 import { useAuth } from '../context/auth-context.js'
 import { useNow } from '../hooks/useNow.js'
 import { queryKeys } from '../queries/keys.js'
@@ -131,6 +132,9 @@ export default function AlertBell() {
                         {/* Entre dos refrescos puede pasar la hora sin que el backend lo marque todavía. */}
                         {alert.expired ? 'vencido' : left > 0 ? `en ${formatTimeLeft(left)}` : 'vence ahora'}
                       </Text>
+                      <Box mt={2}>
+                        <AlertEmailBadge alert={alert} now={now} />
+                      </Box>
                     </UnstyledButton>
                     <Tooltip label="Marcar como cumplido" withArrow>
                       <ActionIcon

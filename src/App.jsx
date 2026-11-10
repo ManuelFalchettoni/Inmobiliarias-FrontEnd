@@ -6,6 +6,8 @@ import { NotFoundPage } from './components/NotFound.jsx'
 import { useAuth } from './context/auth-context.js'
 import Login from './pages/auth/Login.jsx'
 import Register from './pages/auth/Register.jsx'
+import ResetPassword from './pages/auth/ResetPassword.jsx'
+import { RESET_PASSWORD_PATH } from './services/auth.js'
 
 // El panel se descarga recién cuando se entra a /dashboard.
 // `lazy` recibe una función que hace un `import()` dinámico: Vite separa ese
@@ -53,6 +55,8 @@ export default function App() {
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="/login" element={<Login />} />
       <Route path="/registro" element={<Register />} />
+      {/* Adonde lleva el link del mail de recuperación. Sin sesión, como el login. */}
+      <Route path={RESET_PASSWORD_PATH} element={<ResetPassword />} />
 
       {/* El `*` significa "esta ruta y todo lo que cuelgue de ella": las
           subrutas (/dashboard/propiedades, etc.) se resuelven en DashboardRoutes.

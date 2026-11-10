@@ -7,6 +7,7 @@
  * y los enums `CrmStage`, `CrmEventType`, `CrmAlertStatus` y `OfferStatus` del backend.
  */
 import { del, get, pageQuery, patch, post, put } from './api.js'
+import { formatDateTime } from './format.js'
 import { formatPrice } from './properties.js'
 
 export const LEADS_ENDPOINT = '/api/crm_properties'
@@ -143,6 +144,82 @@ export const completeAlert = (leadId, alertId, options) =>
 
 /** Refleja `CrmAlertStatus`. Una alerta nace `PENDING`. */
 export const ALERT_STATUS = { PENDING: 'PENDING', DONE: 'DONE' }
+
+// --------------------------------------------------- Recordatorios por mail
+//
+// Los manda el backend (`CrmAlertReminderService`): el front solo los muestra.
+// Se avisa una vez por alerta, al agente de la alerta, si está `PENDING` y sin
+// vencer. Cambiarle la fecha o el agente con un `PUT` vuelve a programar el mail.
+
+/**
+ * Horas de anticipación del mail. Copia el default de `CRM_ALERT_REMINDER_HOURS`:
+ * el backend no las expone, así que si se cambian allá hay que cambiarlas acá.
+ */
+export const ALERT_EMAIL_HOURS = 24
+
+const HOUR_MS = 60 * 60 * 1000
+
+export const ALERT_EMAIL_STATE = {
+  SCHEDULED: 'SCHEDULED',
+  PENDING: 'PENDING',
+  SENT: 'SENT',
+  MISSED: 'MISSED',
+}
+
+/**
+ * Estado del mail de una alerta: `{ state, label, detail }`, o `null` si no hay
+ * nada para mostrar (cumplida sin mail).
+ *
+ * `notifiedAt` es la fecha de envío. Si todavía no salió, el campo no viene:
+ * el backend no manda los `null`.
+ */
+export function alertEmailStatus(alert, now) {
+  const { notifiedAt } = alert
+  if (notifiedAt) {
+    return {
+      state: ALERT_EMAIL_STATE.SENT,
+      label: 'Mail enviado',
+      detail: `Se le mandó el recordatorio al agente el ${formatDateTime(notifiedAt)}.`,
+    }
+  }
+  if (alert.status !== ALERT_STATUS.PENDING) return null
+
+  const due = new Date(alert.alertDate).getTime()
+  const sendAt = due - ALERT_EMAIL_HOURS * HOUR_MS
+  if (sendAt > now) {
+    return {
+      state: ALERT_EMAIL_STATE.SCHEDULED,
+      label: `Mail el ${formatDateTime(sendAt)}`,
+      detail: `El agente recibe el recordatorio ${ALERT_EMAIL_HOURS} h antes, si la alerta sigue pendiente.`,
+    }
+  }
+  if (alert.expired || due <= now) {
+    return {
+      state: ALERT_EMAIL_STATE.MISSED,
+      label: 'Mail no enviado',
+      detail: 'La alerta venció sin que saliera el recordatorio.',
+    }
+  }
+  return {
+    state: ALERT_EMAIL_STATE.PENDING,
+    label: 'Mail por salir',
+    detail: 'El recordatorio sale en los próximos minutos. Si el envío falla, se reintenta.',
+  }
+}
+
+/** Qué va a pasar con el mail de una alerta que se está cargando, con su fecha elegida. */
+export function newAlertEmailHint(alertDate, now) {
+  if (!alertDate) return `El agente recibe un mail ${ALERT_EMAIL_HOURS} h antes de la fecha.`
+
+  const due = new Date(alertDate).getTime()
+  if (Number.isNaN(due)) return ''
+  if (due <= now) return 'Con una fecha ya pasada no se manda el mail.'
+
+  const sendAt = due - ALERT_EMAIL_HOURS * HOUR_MS
+  return sendAt > now
+    ? `El agente recibe un mail el ${formatDateTime(sendAt)}.`
+    : `Faltan menos de ${ALERT_EMAIL_HOURS} h: el agente recibe el mail en los próximos minutos.`
+}
 
 /**
  * GET /api/crm_alerts/upcoming -> las alertas `PENDING` de todos los leads de la
